@@ -27,24 +27,24 @@ const contextOptions: ContextOption[] = [
     label: 'Tendencias',
     description: 'Análisis de tendencias actuales y patrones emergentes',
     icon: <TrendingUpIcon sx={{ fontSize: 20 }} />,
-    color: '#3B82F6',
-    gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'
+    color: 'var(--color-chart-1)',
+    gradient: 'linear-gradient(135deg, var(--color-chart-1) 0%, var(--color-primary) 100%)'
   },
   {
     value: 'noticias',
     label: 'Noticias',
     description: 'Cobertura mediática y análisis de noticias recientes',
     icon: <ArticleIcon sx={{ fontSize: 20 }} />,
-    color: '#10B981',
-    gradient: 'linear-gradient(135deg, #10B981 0%, #047857 100%)'
+    color: 'var(--color-accent)',
+    gradient: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-chart-3) 100%)'
   },
   {
     value: 'codex',
     label: 'Documentos',
     description: 'Base de conocimientos y documentos del codex',
     icon: <LibraryBooksIcon sx={{ fontSize: 20 }} />,
-    color: '#8B5CF6',
-    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)'
+    color: 'var(--color-chart-4)',
+    gradient: 'linear-gradient(135deg, var(--color-chart-4) 0%, var(--color-destructive) 100%)'
   }
 ];
 
@@ -97,35 +97,47 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
             minWidth: '160px',
             px: 1.5,
             py: 1,
-            borderRadius: '6px',
-            border: '1px solid #D1D5DB',
-            backgroundColor: 'white',
-            color: '#374151',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)',
+            backgroundColor: 'var(--color-input)',
+            color: 'var(--color-foreground)',
             fontSize: '14px',
             fontWeight: 500,
             cursor: disabled ? 'not-allowed' : 'pointer',
-            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s ease',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             opacity: disabled ? 0.6 : 1,
+            letterSpacing: 'var(--tracking-normal)',
             '&:hover': !disabled ? {
-              backgroundColor: '#F9FAFB'
+              backgroundColor: 'var(--color-muted)',
+              borderColor: 'var(--color-ring)',
+              transform: 'translateY(-1px)',
+              boxShadow: 'var(--shadow-md)',
             } : {},
             '&:focus': {
               outline: 'none',
-              borderColor: '#3B82F6',
-              boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.1)'
+              borderColor: 'var(--color-ring)',
+              boxShadow: '0 0 0 2px var(--color-ring)',
             }
           }}
         >
-          <Typography variant="body2" sx={{ fontSize: '14px', color: '#374151' }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              fontSize: '14px', 
+              color: 'var(--color-foreground)',
+              fontWeight: 500,
+              letterSpacing: 'var(--tracking-normal)',
+            }}
+          >
             {getDisplayLabel()}
           </Typography>
           <KeyboardArrowDownIcon 
             sx={{ 
               fontSize: 20, 
-              color: '#6B7280',
+              color: 'var(--color-muted-foreground)',
               transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
+              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
             }} 
           />
         </Box>
@@ -140,68 +152,156 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
               right: 0,
               mt: 0.5,
               py: 1.5,
-              borderRadius: '8px',
-              border: '1px solid #E5E7EB',
-              backgroundColor: 'white',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-              zIndex: 10
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-popover)',
+              boxShadow: 'var(--shadow-lg)',
+              zIndex: 10,
+              backdropFilter: 'blur(12px)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: '-6px',
+                left: '20px',
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderBottom: '6px solid var(--color-border)',
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: '-5px',
+                left: '21px',
+                width: 0,
+                height: 0,
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderBottom: '5px solid var(--color-popover)',
+              }
             }}
           >
             {contextOptions.map((option) => {
               const isSelected = selectedContexts.includes(option.value);
               
               return (
-                <Box
+                <Tooltip 
                   key={option.value}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleContextToggle(option.value);
-                  }}
+                  title={option.description}
+                  placement="left"
+                  arrow
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    px: 1,
-                    py: 0.5,
-                    mx: 1,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      backgroundColor: '#F9FAFB'
+                    '& .MuiTooltip-tooltip': {
+                      backgroundColor: 'var(--color-popover)',
+                      color: 'var(--color-popover-foreground)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '12px',
+                      boxShadow: 'var(--shadow-md)',
+                    },
+                    '& .MuiTooltip-arrow': {
+                      color: 'var(--color-border)',
                     }
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => {}} // Handled by parent onClick
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '4px',
-                      border: '1px solid #D1D5DB',
-                      accentColor: '#3B82F6'
+                  <Box
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleContextToggle(option.value);
                     }}
-                  />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontSize: '14px', 
-                      color: '#374151',
-                      userSelect: 'none'
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      px: 1.5,
+                      py: 1,
+                      mx: 1,
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      backgroundColor: isSelected ? 'var(--color-accent)' : 'transparent',
+                      color: isSelected ? 'var(--color-accent-foreground)' : 'var(--color-popover-foreground)',
+                      '&:hover': {
+                        backgroundColor: isSelected ? 'var(--color-accent)' : 'var(--color-muted)',
+                        transform: 'translateX(2px)',
+                      }
                     }}
                   >
-                    {option.label}
-                  </Typography>
-                </Box>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 'var(--radius-sm)',
+                        background: option.gradient,
+                        color: 'white',
+                        boxShadow: 'var(--shadow-sm)',
+                      }}
+                    >
+                      {option.icon}
+                    </Box>
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontSize: '14px',
+                          fontWeight: isSelected ? 600 : 500,
+                          letterSpacing: 'var(--tracking-normal)',
+                          color: 'inherit',
+                        }}
+                      >
+                        {option.label}
+                      </Typography>
+                    </Box>
+
+                    {/* Custom Checkbox */}
+                    <Box
+                      sx={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 'var(--radius-sm)',
+                        border: `2px solid ${isSelected ? 'currentColor' : 'var(--color-border)'}`,
+                        backgroundColor: isSelected ? 'currentColor' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    >
+                      {isSelected && (
+                        <svg 
+                          width="12" 
+                          height="12" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke={isSelected ? 'var(--color-accent-foreground)' : 'white'}
+                          strokeWidth="3"
+                        >
+                          <polyline points="20,6 9,17 4,12" />
+                        </svg>
+                      )}
+                    </Box>
+                  </Box>
+                </Tooltip>
               );
             })}
           </Box>
         )}
 
-        {/* Trend Selector */}
-        {showTrendSelector && <TrendSelector />}
+        {/* Trend Selector Modal */}
+        {showTrendSelector && selectedContexts.includes('tendencias') && (
+          <TrendSelector 
+            selectedTrends={[]}
+            onTrendChange={(trends) => {
+              // Aquí puedes manejar la selección de tendencias específicas
+              console.log('Tendencias seleccionadas:', trends);
+            }}
+          />
+        )}
       </Box>
     </ClickAwayListener>
   );

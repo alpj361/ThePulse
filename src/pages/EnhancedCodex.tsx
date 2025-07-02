@@ -17,71 +17,43 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// import {
-//   Search,
-//   Folder,
-//   MoreVertical,
-//   Edit,
-//   Trash2,
-//   FolderPlus,
-//   FileText,
-//   Headphones,
-//   Video,
-//   Link,
-//   Plus,
-//   Filter,
-//   Calendar,
-//   Tag,
-//   Eye,
-//   Download,
-//   Share2,
-//   Archive,
-//   RefreshCw,
-//   AlertCircle,
-//   Upload,
-//   Cloud,
-//   ChevronDown,
-//   ChevronUp,
-//   Mic,
-//   Users,
-// } from "lucide-react"
-
-// Iconos temporales que pueden recibir props
-const Search = (props: any) => <span {...props}>🔍</span>
-const Folder = (props: any) => <span {...props}>📁</span>
-const MoreVertical = (props: any) => <span {...props}>⋮</span>
-const Edit = (props: any) => <span {...props}>✏️</span>
-const Trash2 = (props: any) => <span {...props}>🗑️</span>
-const FolderPlus = (props: any) => <span {...props}>📁+</span>
-const FileText = (props: any) => <span {...props}>📄</span>
-const Headphones = (props: any) => <span {...props}>🎧</span>
-const Video = (props: any) => <span {...props}>🎥</span>
-const Link = (props: any) => <span {...props}>🔗</span>
-const Plus = (props: any) => <span {...props}>➕</span>
-const Filter = (props: any) => <span {...props}>🔽</span>
-const Calendar = (props: any) => <span {...props}>📅</span>
-const Tag = (props: any) => <span {...props}>🏷️</span>
-const Eye = (props: any) => <span {...props}>👁️</span>
-const Download = (props: any) => <span {...props}>⬇️</span>
-const Share2 = (props: any) => <span {...props}>↗️</span>
-const Archive = (props: any) => <span {...props}>📦</span>
-const RefreshCw = (props: any) => <span {...props}>🔄</span>
-const AlertCircle = (props: any) => <span {...props}>⚠️</span>
-const Upload = (props: any) => <span {...props}>⬆️</span>
-const Cloud = (props: any) => <span {...props}>☁️</span>
-const ChevronDown = (props: any) => <span {...props}>▼</span>
-const ChevronUp = (props: any) => <span {...props}>▲</span>
-const Mic = (props: any) => <span {...props}>🎤</span>
-const Users = (props: any) => <span {...props}>👥</span>
-const NoteIcon = (props: any) => <span {...props}>📝</span>
+import {
+  Search as LucideSearch,
+  Folder as LucideFolder,
+  MoreVertical,
+  Edit,
+  Trash2,
+  FolderPlus,
+  FileText,
+  Headphones,
+  Video,
+  Link,
+  Plus,
+  Filter,
+  Calendar,
+  Tag,
+  Eye,
+  Download,
+  Share2,
+  Archive,
+  RefreshCw,
+  AlertCircle,
+  Upload,
+  Cloud,
+  ChevronDown,
+  ChevronUp,
+  Mic,
+  Users,
+  StickyNote,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../context/AuthContext"
 import { useGoogleDrive } from "../hooks/useGoogleDrive"
-import { 
-  supabase, 
-  getCodexItemsByUser, 
-  createCodexBucket, 
-  getUserProjects, 
+import {
+  supabase,
+  getCodexItemsByUser,
+  createCodexBucket,
+  getUserProjects,
   Project,
   createCodexGroup,
   addItemToGroup,
@@ -90,8 +62,11 @@ import {
   getGroupStats,
   deleteGroup,
   updateGroupInfo,
-  getUserGroups
+  getUserGroups,
 } from "../services/supabase.ts"
+
+// Iconos temporales que pueden recibir props
+// (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
 
 interface CodexItem {
   id: string
@@ -150,7 +125,7 @@ const CodexFolderCard: React.FC<{
       audio: Headphones,
       video: Video,
       enlace: Link,
-      nota: NoteIcon,
+      nota: StickyNote,
       default: FileText,
     };
     return iconMap[type] || iconMap.default;
@@ -209,7 +184,7 @@ const CodexFolderCard: React.FC<{
     <Card className="bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden w-full col-span-1 lg:col-span-2 xl:col-span-3">
        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-row items-center justify-between">
         <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={toggleExpansion}>
-            <Folder className="h-8 w-8 text-blue-600" />
+            <LucideFolder className="h-8 w-8 text-blue-600" />
             <div className="flex-1">
               <CardTitle className="text-lg font-bold text-slate-800">{item.group_name || "Grupo sin nombre"}</CardTitle>
               <CardDescription className="text-sm text-slate-500 mt-1">{item.group_description || "Sin descripción."}</CardDescription>
@@ -247,7 +222,7 @@ const CodexFolderCard: React.FC<{
                         <span className="font-medium text-slate-700 truncate block" title={child.titulo}>{child.titulo}</span>
                         {child.audio_transcription && (
                           <span className="text-xs text-green-600 cursor-pointer hover:underline" onClick={() => onViewItem(child)} title="Tiene transcripción - click para ver">
-                            🎤 Transcripción disponible
+                            Transcripción disponible
                           </span>
                         )}
                       </div>
@@ -656,7 +631,7 @@ export default function EnhancedCodex() {
       case "enlace":
         return Link
       case "nota":
-        return NoteIcon
+        return StickyNote
       default:
         return FileText
     }
@@ -1820,7 +1795,7 @@ export default function EnhancedCodex() {
     { label: "Audios", count: stats.audios, icon: Headphones, color: "bg-purple-500", type: "audio" },
     { label: "Videos", count: stats.videos, icon: Video, color: "bg-green-500", type: "video" },
     { label: "Enlaces", count: stats.enlaces, icon: Link, color: "bg-orange-500", type: "enlace" },
-    { label: "Notas", count: stats.notas, icon: NoteIcon, color: "bg-pink-500", type: "nota" },
+    { label: "Notas", count: stats.notas, icon: StickyNote, color: "bg-pink-500", type: "nota" },
   ]
 
   if (!user) {
@@ -1949,7 +1924,7 @@ export default function EnhancedCodex() {
                         >
                           <CardContent className="flex items-center gap-4 p-6">
                             <div className="bg-purple-100 p-3 rounded-lg">
-                              <NoteIcon className="h-6 w-6 text-purple-600" />
+                              <StickyNote className="h-6 w-6 text-purple-600" />
                             </div>
                             <div>
                               <h3 className="font-semibold text-slate-900">Agregar Nota o Término</h3>
@@ -2576,7 +2551,7 @@ export default function EnhancedCodex() {
               {isLoading ? (
                 <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
               ) : (
-                <Search className="h-5 w-5 mr-2" />
+                <LucideSearch className="h-5 w-5 mr-2" />
               )}
               {isLoading ? 'Actualizando...' : 'Explorar Codex'}
             </Button>
@@ -2626,7 +2601,7 @@ export default function EnhancedCodex() {
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <LucideSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder="Buscar por título, proyecto, etiquetas..."
                   value={searchQuery}
@@ -2859,7 +2834,7 @@ export default function EnhancedCodex() {
 
                           {item.proyecto && (
                             <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Folder className="h-4 w-4" />
+                              <LucideFolder className="h-4 w-4" />
                               <span className="truncate">{item.proyecto}</span>
                             </div>
                           )}
@@ -2941,7 +2916,7 @@ export default function EnhancedCodex() {
 
           <TabsContent value="projects">
             <div className="text-center py-12">
-              <Folder className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <LucideFolder className="h-12 w-12 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Vista de Proyectos</h3>
               <p className="text-slate-600">Organiza tus fuentes por proyectos de investigación</p>
             </div>

@@ -1471,14 +1471,6 @@ export function ProjectDashboard({
                                     </div>
 
                                     <button
-                                      onClick={() => handleExtractCapturados(task.id)}
-                                      className="p-1 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors text-orange-600 dark:text-orange-400"
-                                      title="Extraer Capturados"
-                                    >
-                                      <FiAlertTriangle className="w-4 h-4" />
-                                    </button>
-
-                                    <button
                                       onClick={() => handleDeleteTask(task.id)}
                                       className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                                       title="Eliminar tarea"
@@ -1600,13 +1592,6 @@ export function ProjectDashboard({
                                             <FiEye className="w-4 h-4" />
                                           </a>
                                         )}
-                                        <button
-                                          onClick={() => handleExtractCapturados(asset.id)}
-                                          className="p-1 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors text-orange-600 dark:text-orange-400"
-                                          title="Extraer Capturados"
-                                        >
-                                          <FiAlertTriangle className="w-4 h-4" />
-                                        </button>
                                         <button
                                           onClick={() => handleRemoveAsset(asset.id)}
                                           className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"

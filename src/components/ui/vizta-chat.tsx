@@ -4,16 +4,13 @@ import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import {
   X,
-  BarChart3,
   MessageCircle,
   Send,
+  Zap,
   Clock,
   Hash,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Zap
+  BarChart3,
+  TrendingUp
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -23,7 +20,7 @@ import { Button } from "./button";
 import { Textarea } from "./textarea";
 import { Avatar, AvatarFallback } from "./avatar";
 import { ScrollArea } from "./scroll-area";
-import { textToSpeechElevenLabs } from "@/services/elevenLabs";
+import { TextShimmer } from "./text-shimmer";
 
 // Types
 interface Message {
@@ -52,12 +49,17 @@ const ViztaChatTrigger = React.forwardRef<
   <SheetPrimitive.Trigger
     ref={ref}
     className={cn(
-      "fixed right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 focus:outline-none",
+      "fixed right-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white shadow-lg hover:shadow-2xl hover:scale-105 focus:outline-none transition-all duration-300 z-50",
       className
     )}
     {...props}
   >
-    {children || <MessageCircle className="h-4 w-4" />}
+    {children || (
+      <div className="relative">
+        <MessageCircle className="h-6 w-6" />
+        <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full animate-pulse"></div>
+      </div>
+    )}
   </SheetPrimitive.Trigger>
 ));
 ViztaChatTrigger.displayName = "ViztaChatTrigger";
@@ -75,7 +77,7 @@ const ViztaChatOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/20 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -93,20 +95,31 @@ const ViztaChatContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex flex-col gap-4 right-0 inset-y-0 h-full w-3/4 sm:w-[400px] border-l bg-background p-0 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-300",
+        "fixed z-50 flex flex-col gap-0 right-0 inset-y-0 h-full w-full sm:w-[420px] border-l bg-gradient-to-b from-white to-gray-50/50 shadow-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-300",
         className
       )}
       {...props}
     >
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">Vizta Chat</h2>
-          <SheetPrimitive.Close className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-500 text-white">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+              <span className="text-sm font-bold">V</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Vizta Chat</h2>
+              <p className="text-xs text-white/80">Análisis inteligente de Guatemala</p>
+            </div>
+          </div>
+          <SheetPrimitive.Close className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
             <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">Cerrar</span>
           </SheetPrimitive.Close>
         </div>
-        <ScrollArea className="flex-1 p-6">
+        
+        {/* Messages area */}
+        <ScrollArea className="flex-1 p-4">
           {children}
         </ScrollArea>
       </div>
@@ -121,55 +134,12 @@ const ViztaChatUI = () => {
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
-  const [audioEnabled, setAudioEnabled] = React.useState<boolean>(true);
-  const [isSpeaking, setIsSpeaking] = React.useState(false);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
-
-  // Speech recognition
-  const [isRecording, setIsRecording] = React.useState(false);
-  const recognitionRef = React.useRef<any>(null);
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
     const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setSessionId(newSessionId);
   }, []);
-
-  // Hablar cuando llegue mensaje del asistente
-  React.useEffect(() => {
-    if (!audioEnabled) return;
-    if (messages.length === 0) return;
-    const last = messages[messages.length - 1];
-    if (last.sender !== "assistant") return;
-
-    const speak = async () => {
-      try {
-        setIsSpeaking(true);
-        const { url, cleanup } = await textToSpeechElevenLabs(last.content);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.play();
-        audio.onended = () => {
-          cleanup();
-          setIsSpeaking(false);
-        };
-      } catch (err) {
-        console.error("TTS error", err);
-        setIsSpeaking(false);
-      }
-    };
-
-    speak();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
-
-  // Toggle audio (moved before JSX usage)
-  const toggleAudio = () => {
-    setAudioEnabled((prev) => !prev);
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  };
 
   const handleSend = async () => {
     if (!inputValue.trim()) return;
@@ -194,9 +164,18 @@ const ViztaChatUI = () => {
       const response = await sendViztaChatQuery(currentInput, sessionId);
       
       if (response.success) {
+        // Filtrar referencias a "nitter" del contenido
+        let cleanContent = response.response;
+        
+        // Remover líneas que contengan referencias técnicas a nitter, herramientas, etc.
+        cleanContent = cleanContent.replace(/.*nitter_context.*\n?/gi, '');
+        cleanContent = cleanContent.replace(/.*⏱.*\d+\.\d+s.*\n?/gi, '');
+        cleanContent = cleanContent.replace(/.*#\s*\d+\s*tweets.*\n?/gi, '');
+        cleanContent = cleanContent.replace(/\n\s*\n/g, '\n'); // Limpiar líneas vacías extra
+        
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: response.response,
+          content: cleanContent.trim(),
           sender: "assistant",
           timestamp: new Date(),
           toolUsed: response.toolUsed,
@@ -211,7 +190,7 @@ const ViztaChatUI = () => {
       console.error('Error enviando mensaje:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}. Por favor intenta de nuevo.`,
+        content: `❌ **Error de conexión**\n\nNo pude procesar tu consulta en este momento. Por favor verifica tu conexión e intenta nuevamente.`,
         sender: "assistant",
         timestamp: new Date(),
       };
@@ -221,51 +200,28 @@ const ViztaChatUI = () => {
     }
   };
 
-  // Voice input
-  const handleToggleRecording = async () => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
+  const quickPrompts = [
+    {
+      text: "¿Qué está pasando en Guatemala hoy?",
+      icon: <MessageCircle className="h-4 w-4" />,
+      gradient: "from-blue-500 to-cyan-400"
+    },
+    {
+      text: "Analiza el sentimiento político actual",
+      icon: <BarChart3 className="h-4 w-4" />,
+      gradient: "from-purple-500 to-pink-400"
+    },
+    {
+      text: "Tendencias en redes sociales",
+      icon: <TrendingUp className="h-4 w-4" />,
+      gradient: "from-green-500 to-emerald-400"
+    },
+    {
+      text: "Reacciones sobre deportes guatemaltecos",
+      icon: <Hash className="h-4 w-4" />,
+      gradient: "from-orange-500 to-red-400"
     }
-
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Reconocimiento de voz no soportado en este navegador.");
-      return;
-    }
-
-    // Pedir permiso de micrófono explícitamente para evitar error "network"
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (err) {
-      console.error("Permiso de micrófono denegado o no disponible", err);
-      alert("Debe permitir el acceso al micrófono para dictar mensajes.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "es-ES";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInputValue((prev) => (prev ? prev + " " + transcript : transcript));
-    };
-    recognition.onerror = (e: any) => {
-      console.error("Speech recognition error", e);
-      alert("Error con el servicio de reconocimiento de voz: " + e.error);
-      setIsRecording(false);
-    };
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-    setIsRecording(true);
-  };
+  ];
 
   return (
     <ViztaChat>
@@ -273,33 +229,43 @@ const ViztaChatUI = () => {
       <ViztaChatContent>
         <div className="flex flex-col space-y-4">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-72 text-center p-6 select-none">
-              <span className="h-14 w-14 mb-3 text-primary/70 text-4xl font-bold">V</span>
-              <h3 className="text-xl font-bold mb-1 text-foreground">¡Hola! Soy Vizta</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-                Asistente especializado en análisis de redes sociales & tendencias de Guatemala.
+            <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none">
+              {/* Logo y bienvenida */}
+              <div className="relative mb-6">
+                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">V</span>
+                </div>
+                <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-400 rounded-full flex items-center justify-center">
+                  <Zap className="h-3 w-3 text-white" />
+                </div>
+              </div>
+              
+              <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                ¡Hola! Soy Vizta
+              </h3>
+              <p className="text-sm text-muted-foreground mb-8 max-w-sm leading-relaxed">
+                Tu asistente especializado en análisis de redes sociales, tendencias y sentimientos sobre Guatemala. 
+                Pregúntame lo que quieras saber.
               </p>
 
               {/* Quick prompts */}
-              <div className="flex flex-col w-full max-w-xs gap-2">
-                <button
-                  onClick={() => setInputValue("¿Qué está pasando en Guatemala hoy?")}
-                  className="w-full bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 text-blue-800 text-sm font-medium py-2 rounded-xl shadow-sm active:scale-[.98] transition-all"
-                >
-                  ¿Qué está pasando en Guatemala?
-                </button>
-                <button
-                  onClick={() => setInputValue("Analiza el sentimiento político actual")}
-                  className="w-full bg-gradient-to-r from-fuchsia-100 to-pink-50 hover:from-fuchsia-200 hover:to-pink-100 text-pink-800 text-sm font-medium py-2 rounded-xl shadow-sm active:scale-[.98] transition-all"
-                >
-                  Analizar sentimiento político
-                </button>
-                <button
-                  onClick={() => setInputValue("Muestra las principales tendencias en redes sociales")}
-                  className="w-full bg-gradient-to-r from-green-100 to-emerald-50 hover:from-green-200 hover:to-emerald-100 text-green-800 text-sm font-medium py-2 rounded-xl shadow-sm active:scale-[.98] transition-all"
-                >
-                  Tendencias en redes sociales
-                </button>
+              <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
+                {quickPrompts.map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setInputValue(prompt.text)}
+                    className={cn(
+                      "group relative overflow-hidden rounded-xl p-4 text-left text-sm font-medium text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]",
+                      `bg-gradient-to-r ${prompt.gradient}`
+                    )}
+                  >
+                    <div className="relative z-10 flex items-center gap-3">
+                      {prompt.icon}
+                      <span className="flex-1">{prompt.text}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -307,131 +273,153 @@ const ViztaChatUI = () => {
               <div
                 key={message.id}
                 className={cn(
-                  "flex items-start gap-3 rounded-lg p-3",
+                  "flex items-start gap-3 rounded-2xl p-4 transition-all duration-200",
                   message.sender === "user"
-                    ? "ml-auto bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white shadow-lg hover:shadow-xl transition-shadow"
-                    : "bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                    ? "ml-auto max-w-[85%] bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white shadow-lg"
+                    : "bg-white border border-gray-100 shadow-sm hover:shadow-md"
                 )}
               >
                 {message.sender === "assistant" && (
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-9 w-9 shadow-sm">
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                      <span className="text-xs font-bold">V</span>
+                      <span className="text-sm font-bold">V</span>
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className="text-sm">
+                
+                <div className="flex-1 min-w-0">
                   <div className="prose prose-sm max-w-none">
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        h2: ({children}) => <h2 className="text-base font-bold mb-2 mt-3 text-foreground">{children}</h2>,
-                        h3: ({children}) => <h3 className="text-sm font-semibold mb-1 mt-2 text-foreground">{children}</h3>,
-                        p: ({children}) => <p className="mb-2 leading-relaxed">{children}</p>,
-                        ul: ({children}) => <ul className="mb-2 ml-4">{children}</ul>,
-                        li: ({children}) => <li className="mb-1 leading-relaxed">{children}</li>,
-                        strong: ({children}) => <strong className="font-semibold text-foreground">{children}</strong>,
+                        h1: ({children}) => <h1 className="text-lg font-bold mb-3 mt-2">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-base font-bold mb-2 mt-3">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-sm font-semibold mb-2 mt-2">{children}</h3>,
+                        p: ({children}) => <p className="mb-3 leading-relaxed text-sm">{children}</p>,
+                        ul: ({children}) => <ul className="mb-3 ml-4 space-y-1">{children}</ul>,
+                        ol: ({children}) => <ol className="mb-3 ml-4 space-y-1">{children}</ol>,
+                        li: ({children}) => <li className="leading-relaxed text-sm">{children}</li>,
+                        strong: ({children}) => <strong className="font-semibold">{children}</strong>,
                         em: ({children}) => <em className="italic">{children}</em>,
+                        blockquote: ({children}) => (
+                          <blockquote className="border-l-4 border-blue-200 pl-4 py-2 bg-blue-50/50 rounded-r-lg my-3">
+                            {children}
+                          </blockquote>
+                        ),
+                        code: ({children}) => (
+                          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">
+                            {children}
+                          </code>
+                        )
                       }}
                     >
                       {message.content}
                     </ReactMarkdown>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <time className="text-xs opacity-70">
-                      {message.timestamp.toLocaleTimeString()}
+                  
+                  {/* Message metadata */}
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-current/10">
+                    <time className={cn(
+                      "text-xs",
+                      message.sender === "user" ? "text-white/70" : "text-muted-foreground"
+                    )}>
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </time>
+                    
                     {message.sender === "assistant" && (
-                      <div className="flex items-center gap-1">
-                        {message.toolUsed && (
-                          <span className="text-xs py-0 px-1">
-                            {message.toolUsed}
-                          </span>
-                        )}
+                      <div className="flex items-center gap-2">
                         {message.executionTime && (
-                          <span className="text-xs py-0 px-1 bg-blue-50 text-blue-700 flex items-center gap-1">
-                            <span className="text-sm">⏱</span>
+                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
                             {(message.executionTime / 1000).toFixed(1)}s
                           </span>
                         )}
-                        {message.tweetsAnalyzed && (
-                          <span className="text-xs py-0 px-1 bg-green-50 text-green-700 flex items-center gap-1">
-                            <span className="text-sm">#</span>
-                            {message.tweetsAnalyzed} tweets
+                        {message.tweetsAnalyzed && message.tweetsAnalyzed > 0 && (
+                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            {message.tweetsAnalyzed}
                           </span>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
+                
                 {message.sender === "user" && (
-                  <Avatar className="h-8 w-8 ml-auto">
-                    <AvatarFallback>U</AvatarFallback>
+                  <Avatar className="h-9 w-9 shadow-sm">
+                    <AvatarFallback className="bg-white/20 text-white border border-white/30">
+                      <MessageCircle className="h-4 w-4" />
+                    </AvatarFallback>
                   </Avatar>
                 )}
               </div>
             ))
           )}
+          
+          {/* Loading state */}
           {isLoading && (
-            <div className="flex items-start gap-3 rounded-lg p-3 bg-white border border-gray-200 shadow-sm">
-              <Avatar className="h-8 w-8">
+            <div className="flex items-start gap-3 rounded-2xl p-4 bg-white border border-gray-100 shadow-sm">
+              <Avatar className="h-9 w-9 shadow-sm">
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                  <span className="text-xs font-bold">V</span>
+                  <span className="text-sm font-bold">V</span>
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-2">
-                <span className="text-sm text-muted-foreground">
+              <div className="flex-1 space-y-3">
+                <TextShimmer 
+                  duration={1.5}
+                  className="text-sm font-medium [--base-color:theme(colors.blue.600)] [--base-gradient-color:theme(colors.blue.300)]"
+                >
                   Analizando tu consulta...
-                </span>
-                <span className="text-xs text-muted-foreground/70">
+                </TextShimmer>
+                <TextShimmer 
+                  duration={2}
+                  className="text-xs [--base-color:theme(colors.gray.500)] [--base-gradient-color:theme(colors.gray.300)]"
+                >
                   Procesando datos y generando respuesta inteligente
-                </span>
-                <div className="flex items-center gap-2 mt-2">
+                </TextShimmer>
+                <div className="flex items-center gap-2">
                   <Zap className="h-3 w-3 animate-pulse text-blue-500" />
-                  <span className="text-xs text-blue-600">
-                    Conectando con herramientas de análisis
-                  </span>
+                  <TextShimmer 
+                    duration={1.8}
+                    className="text-xs [--base-color:theme(colors.blue.600)] [--base-gradient-color:theme(colors.blue.400)]"
+                  >
+                    Conectando con fuentes de datos
+                  </TextShimmer>
                 </div>
               </div>
             </div>
           )}
         </div>
-        <div className="flex gap-2 p-4 border-t bg-background/50 backdrop-blur-md">
-          <div className="flex-1 h-10 bg-gradient-to-br from-blue-500 to-purple-500 p-[1px] rounded-xl">
-            <Textarea
-              placeholder="Escribe tu mensaje..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="h-full flex-1 resize-none rounded-xl bg-background px-3 py-2 focus-visible:ring-0 focus-visible:outline-none"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-          </div>
-          {((window as any).webkitSpeechRecognition || (window as any).SpeechRecognition) && (
-            <button
-              onClick={handleToggleRecording}
-              className={cn(
-                "w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-colors",
-                isRecording ? "bg-red-100 text-red-600" : "bg-white hover:bg-gray-50"
-              )}
-              title={isRecording ? "Detener grabación" : "Grabar mensaje"}
+        
+        {/* Input area */}
+        <div className="border-t bg-white/80 backdrop-blur-sm p-4">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl p-[1px]">
+                <Textarea
+                  placeholder="Escribe tu consulta sobre Guatemala..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  className="h-12 w-full resize-none rounded-xl bg-white border-0 px-4 py-3 focus-visible:ring-0 focus-visible:outline-none placeholder:text-gray-400 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <Button 
+              size="icon" 
+              onClick={handleSend}
+              disabled={isLoading || !inputValue.trim()}
+              className="h-12 w-12 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             >
-              {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </button>
-          )}
-          <Button 
-            size="icon" 
-            onClick={handleSend}
-            disabled={isLoading || !inputValue.trim()}
-            className="w-10 h-10 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
-          >
-            <Send className="h-4 w-4" />
-            <span className="sr-only">Enviar mensaje</span>
-          </Button>
+              <Send className="h-4 w-4" />
+              <span className="sr-only">Enviar mensaje</span>
+            </Button>
+          </div>
         </div>
       </ViztaChatContent>
     </ViztaChat>

@@ -2,20 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Paper,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
-import {
   BarChart,
   TrendingUp,
   LocationOn,
@@ -23,7 +9,6 @@ import {
   Search as SearchIcon,
   Edit as EditIcon,
   Refresh as RefreshIcon,
-  Save as SaveIcon,
   Share as ShareIcon,
   Download as DownloadIcon,
   People,
@@ -36,16 +21,9 @@ import {
   Timeline
 } from '@mui/icons-material';
 import { getLatestNews, getCodexItemsByUser, getSondeosByUser } from '../services/supabase.ts';
-import { sendSondeoToExtractorW, getLatestTrends } from '../services/api';
 import { sondearTema as sondearTemaService } from '../services/sondeos';
 import { useAuth } from '../context/AuthContext';
 import { NewsItem } from '../types';
-import type { TrendResponse } from '../services/api';
-import SondeosMap, { Sondeo } from '../components/SondeosMap';
-import BarChartVisual from '../components/ui/BarChartVisual';
-import LineChartVisual from '../components/ui/LineChartVisual';
-import AreaChartVisual from '../components/ui/AreaChartVisual';
-import PieChartVisual from '../components/ui/PieChartVisual';
 import ModernBarChart from '../components/ui/ModernBarChart';
 import ModernLineChart from '../components/ui/ModernLineChart';
 import ModernPieChart from '../components/ui/ModernPieChart';
@@ -57,8 +35,6 @@ import { useSondeoConfig } from '../hooks/useSondeoConfig';
 import { useSondeoForm } from '../hooks/useSondeoForm';
 import { useI18n } from '../hooks/useI18n';
 import { useLogRocketEvents } from '../hooks/useLogRocketEvents';
-import CardSondeo from '../components/sondeos/CardSondeo';
-import AnalisisGenerado from '../components/sondeos/AnalisisGenerado';
 
 // Tipo para el historial de sondeos
 interface SondeoHistorial {
@@ -73,27 +49,12 @@ interface SondeoHistorial {
   tokens_utilizados: number;
 }
 
-// Utilidad mejorada para buscar relevancia por palabras clave del input
-function filtrarPorRelevancia(texto: string, input: string) {
-  if (!texto || !input) return false;
-  // Extraer palabras del input (ignorando signos y mayúsculas, y palabras cortas)
-  const palabrasInput = input
-    .toLowerCase()
-    .normalize('NFD').replace(/\p{Diacritic}/gu, '')
-    .split(/\W+/)
-    .filter(p => p.length >= 3); // Solo palabras de 3+ letras
-  if (palabrasInput.length === 0) return false;
-  const textoLower = texto.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-  // Coincidencia: al menos una palabra del input está en el texto
-  return palabrasInput.some(palabra => textoLower.includes(palabra));
-}
-
 function resumirTexto(texto: string, maxLen = 220) {
   if (!texto) return '';
   return texto.length > maxLen ? texto.slice(0, maxLen) + '...' : texto;
 }
 
-const Sondeos: React.FC = () => {
+const SondeosModern: React.FC = () => {
   const { user, session } = useAuth();
   const { selectedContexts, setSelectedContexts, questions: dynamicQuestions } = useSondeoConfig();
   const { 
@@ -108,8 +69,8 @@ const Sondeos: React.FC = () => {
   
   const [news, setNews] = useState<NewsItem[]>([]);
   const [codex, setCodex] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false); // loading de datos iniciales
-  const [loadingSondeo, setLoadingSondeo] = useState(false); // loading solo para el botón Sondear
+  const [loading, setLoading] = useState(false);
+  const [loadingSondeo, setLoadingSondeo] = useState(false);
   const [error, setError] = useState('');
   const [input, setInput] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
@@ -119,58 +80,14 @@ const Sondeos: React.FC = () => {
   const [llmSources, setLlmSources] = useState<any>(null);
   const [sondeos, setSondeos] = useState<SondeoHistorial[]>([]);
   const [loadingSondeos, setLoadingSondeos] = useState(false);
-  
-  // Nuevo estado para datos de visualización
   const [datosAnalisis, setDatosAnalisis] = useState<any>(null);
-  
-  // Estado para el modal de configuración
   const [configModalOpen, setConfigModalOpen] = useState(false);
-  
-  // Estados para el indicador de progreso
   const [currentStep, setCurrentStep] = useState<string>('preparing');
   const [progress, setProgress] = useState<number>(0);
 
   // Estados para la UI moderna
   const [selectedChartType, setSelectedChartType] = useState<'bar' | 'line' | 'pie'>('bar');
   const [selectedPeriod, setSelectedPeriod] = useState('last-7-days');
-
-  // Opciones para el dropdown de contexto
-  const opcionesContexto = [
-    { value: 'tendencias', label: 'Tendencias actuales' },
-    { value: 'noticias', label: 'Noticias recientes' },
-    { value: 'codex', label: 'Documentos del Codex' },
-  ];
-
-  const questions = [
-    {
-      id: 1,
-      title: '¿Qué temas preocupan más a las personas hoy?',
-      icon: <TrendingUp />,
-      description: 'Análisis de tendencias emergentes y preocupaciones ciudadanas',
-      color: 'primary'
-    },
-    {
-      id: 2,
-      title: '¿Hay coherencia entre lo que se cubre y lo que se opina?',
-      icon: <Assessment />,
-      description: 'Comparación entre cobertura mediática y opinión pública',
-      color: 'secondary'
-    },
-    {
-      id: 3,
-      title: '¿Dónde se están generando los focos de atención?',
-      icon: <LocationOn />,
-      description: 'Mapeo geográfico de tendencias y puntos de interés',
-      color: 'success'
-    },
-    {
-      id: 4,
-      title: '¿Qué tan alineadas están las tendencias mediáticas con la agenda ciudadana?',
-      icon: <BarChart />,
-      description: 'Medición de sincronía entre medios y ciudadanía',
-      color: 'warning'
-    }
-  ];
 
   // Las preguntas dinámicas ahora vienen del hook useSondeoConfig
   const currentQuestions = dynamicQuestions;
@@ -188,19 +105,7 @@ const Sondeos: React.FC = () => {
     const data = datosAnalisis[question.dataKey];
     const primaryContext = selectedContexts[0] || 'tendencias';
     
-    // Función para obtener la conclusión y metodología
-    const getInsights = (dataKey: string) => {
-      const conclusiones = datosAnalisis.conclusiones || {};
-      const metodologia = datosAnalisis.metodologia || {};
-      
-      return {
-        conclusion: conclusiones[dataKey] || "Análisis completado exitosamente.",
-        methodology: metodologia[dataKey] || "Datos procesados usando algoritmos de análisis avanzado."
-      };
-    };
-    
     let chartComponent = null;
-    let insights = null;
     
     // Visualizaciones específicas según el tipo de contexto y pregunta
     if (primaryContext === 'tendencias') {
@@ -214,7 +119,6 @@ const Sondeos: React.FC = () => {
               glassmorphism={true}
             />
           );
-          insights = getInsights('temas_relevantes');
           break;
           
         case 2: // Distribución por categorías
@@ -225,7 +129,6 @@ const Sondeos: React.FC = () => {
               showLegend={true}
             />
           );
-          insights = getInsights('distribucion_categorias');
           break;
           
         case 3: // Mapa de menciones
@@ -237,7 +140,6 @@ const Sondeos: React.FC = () => {
               glassmorphism={true}
             />
           );
-          insights = getInsights('mapa_menciones');
           break;
           
         case 4: // Subtemas relacionados
@@ -249,7 +151,6 @@ const Sondeos: React.FC = () => {
               glassmorphism={true}
             />
           );
-          insights = getInsights('subtemas_relacionados');
           break;
       }
     } else if (primaryContext === 'noticias') {
@@ -263,7 +164,6 @@ const Sondeos: React.FC = () => {
               glassmorphism={true}
             />
           );
-          insights = getInsights('noticias_relevantes');
           break;
           
         case 2: // Distribución por categorías de noticias
@@ -274,7 +174,6 @@ const Sondeos: React.FC = () => {
               showLegend={true}
             />
           );
-          insights = getInsights('categorias_noticias');
           break;
           
         case 3: // Mapa de cobertura
@@ -286,7 +185,6 @@ const Sondeos: React.FC = () => {
               glassmorphism={true}
             />
           );
-          insights = getInsights('mapa_cobertura');
           break;
           
         case 4: // Análisis de sentimiento
@@ -296,7 +194,6 @@ const Sondeos: React.FC = () => {
               height={280}
             />
           );
-          insights = getInsights('analisis_sentimiento');
           break;
       }
     } else if (primaryContext === 'codex') {
@@ -309,7 +206,6 @@ const Sondeos: React.FC = () => {
           glassmorphism={true}
         />
       );
-      insights = getInsights('documentos_codex');
     }
 
     return chartComponent;
@@ -319,12 +215,10 @@ const Sondeos: React.FC = () => {
   const sondearTema = async () => {
     if (!user) return;
     
-    // Obtener valores actuales del hook de validación
     const formValues = getValues();
     const currentInput = input || formValues.input;
     const currentContexts = selectedContexts.length > 0 ? selectedContexts : formValues.selectedContexts;
     
-    // Validar antes de proceder
     const validationMessage = getValidationMessage();
     if (validationMessage || !currentInput || currentInput.trim().length < 3 || currentContexts.length === 0) {
       setError(validationMessage || 'Complete todos los campos requeridos');
@@ -332,7 +226,6 @@ const Sondeos: React.FC = () => {
       return;
     }
     
-    // Track inicio de sondeo
     trackSondeoAction('sondeo_started', currentContexts, currentInput, {
       questionLength: currentInput.length,
       contextsCount: currentContexts.length
@@ -347,11 +240,9 @@ const Sondeos: React.FC = () => {
     setProgress(0);
     
     try {
-      // Paso 1: Preparando contexto
       setCurrentStep('preparing');
       setProgress(25);
       
-      // Paso 2: Obteniendo datos
       setCurrentStep('fetching');
       setProgress(50);
       
@@ -362,11 +253,9 @@ const Sondeos: React.FC = () => {
         session?.access_token
       );
       
-      // Paso 3: Analizando con IA
       setCurrentStep('analyzing');
       setProgress(75);
       
-      // Paso 4: Generando visualizaciones
       setCurrentStep('generating');
       setProgress(100);
       
@@ -375,11 +264,10 @@ const Sondeos: React.FC = () => {
       setLlmSources(result.llmSources);
       setDatosAnalisis(result.datosAnalisis);
       
-      // Track sondeo exitoso
       trackSondeoAction('sondeo_completed', currentContexts, currentInput, {
         hasResponse: !!result.llmResponse,
         hasAnalysis: !!result.datosAnalisis,
-        responseDuration: Date.now() - Date.now() // Esto se podría mejorar con timestamp real
+        responseDuration: Date.now() - Date.now()
       });
       
     } catch (e: any) {
@@ -387,7 +275,6 @@ const Sondeos: React.FC = () => {
       const errorMessage = e.message || e.toString() || getErrorMessage('sondeo');
       setError(errorMessage);
       
-      // Track error en sondeo
       trackError('Sondeo Error', errorMessage, 'sondeos', {
         contexts: currentContexts,
         questionLength: currentInput.length
@@ -399,13 +286,11 @@ const Sondeos: React.FC = () => {
     }
   };
 
-  // Función para actualizar input y sincronizar con el hook
   const handleInputChange = (value: string) => {
     setInput(value);
     updateInput(value);
   };
 
-  // Función para actualizar contextos y sincronizar con el hook
   const handleContextChange = (contexts: string[]) => {
     setSelectedContexts(contexts);
     updateSelectedContexts(contexts);
@@ -416,11 +301,9 @@ const Sondeos: React.FC = () => {
   };
 
   const generarDatosPrueba = (tipo: string, consulta: string) => {
-    // Generar datos de prueba basados en el tipo de contexto y consulta
     const datos: any = {
       conclusiones: {},
       metodologia: {},
-      // ... resto de datos simulados
     };
 
     // Simular diferentes tipos de datos según el contexto
@@ -487,29 +370,6 @@ const Sondeos: React.FC = () => {
       ];
     }
 
-    // Agregar metadatos adicionales
-    datos.metadata = {
-      tipo_analisis: tipo,
-      consulta_original: consulta,
-      contextos_utilizados: selectedContexts,
-      timestamp: new Date().toISOString(),
-      total_elementos: Object.keys(datos).length - 3, // Excluir conclusiones, metodologia y metadata
-      confiabilidad: Math.floor(Math.random() * 30) + 70, // 70-100%
-      fuentes_consultadas: selectedContexts.length * Math.floor(Math.random() * 5) + 10,
-      tiempo_procesamiento: Math.floor(Math.random() * 3000) + 1000, // 1-4 segundos
-    };
-
-    // Generar conclusiones específicas por contexto
-    if (selectedContexts.includes('tendencias')) {
-      datos.conclusiones.temas_relevantes = `El análisis revela que ${consulta} está fuertemente correlacionado con las tendencias actuales, mostrando un 85% de relevancia en discusiones públicas.`;
-      datos.metodologia.temas_relevantes = "Análisis de frecuencia de menciones y engagement en plataformas digitales durante los últimos 30 días.";
-    }
-
-    if (selectedContexts.includes('noticias')) {
-      datos.conclusiones.noticias_relevantes = `La cobertura mediática de ${consulta} muestra un incremento del 45% en los últimos 7 días, con énfasis en aspectos económicos y sociales.`;
-      datos.metodologia.noticias_relevantes = "Procesamiento de titulares y contenido de 15 medios nacionales usando análisis de sentimiento y relevancia semántica.";
-    }
-
     return datos;
   };
 
@@ -551,7 +411,6 @@ const Sondeos: React.FC = () => {
     getSondeosByUser(user.email)
       .then((data) => {
         console.log('📊 Sondeos cargados:', data?.length || 0);
-        // Mapear los datos de Supabase para mostrar el historial
         const mapped = (data || []).map((s: any) => ({
           id: s.id,
           pregunta: s.pregunta,
@@ -799,7 +658,7 @@ const Sondeos: React.FC = () => {
           )}
 
           {/* Chart Container */}
-          <div className="relative aspect-video">
+          <div className="relative aspect-video" id="main-chart">
             {datosAnalisis && currentQuestions.length > 0 ? (
               renderVisualization(currentQuestions[0])
             ) : (
@@ -899,4 +758,4 @@ const Sondeos: React.FC = () => {
   );
 };
 
-export default Sondeos; 
+export default SondeosModern; 

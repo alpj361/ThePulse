@@ -21,6 +21,7 @@ import { Box, CircularProgress } from '@mui/material';
 import EnhancedCodex from './pages/EnhancedCodex';
 import News from './pages/News';
 import Sondeos from './pages/Sondeos';
+import SondeosModern from './pages/SondeosModern';
 import Projects from './pages/Projects';
 import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
 import SidebarDemoPage from './pages/SidebarDemo';
@@ -192,7 +193,7 @@ function App() {
           <Route path="/sondeos" element={
             <VerifiedRoute>
               <Layout>
-                <Sondeos />
+                <SondeosModern />
               </Layout>
             </VerifiedRoute>
           } />

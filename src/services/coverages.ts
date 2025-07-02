@@ -493,6 +493,7 @@ export async function getFindingsByTheme(projectId: string): Promise<Record<stri
 
 /**
  * Devuelve las cards capturadas que coincidan con la cobertura (ciudad, departamento o país)
+ * Busca tanto coincidencias exactas como parciales para manejar casos parseados
  */
 export async function getFindingsForCoverage(projectId: string, coverage: Coverage): Promise<CapturadoCard[]> {
   try {
@@ -515,15 +516,68 @@ export async function getFindingsForCoverage(projectId: string, coverage: Covera
         return [];
     }
 
-    const { data, error } = await supabase
+    // PASO 1: Buscar coincidencias exactas
+    const { data: exactMatches, error: exactError } = await supabase
       .from('capturado_cards')
       .select('id, entity, city, department, pais, topic, description, discovery, created_at')
       .eq('project_id', projectId)
       .eq(matchField, coverage.name)
       .limit(50);
 
-    if (error) throw error;
-    return data as CapturadoCard[];
+    if (exactError) throw exactError;
+
+    // PASO 2: Si no hay coincidencias exactas, buscar coincidencias parciales
+    // Esto maneja casos donde "El Estor" debe encontrar hallazgos con "El Estor, Livingston, Izabal"
+    let partialMatches: CapturadoCard[] = [];
+    
+    if (exactMatches.length === 0) {
+      const { data: partialData, error: partialError } = await supabase
+        .from('capturado_cards')
+        .select('id, entity, city, department, pais, topic, description, discovery, created_at')
+        .eq('project_id', projectId)
+        .ilike(matchField, `%${coverage.name}%`)
+        .limit(50);
+
+      if (partialError) throw partialError;
+      
+      // Filtrar para asegurar que realmente contiene el nombre
+      // Usa una verificación más flexible que maneja acentos y espacios
+      partialMatches = (partialData as CapturadoCard[]).filter(card => {
+        const fieldValue = card[matchField as keyof CapturadoCard] as string;
+        if (!fieldValue) return false;
+        
+        // Normalizar ambos strings para comparación más robusta
+        const normalizeString = (str: string) => str
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+          .trim();
+        
+        const normalizedField = normalizeString(fieldValue);
+        const normalizedCoverage = normalizeString(coverage.name);
+        
+        // Buscar la palabra completa con límites de palabra
+        const regex = new RegExp(`\\b${normalizedCoverage.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        const hasWordMatch = regex.test(normalizedField);
+        
+        // También permitir coincidencias donde el nombre aparece seguido de coma o al final
+        const hasCommaMatch = normalizedField.includes(normalizedCoverage + ',') || 
+                             normalizedField.includes(',' + normalizedCoverage) ||
+                             normalizedField.endsWith(normalizedCoverage);
+        
+        return hasWordMatch || hasCommaMatch;
+      });
+    }
+
+    // Combinar resultados, priorizando coincidencias exactas
+    const allMatches = [...(exactMatches as CapturadoCard[]), ...partialMatches];
+    
+    // Eliminar duplicados por ID
+    const uniqueMatches = allMatches.filter((match, index, array) => 
+      array.findIndex(m => m.id === match.id) === index
+    );
+
+    return uniqueMatches;
   } catch (error) {
     console.error('Error fetching findings for coverage:', error);
     return [];

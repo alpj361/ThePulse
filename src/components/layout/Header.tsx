@@ -1,20 +1,7 @@
 import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  Tooltip
-} from '@mui/material';
+import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 
-interface HeaderProps {
-  toggleDarkMode: () => void;
-  darkMode: boolean;
-}
-
-const Header: React.FC<HeaderProps> = ({ toggleDarkMode, darkMode }) => {
+const Header: React.FC = () => {
 
   return (
     <AppBar 
@@ -69,21 +56,6 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode, darkMode }) => {
               JOURNAL
             </Typography>
           </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Tooltip title={darkMode ? "Modo claro" : "Modo oscuro"}>
-            <IconButton 
-              onClick={toggleDarkMode} 
-              color="inherit"
-            >
-              {darkMode ? (
-                <Sun size={20} color="#fbbf24" />
-              ) : (
-                <Moon size={20} color="#4b5563" />
-              )}
-            </IconButton>
-          </Tooltip>
         </Box>
       </Toolbar>
     </AppBar>

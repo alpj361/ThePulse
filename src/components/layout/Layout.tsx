@@ -13,8 +13,6 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
-  
   // Configurar LogRocket automáticamente cuando el usuario esté autenticado
   const { profile, error } = useUserProfile();
   const { trackPageView } = useLogRocketEvents();
@@ -36,11 +34,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     console.warn('⚠️ Error obteniendo perfil de usuario para LogRocket:', error);
   }
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
-
   return (
     <LanguageProvider>
       <div className="flex h-screen bg-background">
@@ -50,10 +43,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main content area */}
         <div className="flex flex-col flex-1 min-w-0 ml-12">
           {/* Header */}
-          <Header toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
+          <Header />
           
           {/* Main content */}
-          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+          <main className="flex-1 overflow-auto bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 py-6">
               {children}
             </div>
