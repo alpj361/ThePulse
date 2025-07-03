@@ -28,9 +28,12 @@ import {
   SmartToy
 } from '@mui/icons-material';
 import RecentScrapeCard from './RecentScrapeCard';
-import { getRecentScrapes, getRecentScrapeStats, deleteRecentScrape, RecentScrape, RecentScrapeStats } from '../../services/recentScrapes';
+import ProjectSelectorDialog from './ProjectSelectorDialog';
+import { getRecentScrapes, getRecentScrapeStats, deleteRecentScrape, getRecentScrapeGroups, RecentScrapeGroup, RecentScrape, RecentScrapeStats } from '../../services/recentScrapes';
 import { LanguageContext } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { addMonitoreoToProject } from '../../services/projectMonitoreos';
+import { Project } from '../../types/projects';
 
 const translations = {
   es: {
@@ -117,7 +120,7 @@ const RecentScrapesSection: React.FC = () => {
   const t = translations[language];
   const theme = useTheme();
 
-  const [scrapes, setScrapes] = useState<RecentScrape[]>([]);
+  const [groups, setGroups] = useState<RecentScrapeGroup[]>([]);
   const [stats, setStats] = useState<RecentScrapeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -129,6 +132,16 @@ const RecentScrapesSection: React.FC = () => {
     message: '',
     severity: 'success'
   });
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [scrapeToLink, setScrapeToLink] = useState<RecentScrape | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [showAllScrapes, setShowAllScrapes] = useState(false);
+
+  /* util memo for all scrapes */
+  const allScrapes = React.useMemo(() => {
+    if (!groups || groups.length === 0) return [] as RecentScrape[];
+    return groups.flatMap(g => g.scrapes).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [groups]);
 
   useEffect(() => {
     if (user) {
@@ -142,30 +155,31 @@ const RecentScrapesSection: React.FC = () => {
     
     setLoading(true);
     try {
-      const categoria = selectedCategory === 'all' ? undefined : selectedCategory;
-      
-      const scrapesData = await getRecentScrapes(user.id, {
-        limit: 50,
-        categoria,
-      });
-      
-      // Ordenar scrapes según el criterio seleccionado
-      const sortedScrapes = [...scrapesData].sort((a, b) => {
+      // Cargar grupos de monitoreos
+      const grouped = await getRecentScrapeGroups(user.id, 50);
+
+      // Aplicar filtro de categoría si corresponde
+      const filteredGroups = selectedCategory === 'all'
+        ? grouped
+        : grouped.filter(g => g.scrapes.some(s => s.categoria === selectedCategory));
+
+      // Ordenar grupos según sortBy
+      const sortedGroups = [...filteredGroups].sort((a, b) => {
         switch (sortBy) {
           case 'tweets':
-            return b.tweet_count - a.tweet_count;
+            return (b.total_tweets || 0) - (a.total_tweets || 0);
           case 'engagement':
-            return b.total_engagement - a.total_engagement;
+            return (b.total_tweets || 0) - (a.total_tweets || 0);
           case 'date':
           default:
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            return new Date(b.latest_created_at).getTime() - new Date(a.latest_created_at).getTime();
         }
       });
-      
-      setScrapes(sortedScrapes);
+
+      setGroups(sortedGroups);
     } catch (error) {
       console.error('Error loading scrapes:', error);
-      setScrapes([]);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -232,7 +246,10 @@ const RecentScrapesSection: React.FC = () => {
       await deleteRecentScrape(scrapeId, authToken);
 
       // Actualizar la lista local eliminando el item
-      setScrapes(prevScrapes => prevScrapes.filter(scrape => scrape.id !== scrapeId));
+      setGroups(prevGroups => prevGroups.map(group => ({
+        ...group,
+        scrapes: group.scrapes.filter(scrape => scrape.id !== scrapeId)
+      })));
 
       // Actualizar estadísticas
       await loadStats();
@@ -248,6 +265,27 @@ const RecentScrapesSection: React.FC = () => {
       );
     } finally {
       setDeleting(null);
+    }
+  };
+
+  /** Maneja click en "Agregar a proyecto" para abrir diálogo */
+  const handleAddToProjectRequest = (scrape: RecentScrape) => {
+    setScrapeToLink(scrape);
+    setLinkDialogOpen(true);
+  };
+
+  /** Cuando usuario selecciona proyecto en diálogo */
+  const handleProjectSelected = async (project: Project) => {
+    if (!scrapeToLink) return;
+    try {
+      await addMonitoreoToProject(project.id, scrapeToLink.id);
+      showSnackbar(`Monitoreo vinculado a "${project.title}"`, 'success');
+    } catch (error) {
+      console.error('Error vinculando monitoreo:', error);
+      showSnackbar('Error al vincular monitoreo al proyecto', 'error');
+    } finally {
+      setLinkDialogOpen(false);
+      setScrapeToLink(null);
     }
   };
 
@@ -350,7 +388,7 @@ const RecentScrapesSection: React.FC = () => {
           </ToggleButtonGroup>
         </Box>
 
-        {/* Layout and Sort Controls */}
+        {/* Layout, Sort & View Controls */}
         <Stack direction="row" spacing={3} justifyContent="space-between" alignItems="flex-end">
           {/* Sort Controls */}
           <Box>
@@ -381,6 +419,15 @@ const RecentScrapesSection: React.FC = () => {
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
+
+          {/* View toggle */}
+          {groups.length > 0 && (
+            <Box>
+              <Button variant="text" size="small" onClick={() => setShowAllScrapes(!showAllScrapes)}>
+                {showAllScrapes ? 'Ver agrupados' : 'Ver todas las extracciones'}
+              </Button>
+            </Box>
+          )}
         </Stack>
       </Stack>
 
@@ -462,7 +509,7 @@ const RecentScrapesSection: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!loading && scrapes.length === 0 && (
+      {!loading && groups.length === 0 && (
         <Box
           sx={{
             textAlign: 'center',
@@ -484,19 +531,48 @@ const RecentScrapesSection: React.FC = () => {
       )}
 
       {/* Scrapes Grid */}
-      {!loading && scrapes.length > 0 && (
-        <Grid container spacing={3}>
-          {scrapes.map((scrape) => (
-            <Grid item {...gridProps} key={scrape.id}>
-              <RecentScrapeCard 
-                scrape={scrape} 
-                onDelete={handleDelete}
-                isDeleting={deleting === scrape.id}
-                showActions={!deleting}
-              />
+      {!loading && groups.length > 0 && (
+        <>
+          {showAllScrapes ? (
+            <Grid container spacing={3}>
+              {allScrapes.map(scrape => (
+                <Grid item {...gridProps} key={scrape.id}>
+                  <RecentScrapeCard
+                    scrape={scrape}
+                    onDelete={handleDelete}
+                    isDeleting={deleting === scrape.id}
+                    showActions={!deleting}
+                    onAddToProject={handleAddToProjectRequest}
+                  />
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          ) : (
+            <>
+              <Grid container spacing={3}>
+                {(showAll ? groups : groups.slice(0, 3)).map((group) => (
+                  <Grid item {...gridProps} key={group.group_key}>
+                    <RecentScrapeCard 
+                      scrape={group.scrapes[0]} 
+                      onDelete={handleDelete}
+                      isDeleting={deleting === (group.scrapes[0]?.id || '')}
+                      showActions={!deleting}
+                      onAddToProject={handleAddToProjectRequest}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+              {/* Botón Ver más / Ver menos */}
+              {groups.length > 3 && (
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Button variant="outlined" size="small" onClick={() => setShowAll(!showAll)}>
+                    {showAll ? 'Mostrar menos' : 'Ver más grupos'}
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
+        </>
       )}
 
       {/* Snackbar for user feedback */}
@@ -515,6 +591,14 @@ const RecentScrapesSection: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Diálogo de selección de proyecto */}
+      <ProjectSelectorDialog
+        open={linkDialogOpen}
+        onClose={() => setLinkDialogOpen(false)}
+        onSelect={handleProjectSelected}
+        title="Agregar monitoreo a proyecto"
+      />
     </Box>
   );
 };

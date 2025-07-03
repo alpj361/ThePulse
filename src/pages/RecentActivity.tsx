@@ -82,9 +82,13 @@ const WHATSAPP_BOT_NUMBER = '50252725024';
 interface Activity {
   id: string;
   created_at: string;
-  type: 'Hashtag' | 'Usuario' | 'News';
+  type: 'Hashtag' | 'Usuario' | 'News' | 'General';
   value: string;
   sentimiento: 'positivo' | 'negativo' | 'neutral';
+  herramienta?: string;
+  categoria?: string;
+  tweet_count?: number;
+  smart_grouping?: string;
 }
 
 interface ThemeCount {
@@ -97,7 +101,6 @@ export default function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userPhone, setUserPhone] = useState('');
   const { language } = useContext(LanguageContext);
   const t = translations[language];
   const theme = useTheme();
@@ -108,73 +111,31 @@ export default function RecentActivity() {
     const userCount = activities.filter(a => a.type === 'Usuario').length;
     const newsCount = activities.filter(a => a.type === 'News').length;
     
-    // Extract common themes (based on value frequency)
+    // Extract common themes (based on queries and categories)
     const valueFrequency: Record<string, number> = {};
     activities.forEach(activity => {
-      // Check if the value is a JSON string
-      try {
-        // Try to parse as JSON
-        const jsonData = JSON.parse(activity.value);
-        
-        // Extract theme name from JSON structure
-        if (jsonData.meta && jsonData.meta.hashtag) {
-          // If it's a hashtag JSON format (new format)
-          const theme = jsonData.meta.hashtag.toLowerCase();
-          if (valueFrequency[theme]) {
-            valueFrequency[theme]++;
-          } else {
-            valueFrequency[theme] = 1;
-          }
-          
-          // Also add related topics if available
-          if (jsonData.meta.related_topics && Array.isArray(jsonData.meta.related_topics)) {
-            jsonData.meta.related_topics.forEach((topic: string) => {
-              const relatedTopic = topic.toLowerCase();
-              if (valueFrequency[relatedTopic]) {
-                valueFrequency[relatedTopic]++;
-              } else {
-                valueFrequency[relatedTopic] = 1;
-              }
-            });
-          }
-        } else if (Array.isArray(jsonData) && jsonData.length > 0) {
-          // Check if it's the older array format with tweets
-          if (jsonData[0].tipo === "tweet" && jsonData[0].contenido) {
-            // Extract hashtag from tweet content
-            const hashtagMatch = jsonData[0].contenido.match(/#(\w+)/);
-            if (hashtagMatch) {
-              const theme = hashtagMatch[1].toLowerCase();
-              if (valueFrequency[theme]) {
-                valueFrequency[theme]++;
-              } else {
-                valueFrequency[theme] = 1;
-              }
-            }
-          }
-        } else if (jsonData.hashtag) {
-          // Direct hashtag property
-          const theme = jsonData.hashtag.toLowerCase();
-          if (valueFrequency[theme]) {
-            valueFrequency[theme]++;
-          } else {
-            valueFrequency[theme] = 1;
-          }
+      // Use categoria if available, otherwise use query
+      let theme = activity.categoria || activity.value || '';
+      
+      // Clean hashtag symbols and @ symbols
+      theme = theme.replace(/^[#@]/, '').toLowerCase();
+      
+      // Skip empty themes
+      if (!theme.trim()) return;
+      
+      if (valueFrequency[theme]) {
+        valueFrequency[theme]++;
+      } else {
+        valueFrequency[theme] = 1;
+      }
+      
+      // Also add smart_grouping if available
+      if (activity.smart_grouping) {
+        const grouping = activity.smart_grouping.toLowerCase();
+        if (valueFrequency[grouping]) {
+          valueFrequency[grouping]++;
         } else {
-          // Not the expected JSON format, use the raw value
-          const value = activity.value.toLowerCase();
-          if (valueFrequency[value]) {
-            valueFrequency[value]++;
-          } else {
-            valueFrequency[value] = 1;
-          }
-        }
-      } catch (e) {
-        // Not JSON, use the raw value
-        const value = activity.value.toLowerCase();
-        if (valueFrequency[value]) {
-          valueFrequency[value]++;
-        } else {
-          valueFrequency[value] = 1;
+          valueFrequency[grouping] = 1;
         }
       }
     });
@@ -197,120 +158,75 @@ export default function RecentActivity() {
   };
 
   useEffect(() => {
-    const fetchPhoneAndActivity = async () => {
+    const fetchRecentActivity = async () => {
       if (!user) return;
       setLoading(true);
       setError('');
-      // Obtener el número de teléfono del perfil
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('phone').eq('id', user.id).single();
-      if (profileError || !profile?.phone) {
-        setError('No se pudo obtener tu número de teléfono. Ve a Settings para configurarlo.');
-        setLoading(false);
-        return;
-      }
-      setUserPhone(profile.phone);
-      console.log('🔍 DEBUG: User phone:', profile.phone);
+      // Ya no necesitamos el número de teléfono para recent_scrapes
+      console.log('🔍 DEBUG: User ID:', user.id);
       
-      // Obtener la actividad asociada a ese número
+      // Obtener la actividad reciente desde recent_scrapes
       const { data, error: activityError } = await supabase
-        .from('scrapes')
+        .from('recent_scrapes')
         .select('*')
-        .eq('wa_number', profile.phone)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
         
-      console.log('📊 DEBUG: Raw scrapes data:', data);
+      console.log('📊 DEBUG: Recent scrapes data:', data);
       console.log('❌ DEBUG: Activity error:', activityError);
-      
-      // TEMP DEBUG: Also get all recent scrapes to see what's available
-      const { data: allScrapes } = await supabase
-        .from('scrapes')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      console.log('🌍 DEBUG: All recent scrapes (last 10):', allScrapes?.map(s => ({
-        id: s.id,
-        wa_number: s.wa_number,
-        type: s.type,
-        value_preview: s.value?.substring(0, 50),
-        created_at: s.created_at
-      })));
       
       if (activityError) {
         setError(t.error);
       } else {
-        // Process the data to ensure correct type detection
+        // Process the data from recent_scrapes table
         const processedActivities = (data || []).map((scrape: any) => {
-          console.log('🔍 DEBUG: Processing scrape:', scrape.id, scrape.type, scrape.value?.substring(0, 100));
+          console.log('🔍 DEBUG: Processing recent scrape:', scrape.id, scrape.herramienta, scrape.query_original);
           
-          let processedType = scrape.type;
-          let processedSentimiento = scrape.sentimiento || 'neutral';
+          // Determine type based on herramienta and query
+          let processedType = 'General';
+          let processedSentimiento = 'neutral';
           
-          // Try to detect type from JSON structure if not already set correctly
-          if (scrape.value) {
+          // Map herramienta to type
+          if (scrape.herramienta === 'nitter_context' || scrape.query_original?.includes('#')) {
+            processedType = 'Hashtag';
+          } else if (scrape.query_original?.includes('@')) {
+            processedType = 'Usuario';
+          } else if (scrape.herramienta === 'news_search') {
+            processedType = 'News';
+          }
+          
+          // Try to get sentiment from nitter_context if available
+          if (scrape.nitter_context) {
             try {
-              const jsonData = JSON.parse(scrape.value);
-              console.log('📋 DEBUG: Parsed JSON meta:', jsonData.meta);
+              const contextData = typeof scrape.nitter_context === 'string' 
+                ? JSON.parse(scrape.nitter_context) 
+                : scrape.nitter_context;
               
-              // New format with meta.hashtag
-              if (jsonData.meta && jsonData.meta.hashtag) {
-                processedType = 'Hashtag';
-                console.log('✅ DEBUG: Detected hashtag format:', jsonData.meta.hashtag);
-                // Use sentiment from meta if available
-                if (jsonData.meta.sentiment_summary) {
-                  const sentiment = jsonData.meta.sentiment_summary;
-                  if (sentiment.positivo > sentiment.negativo && sentiment.positivo > sentiment.neutral) {
-                    processedSentimiento = 'positivo';
-                  } else if (sentiment.negativo > sentiment.positivo && sentiment.negativo > sentiment.neutral) {
-                    processedSentimiento = 'negativo';
-                  } else {
-                    processedSentimiento = 'neutral';
-                  }
+              if (contextData.meta && contextData.meta.sentiment_summary) {
+                const sentiment = contextData.meta.sentiment_summary;
+                if (sentiment.positivo > sentiment.negativo && sentiment.positivo > sentiment.neutral) {
+                  processedSentimiento = 'positivo';
+                } else if (sentiment.negativo > sentiment.positivo && sentiment.negativo > sentiment.neutral) {
+                  processedSentimiento = 'negativo';
+                } else {
+                  processedSentimiento = 'neutral';
                 }
-              }
-              // Array format with tweets
-              else if (Array.isArray(jsonData) && jsonData.length > 0) {
-                if (jsonData[0].tipo === "tweet" || jsonData[0].text || jsonData[0].contenido) {
-                  // Check if it looks like hashtag content
-                  const content = jsonData[0].contenido || jsonData[0].text || '';
-                  if (content.includes('#')) {
-                    processedType = 'Hashtag';
-                    console.log('✅ DEBUG: Detected hashtag in array format');
-                  }
-                  // Use sentiment from first tweet if available
-                  if (jsonData[0].sentimiento || jsonData[0].sentiment) {
-                    processedSentimiento = jsonData[0].sentimiento || jsonData[0].sentiment;
-                  }
-                }
-              }
-              // Direct hashtag object
-              else if (jsonData.hashtag) {
-                processedType = 'Hashtag';
-                console.log('✅ DEBUG: Detected direct hashtag format');
-              }
-              // User data
-              else if (jsonData.username || jsonData.user) {
-                processedType = 'Usuario';
-                console.log('✅ DEBUG: Detected user format');
               }
             } catch (e) {
-              console.log('❌ DEBUG: JSON parse error:', e);
-              console.log('📄 DEBUG: Raw JSON content that failed:', scrape.value);
-              // Si el valor contiene 'meta' y 'hashtag', forzar tipo Hashtag
-              if (scrape.value.includes('"meta"') && scrape.value.includes('"hashtag"')) {
-                processedType = 'Hashtag';
-                console.log('🟡 DEBUG: Forzando tipo Hashtag por contenido de texto');
-              } else if (scrape.value.startsWith('#')) {
-                processedType = 'Hashtag';
-              } else if (scrape.value.startsWith('@')) {
-                processedType = 'Usuario';
-              }
+              console.log('❌ DEBUG: Error parsing nitter_context:', e);
             }
           }
           
           const processed = {
-            ...scrape,
+            id: scrape.id,
+            created_at: scrape.created_at,
             type: processedType,
-            sentimiento: processedSentimiento
+            value: scrape.query_original || scrape.query_clean || '',
+            sentimiento: processedSentimiento,
+            herramienta: scrape.herramienta,
+            categoria: scrape.categoria,
+            tweet_count: scrape.tweet_count,
+            smart_grouping: scrape.smart_grouping
           };
           
           console.log('✅ DEBUG: Processed result:', processed.id, processed.type, processed.sentimiento);
@@ -322,7 +238,7 @@ export default function RecentActivity() {
       }
       setLoading(false);
     };
-    fetchPhoneAndActivity();
+    fetchRecentActivity();
   }, [user, t.error]);
 
   const statistics = getStatistics();

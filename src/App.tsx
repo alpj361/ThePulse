@@ -22,6 +22,7 @@ import EnhancedCodex from './pages/EnhancedCodex';
 import News from './pages/News';
 import Sondeos from './pages/Sondeos';
 import SondeosModern from './pages/SondeosModern';
+import SondeosFullPage from './pages/SondeosFullPage';
 import Projects from './pages/Projects';
 import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
 import SidebarDemoPage from './pages/SidebarDemo';
@@ -191,6 +192,20 @@ function App() {
             </VerifiedRoute>
           } />
           <Route path="/sondeos" element={
+            <VerifiedRoute>
+              <Layout>
+                <SondeosFullPage />
+              </Layout>
+            </VerifiedRoute>
+          } />
+          <Route path="/sondeos/compact" element={
+            <VerifiedRoute>
+              <Layout>
+                <Sondeos />
+              </Layout>
+            </VerifiedRoute>
+          } />
+          <Route path="/sondeos/modern" element={
             <VerifiedRoute>
               <Layout>
                 <SondeosModern />

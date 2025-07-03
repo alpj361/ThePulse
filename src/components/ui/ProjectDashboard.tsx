@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { 
@@ -28,7 +28,8 @@ import {
   FiCheckSquare,
   FiAlertTriangle,
   FiDownload,
-  FiLayers
+  FiLayers,
+  FiRefreshCw
 } from 'react-icons/fi';
 
 import { Card, CardContent, CardHeader, CardTitle } from './card';
@@ -66,6 +67,7 @@ import CapturedCards from './CapturedCards';
 import { extractCapturados } from '../../services/capturados';
 import ProjectCoverages from '../coverages/ProjectCoverages';
 import { supabase } from '../../services/supabase.ts';
+import { getMonitoreosByProject, removeMonitoreoFromProject, ProjectMonitoreo } from '../../services/projectMonitoreos';
 
 // ===================================================================
 // INTERFACES
@@ -402,7 +404,7 @@ export function ProjectDashboard({
     } catch (error) {
       console.error('Error removing asset:', error);
     }
-  }, []);
+  }, [projectForDetails, loadProjectAssets]);
 
   const handleCancelEditing = useCallback(() => {
     setIsEditing(false);
@@ -569,6 +571,39 @@ export function ProjectDashboard({
       setIsExtractingCaptures(false);
     }
   }, [projectForDetails, session, isExtractingCaptures, selectedDocuments]);
+
+  // ============================== Monitoreos Asociados ==============================
+  const [projectMonitoreos, setProjectMonitoreos] = useState<ProjectMonitoreo[]>([]);
+  const [loadingMonitoreos, setLoadingMonitoreos] = useState(false);
+
+  const loadProjectMonitoreos = useCallback(async () => {
+    if (!projectForDetails) return;
+    setLoadingMonitoreos(true);
+    try {
+      const data = await getMonitoreosByProject(projectForDetails.id);
+      setProjectMonitoreos(data);
+    } catch (error) {
+      console.error('Error cargando monitoreos del proyecto:', error);
+    } finally {
+      setLoadingMonitoreos(false);
+    }
+  }, [projectForDetails?.id]);
+
+  // Cargar monitoreos cuando se selecciona proyecto
+  useEffect(() => {
+    loadProjectMonitoreos();
+  }, [loadProjectMonitoreos]);
+
+  /** Eliminar vínculo de monitoreo */
+  const handleRemoveMonitoreo = useCallback(async (scrapeId: string) => {
+    if (!projectForDetails) return;
+    try {
+      await removeMonitoreoFromProject(projectForDetails.id, scrapeId);
+      setProjectMonitoreos(prev => prev.filter((m) => m.scrape_id !== scrapeId));
+    } catch (error) {
+      console.error('Error eliminando monitoreo del proyecto:', error);
+    }
+  }, [projectForDetails]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -1622,6 +1657,76 @@ export function ProjectDashboard({
                                   <FiPlus className="w-4 h-4" />
                                   Agregar primer activo
                                 </button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Monitoreos Asociados */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FiLayers className="w-5 h-5" />
+                              Monitoreos Asociados
+                              {projectMonitoreos.length > 0 && (
+                                <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">
+                                  {projectMonitoreos.length}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={loadProjectMonitoreos}
+                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800/40 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              title="Refrescar monitoreos"
+                            >
+                              <FiRefreshCw className="w-4 h-4" />
+                              Refrescar
+                            </button>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {loadingMonitoreos ? (
+                              <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                              </div>
+                            ) : projectMonitoreos.length > 0 ? (
+                              <div className="space-y-3">
+                                {projectMonitoreos.map((link) => (
+                                  <div key={link.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                          {link.scrape?.generated_title || link.scrape?.query_original || link.scrape_id}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                          {link.scrape?.tweet_count || 0} tweets • {new Date(link.scrape?.created_at || link.added_at).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveMonitoreo(link.scrape_id)}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                        title="Quitar del proyecto"
+                                      >
+                                        <FiX className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-8">
+                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                  <FiLayers className="w-8 h-8 text-gray-400" />
+                                </div>
+                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                  No hay monitoreos asociados
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Agrega monitoreos desde la sección "Monitoreos" para analizarlos dentro del proyecto.
+                                </p>
                               </div>
                             )}
                           </div>

@@ -36,8 +36,8 @@ const GlassBar = (props: any) => {
         width={width}
         height={height}
         fill={fill}
-        rx={8}
-        ry={8}
+        rx={Math.min(8, width * 0.2)}
+        ry={Math.min(8, width * 0.2)}
         style={{
           filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.15))',
           border: '1px solid rgba(0,0,0,0.1)'
@@ -47,11 +47,11 @@ const GlassBar = (props: any) => {
       <rect
         x={x + 2}
         y={y + 2}
-        width={width - 4}
+        width={Math.max(width - 4, 0)}
         height={Math.max(height * 0.3, 4)}
         fill="rgba(255,255,255,0.6)"
-        rx={6}
-        ry={6}
+        rx={Math.min(6, width * 0.15)}
+        ry={Math.min(6, width * 0.15)}
       />
     </g>
   );
@@ -61,15 +61,15 @@ const GlassBar = (props: any) => {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl p-4 shadow-xl">
-        <p className="text-gray-800 font-medium text-sm mb-2">{label}</p>
+      <div className="bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl p-3 shadow-xl max-w-xs">
+        <p className="text-gray-800 font-medium text-sm mb-2 truncate">{label}</p>
         <div className="flex items-center gap-2">
           <div 
-            className="w-3 h-3 rounded-full"
+            className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: payload[0].color }}
           />
-          <span className="text-gray-700 text-sm">
-            {payload[0].name}: <span className="font-bold text-blue-600">{payload[0].value}</span>
+          <span className="text-gray-700 text-sm min-w-0">
+            <span className="font-bold text-blue-600">{payload[0].value}</span>
           </span>
         </div>
       </div>
@@ -78,16 +78,22 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Custom Label for white background
+// Custom Label for white background - adaptativo
 const CustomLabel = (props: any) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, value, height } = props;
+  
+  // Solo mostrar label si hay espacio suficiente
+  if (width < 30 || height < 25) return null;
+  
+  const fontSize = Math.max(9, Math.min(12, width * 0.2));
+  
   return (
     <text 
       x={x + width / 2} 
       y={y - 6} 
       fill="rgba(55, 65, 81, 0.8)" 
       textAnchor="middle" 
-      fontSize="12"
+      fontSize={fontSize}
       fontWeight="500"
     >
       {value}
@@ -102,6 +108,36 @@ const ModernBarChart: React.FC<ModernBarChartProps> = ({
   glassmorphism = true,
   darkMode = false
 }) => {
+  // Calcular configuración adaptativa basada en datos
+  const dataLength = data.length;
+  const maxLabelLength = Math.max(...data.map(item => item.name.length));
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
+  // Configuración adaptativa
+  const adaptiveConfig = {
+    // Márgenes dinámicos basados en contenido
+    margins: {
+      top: height < 300 ? 15 : 20,
+      right: Math.max(20, Math.min(40, height * 0.1)),
+      left: Math.max(15, Math.min(30, height * 0.08)),
+      bottom: Math.max(40, Math.min(80, maxLabelLength * (isMobile ? 3 : 2.5) + 20))
+    },
+    
+    // Tamaño de fuente adaptativo
+    fontSize: isMobile ? 
+      Math.max(8, Math.min(10, height * 0.025)) : 
+      Math.max(9, Math.min(12, height * 0.03)),
+    
+    // Configuración de barras
+    barCategoryGap: dataLength > 8 ? "10%" : "20%",
+    maxBarSize: Math.max(20, Math.min(80, (height * 0.15) / Math.max(1, dataLength * 0.1))),
+    
+    // Rotación de etiquetas
+    labelAngle: maxLabelLength > 8 || dataLength > 6 ? -35 : 0,
+    labelHeight: maxLabelLength > 8 || dataLength > 6 ? 
+      Math.max(50, maxLabelLength * 2.5) : 30
+  };
+
   // Generate colors based on values - optimized for white background
   const getBarColor = (value: number, index: number) => {
     const colors = [
@@ -133,14 +169,9 @@ const ModernBarChart: React.FC<ModernBarChartProps> = ({
       <ResponsiveContainer width="100%" height={height}>
         <BarChart
           data={data}
-          margin={{
-            top: 20,
-            right: 20,
-            left: 10,
-            bottom: 40,
-          }}
-          barCategoryGap="20%"
-          maxBarSize={60}
+          margin={adaptiveConfig.margins}
+          barCategoryGap={adaptiveConfig.barCategoryGap}
+          maxBarSize={adaptiveConfig.maxBarSize}
         >
           <defs>
             {/* Create 6 different gradients for bars */}
@@ -162,33 +193,50 @@ const ModernBarChart: React.FC<ModernBarChartProps> = ({
           <XAxis 
             dataKey="name" 
             stroke="rgba(55, 65, 81, 0.7)"
-            fontSize={11}
+            fontSize={adaptiveConfig.fontSize}
             tickLine={false}
             axisLine={false}
             interval={0}
-            angle={-35}
-            textAnchor="end"
-            height={60}
-            tick={{ fontSize: 11, fill: 'rgba(55, 65, 81, 0.8)' }}
+            angle={adaptiveConfig.labelAngle}
+            textAnchor={adaptiveConfig.labelAngle !== 0 ? "end" : "middle"}
+            height={adaptiveConfig.labelHeight}
+            tick={{ 
+              fontSize: adaptiveConfig.fontSize, 
+              fill: 'rgba(55, 65, 81, 0.8)',
+              width: 100 
+            }}
+            tickFormatter={(value) => {
+              // Truncar etiquetas largas
+              const maxChars = isMobile ? 12 : 15;
+              return value.length > maxChars ? value.substring(0, maxChars) + '...' : value;
+            }}
           />
           
           <YAxis 
             stroke="rgba(55, 65, 81, 0.7)"
-            fontSize={11}
+            fontSize={adaptiveConfig.fontSize}
             tickLine={false}
             axisLine={false}
-            width={50}
-            tick={{ fontSize: 11, fill: 'rgba(55, 65, 81, 0.8)' }}
+            width={Math.max(35, adaptiveConfig.margins.left + 15)}
+            tick={{ fontSize: adaptiveConfig.fontSize, fill: 'rgba(55, 65, 81, 0.8)' }}
           />
           
           <Tooltip content={<CustomTooltip />} />
           
           <Bar 
             dataKey="value" 
-            radius={[8, 8, 0, 0]}
+            radius={[
+              Math.min(8, adaptiveConfig.maxBarSize * 0.2), 
+              Math.min(8, adaptiveConfig.maxBarSize * 0.2), 
+              0, 
+              0
+            ]}
             shape={glassmorphism ? <GlassBar /> : undefined}
           >
-            <LabelList content={<CustomLabel />} />
+            {/* Solo mostrar labels si hay espacio */}
+            {height > 250 && adaptiveConfig.maxBarSize > 25 && (
+              <LabelList content={<CustomLabel />} />
+            )}
             {data.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 

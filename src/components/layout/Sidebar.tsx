@@ -106,10 +106,9 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
       path: '/news'
     },
     {
-      icon: <BarChart3 size={20} style={{ color: 'grey' }} />,
+      icon: <BarChart3 size={20} />,
       label: 'Sondeos',
-      path: '#', // Cambiamos la ruta para que no vaya a ningún lado
-      disabled: true
+      path: '/sondeos'
     },
     {
       icon: <Layers size={20} />,
@@ -162,12 +161,12 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
           <ListItem 
             key={item.path} 
             disablePadding 
-            onClick={item.disabled ? (e) => e.preventDefault() : closeSidebar} // Prevenir acción por defecto
+            onClick={item.disabled ? (e) => e.preventDefault() : closeSidebar}
             sx={{ 
-              color: item.path === '#' ? 'grey.500' : (item.disabled ? 'text.disabled' : 'inherit'),
+              color: item.disabled ? 'text.disabled' : 'inherit',
               pointerEvents: item.disabled ? 'none' : 'auto',
               cursor: item.disabled ? 'not-allowed' : 'pointer',
-              opacity: item.path === '#' ? 0.7 : 1
+              opacity: item.disabled ? 0.5 : 1
             }}
           >
             {item.disabled ? (

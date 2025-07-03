@@ -33,7 +33,8 @@ import {
   Speed,
   LocationOn,
   Delete,
-  Warning
+  Warning,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { RecentScrape } from '../../services/recentScrapes';
@@ -45,6 +46,7 @@ interface RecentScrapeCardProps {
   showActions?: boolean;
   onDelete?: (scrapeId: string) => void;
   isDeleting?: boolean;
+  onAddToProject?: (scrape: RecentScrape) => void;
 }
 
 const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({ 
@@ -52,7 +54,8 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
   layout = 'expanded',
   showActions = true,
   onDelete,
-  isDeleting = false
+  isDeleting = false,
+  onAddToProject
 }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
@@ -166,6 +169,12 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
     setDeleteDialogOpen(false);
   };
 
+  const handleAddToProject = () => {
+    if (onAddToProject) {
+      onAddToProject(scrape);
+    }
+  };
+
   return (
     <>
       <Card
@@ -245,22 +254,22 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
               )}
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                 <Chip
-                  label={scrape.categoria}
+                  label={scrape.categoria || ''}
                   size="small"
                   sx={{
-                    backgroundColor: alpha(getCategoryColor(scrape.categoria), 0.1),
-                    color: getCategoryColor(scrape.categoria),
+                    backgroundColor: alpha(getCategoryColor(scrape.categoria || ''), 0.1),
+                    color: getCategoryColor(scrape.categoria || ''),
                     fontWeight: 'medium',
                   }}
                 />
                 {/* Mostrar grupo detectado si está disponible */}
                 {scrape.detected_group && (
                   <Chip
-                    label={getGroupDisplayName(scrape.detected_group)}
+                    label={getGroupDisplayName(scrape.detected_group || '')}
                     size="small"
                     sx={{
-                      backgroundColor: alpha(getGroupColor(scrape.detected_group), 0.1),
-                      color: getGroupColor(scrape.detected_group),
+                      backgroundColor: alpha(getGroupColor(scrape.detected_group || ''), 0.1),
+                      color: getGroupColor(scrape.detected_group || ''),
                       fontWeight: 'medium',
                     }}
                   />
@@ -276,6 +285,23 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+              {/* Botón de agregar al proyecto */}
+              {showActions && onAddToProject && (
+                <Tooltip title="Agregar a proyecto">
+                  <IconButton
+                    onClick={handleAddToProject}
+                    size="small"
+                    sx={{
+                      color: theme.palette.success.main,
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.success.main, 0.1)
+                      }
+                    }}
+                  >
+                    <LinkIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
               {/* Botón de eliminar */}
               {showActions && onDelete && (
                 <Tooltip title="Eliminar extracción">
@@ -322,14 +348,14 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
               <Divider orientation="vertical" flexItem />
               <Tooltip title="Engagement total">
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" fontWeight="bold">{scrape.total_engagement.toLocaleString()}</Typography>
+                  <Typography variant="h6" fontWeight="bold">{(scrape.total_engagement ?? 0).toLocaleString()}</Typography>
                   <Typography variant="caption" color="text.secondary">Engagement</Typography>
                 </Box>
               </Tooltip>
               <Divider orientation="vertical" flexItem />
               <Tooltip title="Engagement promedio">
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" fontWeight="bold">{scrape.avg_engagement}</Typography>
+                  <Typography variant="h6" fontWeight="bold">{scrape.avg_engagement ?? 0}</Typography>
                   <Typography variant="caption" color="text.secondary">Promedio</Typography>
                 </Box>
               </Tooltip>

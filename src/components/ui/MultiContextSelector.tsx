@@ -3,8 +3,10 @@ import { Box, Chip, Typography, Tooltip, ClickAwayListener } from '@mui/material
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArticleIcon from '@mui/icons-material/Article';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import MonitorIcon from '@mui/icons-material/Monitor';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import TrendSelector from './TrendSelector';
+import MonitoreosSelector from './MonitoreosSelector';
 
 interface ContextOption {
   value: string;
@@ -18,6 +20,8 @@ interface ContextOption {
 interface MultiContextSelectorProps {
   selectedContexts: string[];
   onContextChange: (contexts: string[]) => void;
+  onMonitoreosChange?: (monitoreosIds: string[]) => void;
+  onTrendsChange?: (trends: string[]) => void;
   disabled?: boolean;
 }
 
@@ -25,36 +29,48 @@ const contextOptions: ContextOption[] = [
   {
     value: 'tendencias',
     label: 'Tendencias',
-    description: 'Análisis de tendencias actuales y patrones emergentes',
-    icon: <TrendingUpIcon sx={{ fontSize: 20 }} />,
-    color: 'var(--color-chart-1)',
-    gradient: 'linear-gradient(135deg, var(--color-chart-1) 0%, var(--color-primary) 100%)'
+    description: 'Analiza tendencias actuales en redes sociales',
+    icon: <TrendingUpIcon />,
+    color: 'var(--color-primary)',
+    gradient: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)'
   },
   {
     value: 'noticias',
     label: 'Noticias',
-    description: 'Cobertura mediática y análisis de noticias recientes',
-    icon: <ArticleIcon sx={{ fontSize: 20 }} />,
-    color: 'var(--color-accent)',
-    gradient: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-chart-3) 100%)'
+    description: 'Analiza noticias recientes de medios',
+    icon: <ArticleIcon />,
+    color: 'var(--color-secondary)',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%)'
   },
   {
     value: 'codex',
-    label: 'Documentos',
-    description: 'Base de conocimientos y documentos del codex',
-    icon: <LibraryBooksIcon sx={{ fontSize: 20 }} />,
-    color: 'var(--color-chart-4)',
-    gradient: 'linear-gradient(135deg, var(--color-chart-4) 0%, var(--color-destructive) 100%)'
+    label: 'Codex',
+    description: 'Analiza documentos de tu biblioteca',
+    icon: <LibraryBooksIcon />,
+    color: 'var(--color-accent)',
+    gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+  },
+  {
+    value: 'monitoreos',
+    label: 'Monitoreos',
+    description: 'Analiza monitoreos de actividad reciente',
+    icon: <MonitorIcon />,
+    color: 'var(--color-warning)',
+    gradient: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
   }
 ];
 
 const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
   selectedContexts,
   onContextChange,
+  onMonitoreosChange,
+  onTrendsChange,
   disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showTrendSelector, setShowTrendSelector] = useState(false);
+  const [showMonitoreosSelector, setShowMonitoreosSelector] = useState(false);
+  const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
   
   const handleContextToggle = (contextValue: string) => {
     if (disabled) return;
@@ -65,11 +81,17 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
       if (contextValue === 'tendencias') {
         setShowTrendSelector(false);
       }
+      if (contextValue === 'monitoreos') {
+        setShowMonitoreosSelector(false);
+      }
     } else {
       // Add context
       onContextChange([...selectedContexts, contextValue]);
       if (contextValue === 'tendencias') {
         setShowTrendSelector(true);
+      }
+      if (contextValue === 'monitoreos') {
+        setShowMonitoreosSelector(true);
       }
     }
   };
@@ -292,15 +314,32 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
           </Box>
         )}
 
-        {/* Trend Selector Modal */}
-        {showTrendSelector && selectedContexts.includes('tendencias') && (
-          <TrendSelector 
-            selectedTrends={[]}
-            onTrendChange={(trends) => {
-              // Aquí puedes manejar la selección de tendencias específicas
-              console.log('Tendencias seleccionadas:', trends);
-            }}
-          />
+        {/* Trend Selector */}
+        {showTrendSelector && (
+          <Box sx={{ mt: 2 }}>
+            <TrendSelector 
+              selectedTrends={selectedTrends}
+              onTrendChange={(trends) => {
+                setSelectedTrends(trends);
+                if (onTrendsChange) {
+                  onTrendsChange(trends);
+                }
+              }}
+            />
+          </Box>
+        )}
+        
+        {/* Monitoreos Selector */}
+        {showMonitoreosSelector && (
+          <Box sx={{ mt: 2 }}>
+            <MonitoreosSelector 
+              onSelectionChange={(monitoreosIds) => {
+                if (onMonitoreosChange) {
+                  onMonitoreosChange(monitoreosIds);
+                }
+              }}
+            />
+          </Box>
         )}
       </Box>
     </ClickAwayListener>
