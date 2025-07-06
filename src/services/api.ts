@@ -46,8 +46,31 @@ export interface Statistics {
 // This will come from Netlify environment variables in production
 const VPS_API_URL = import.meta.env.VITE_VPS_API_URL || '';
 
-// ExtractorW Backend URL - Siempre usar servidor de producción
-export const EXTRACTORW_API_URL = 'https://server.standatpd.com/api';
+// Base URL para el backend ExtractorW
+// 1. Si existe VITE_EXTRACTORW_URL en variables de entorno, úsala.
+// 2. Si estamos en desarrollo o el hostname es localhost, usar el backend local (puerto 8080).
+// 3. De lo contrario, usar el servidor de producción.
+
+function resolveExtractorWUrl(): string {
+  // Prioridad 1: variable del entorno explícita
+  const envUrl = import.meta.env.VITE_EXTRACTORW_URL as string | undefined;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/$/, ''); // quitar barra final
+  }
+
+  // Prioridad 2: entorno de desarrollo o hostname localhost
+  if (
+    import.meta.env.DEV ||
+    ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname)
+  ) {
+    return 'http://localhost:8080/api';
+  }
+
+  // Fallback producción
+  return 'https://server.standatpd.com/api';
+}
+
+export const EXTRACTORW_API_URL = resolveExtractorWUrl();
 
 console.log('🔧 Configuración de APIs:');
 console.log(`   ExtractorW: ${EXTRACTORW_API_URL}`);
@@ -514,7 +537,7 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
     console.log('📤 Payload enviado:', JSON.stringify(payload, null, 2));
     
     // 1. Enviar el contexto y pregunta a ExtractorW (nuevo endpoint /api/sondeo)
-    const response = await fetch('https://server.standatpd.com/api/sondeo', {
+    const response = await fetch(`${EXTRACTORW_API_URL}/sondeo`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)

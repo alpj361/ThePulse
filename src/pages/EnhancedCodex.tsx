@@ -45,6 +45,9 @@ import {
   Mic,
   Users,
   StickyNote,
+  LinkIcon,
+  ExternalLink,
+  Zap,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../context/AuthContext"
@@ -64,6 +67,8 @@ import {
   updateGroupInfo,
   getUserGroups,
 } from "../services/supabase.ts"
+// URL dinámico del backend ExtractorW
+import { EXTRACTORW_API_URL } from "../services/api";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
@@ -337,6 +342,28 @@ export default function EnhancedCodex() {
   const [partNumber, setPartNumber] = useState(1)
   const [showGroupDetails, setShowGroupDetails] = useState<string | null>(null)
   
+  // Estados para enlaces múltiples
+  const [linksInput, setLinksInput] = useState("")
+  const [detectedLinks, setDetectedLinks] = useState<string[]>([])
+  const [linkTitle, setLinkTitle] = useState("")
+  const [linkDescription, setLinkDescription] = useState("")
+  const [linkTags, setLinkTags] = useState("")
+  const [linkProject, setLinkProject] = useState("")
+  const [shouldAnalyzeLinks, setShouldAnalyzeLinks] = useState(false)
+  const [showLinkMetadata, setShowLinkMetadata] = useState(false)
+
+  // Estados para análisis de enlaces pendientes
+  const [pendingAnalysisCount, setPendingAnalysisCount] = useState(0)
+  const [isAnalyzingLinks, setIsAnalyzingLinks] = useState(false)
+  const [analysisProgress, setAnalysisProgress] = useState(0)
+  const [analysisResults, setAnalysisResults] = useState<any>(null)
+  const [pendingAnalysisStats, setPendingAnalysisStats] = useState<{
+    total_links: number;
+    multimedia_links: number;
+    basic_links: number;
+    estimated_cost: number;
+  } | null>(null)
+  
   // Estados para el modal de edición de grupo
   const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false)
   const [groupToEdit, setGroupToEdit] = useState<CodexItem | null>(null)
@@ -579,6 +606,9 @@ export default function EnhancedCodex() {
       const items = await getCodexItemsByUser(user.id)
       setCodexItems(items)
       calculateStats(items)
+      
+      // También cargar estadísticas de enlaces pendientes
+      getPendingLinksStats()
     } catch (err) {
       console.error('Error loading codex data:', err)
       setError('Error al cargar los datos del Codex')
@@ -618,6 +648,96 @@ export default function EnhancedCodex() {
       notas: items.filter(item => item.tipo === 'nota').length
     }
     setStats(newStats)
+    
+    // Contar enlaces pendientes de análisis
+    const pendingLinks = items.filter(item => 
+      item.tipo === 'enlace' && 
+      item.etiquetas?.includes('pendiente-analisis')
+    ).length
+    setPendingAnalysisCount(pendingLinks)
+  }
+
+  // Función para analizar enlaces pendientes
+  const handleAnalyzePendingLinks = async () => {
+    if (!user?.id || pendingAnalysisCount === 0) return
+
+    setIsAnalyzingLinks(true)
+    setAnalysisProgress(0)
+    setError(null)
+
+    try {
+      console.log('🔍 Iniciando análisis de enlaces pendientes...')
+      
+      const response = await fetch(`${EXTRACTORW_API_URL}/pending-analysis/analyze-pending-links`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          processAll: true,
+          dryRun: false
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        throw new Error(`Error ${response.status}: ${errorData}`)
+      }
+
+      const result = await response.json()
+      
+      console.log('✅ Análisis completado:', result)
+      
+      setAnalysisResults(result)
+      
+      // Recargar datos del codex para ver los cambios
+      await loadCodexData()
+      
+      // Simular progreso para UX
+      const progressInterval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval)
+            return 100
+          }
+          return prev + 10
+        })
+      }, 200)
+
+    } catch (err) {
+      console.error('❌ Error analizando enlaces:', err)
+      setError(`Error al analizar enlaces: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+    } finally {
+      setTimeout(() => {
+        setIsAnalyzingLinks(false)
+        setAnalysisProgress(0)
+      }, 2000)
+    }
+  }
+
+  // Función para obtener estadísticas de enlaces pendientes
+  const getPendingLinksStats = async () => {
+    if (!user?.id || !session?.access_token) return null
+
+    try {
+      const response = await fetch(`${EXTRACTORW_API_URL}/pending-analysis/pending-stats`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const stats = await response.json()
+        setPendingAnalysisStats(stats)
+        return stats
+      }
+    } catch (err) {
+      console.error('Error obteniendo estadísticas de enlaces pendientes:', err)
+      setPendingAnalysisStats(null)
+    }
+    return null
   }
 
   const getTypeIcon = (type: string) => {
@@ -1196,6 +1316,92 @@ export default function EnhancedCodex() {
     }
   }
 
+  // Función para detectar URLs en el texto
+  const detectLinks = (text: string) => {
+    const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g
+    const matches = text.match(urlRegex) || []
+    return [...new Set(matches)] // Eliminar duplicados
+  }
+
+  // Manejar cambios en el input de enlaces
+  const handleLinksInputChange = (value: string) => {
+    setLinksInput(value)
+    const links = detectLinks(value)
+    setDetectedLinks(links)
+  }
+
+  // Guardar enlaces múltiples
+  const handleSaveMultipleLinks = async () => {
+    if (detectedLinks.length === 0) {
+      setError('No se detectaron enlaces válidos')
+      return
+    }
+
+    if (!linkTitle.trim()) {
+      setError('El título es requerido')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const tagsArray = linkTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      const finalTags = contentType.trim() ? [...tagsArray, contentType.trim()] : tagsArray
+      
+      // Get project information
+      const selectedProjectData = (linkProject && linkProject !== 'sin-proyecto') ? 
+        userProjects.find(p => p.id === linkProject) : null
+
+      const savedLinks = []
+
+      // Crear un elemento por cada enlace detectado
+      for (let i = 0; i < detectedLinks.length; i++) {
+        const url = detectedLinks[i]
+        const title = detectedLinks.length === 1 ? 
+          linkTitle.trim() : 
+          `${linkTitle.trim()} - Enlace ${i + 1}`
+
+        const description = `${contentType.trim() ? `[${contentType.trim()}] ` : ''}${linkDescription.trim()}${shouldAnalyzeLinks ? ' [PENDIENTE ANÁLISIS]' : ''}`
+
+        const newLink = {
+          user_id: user?.id,
+          tipo: 'enlace',
+          titulo: title,
+          descripcion: description,
+          etiquetas: shouldAnalyzeLinks ? [...finalTags, 'pendiente-analisis'] : finalTags,
+          proyecto: selectedProjectData ? selectedProjectData.title : 'Sin proyecto',
+          project_id: selectedProjectData ? linkProject : null,
+          url: url,
+          fecha: new Date().toISOString()
+        }
+
+        const { data, error } = await supabase
+          .from('codex_items')
+          .insert([newLink])
+          .select()
+          .single()
+
+        if (error) throw error
+        savedLinks.push(data)
+      }
+
+      // Actualizar el estado local
+      const updatedItems = [...codexItems, ...savedLinks]
+      setCodexItems(updatedItems)
+      calculateStats(updatedItems)
+
+      // Limpiar formulario y cerrar modal
+      clearForm()
+
+    } catch (err) {
+      console.error('Error saving links:', err)
+      setError('Error al guardar los enlaces')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Handle Save Drive File
   const handleSaveDriveFile = async (fileParam?: any) => {
     console.log('💾 Guardando archivo de Drive')
@@ -1569,6 +1775,7 @@ export default function EnhancedCodex() {
     setShowUploadMetadata(false)
     setShowDriveMetadata(false)
     setShowNoteMetadata(false)
+    setShowLinkMetadata(false)
     // Reset file states
     setSelectedFiles([])
     setUploadProgress({})
@@ -1576,6 +1783,14 @@ export default function EnhancedCodex() {
     setSelectedDriveFile(null)
     setDriveFiles([])
     setIsDriveConnected(false)
+    // Reset link states
+    setLinksInput("")
+    setDetectedLinks([])
+    setLinkTitle("")
+    setLinkDescription("")
+    setLinkTags("")
+    setLinkProject("")
+    setShouldAnalyzeLinks(false)
     // Reset edit states
     setIsEditModalOpen(false)
     setEditingItem(null)
@@ -1858,6 +2073,57 @@ export default function EnhancedCodex() {
             })}
           </div>
 
+          {/* Banner de Enlaces Pendientes */}
+          {pendingAnalysisCount > 0 && (
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 p-2 rounded-lg">
+                    <AlertCircle className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-orange-900">
+                      Enlaces Pendientes de Análisis
+                    </h3>
+                    <p className="text-sm text-orange-700">
+                      Tienes {pendingAnalysisCount} enlaces marcados para análisis automático
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
+                  {pendingAnalysisStats?.total_links || pendingAnalysisCount} enlaces
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={handleAnalyzePendingLinks}
+                  disabled={isAnalyzingLinks}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  {isAnalyzingLinks ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Analizando...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Analizar Enlaces Ahora
+                    </>
+                  )}
+                </Button>
+                
+                {pendingAnalysisStats && (
+                  <div className="text-sm text-orange-700 space-y-1">
+                    <div>🎬 {pendingAnalysisStats.multimedia_links || 0} multimedia</div>
+                    <div>🔗 {pendingAnalysisStats.basic_links || 0} básicos</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1933,6 +2199,22 @@ export default function EnhancedCodex() {
                           </CardContent>
                         </Card>
                       )}
+
+                      {/* Add Multiple Links */}
+                      <Card
+                        className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-orange-200"
+                        onClick={() => setSelectedSourceType("links")}
+                      >
+                        <CardContent className="flex items-center gap-4 p-6">
+                          <div className="bg-orange-100 p-3 rounded-lg">
+                            <Link className="h-6 w-6 text-orange-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-slate-900">Agregar Enlaces</h3>
+                            <p className="text-sm text-slate-600">Agrega múltiples enlaces web con detección automática</p>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -2499,6 +2781,115 @@ export default function EnhancedCodex() {
                         </div>
                       )}
 
+                      {/* Links Form */}
+                      {selectedSourceType === "links" && (
+                        <div className="space-y-4">
+                          {/* Links Input */}
+                          <div className="space-y-2">
+                            <Label htmlFor="links-input">Enlaces *</Label>
+                            <Textarea
+                              id="links-input"
+                              placeholder="Pega aquí uno o múltiples enlaces web, separados por líneas o espacios..."
+                              rows={4}
+                              value={linksInput}
+                              onChange={(e) => handleLinksInputChange(e.target.value)}
+                            />
+                            {detectedLinks.length > 0 && (
+                              <div className="text-sm text-green-600">
+                                ✓ {detectedLinks.length} enlace(s) detectado(s)
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Analysis Checkbox */}
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="analyze-links"
+                              checked={shouldAnalyzeLinks}
+                              onChange={(e) => setShouldAnalyzeLinks(e.target.checked)}
+                              className="rounded border-slate-300"
+                            />
+                            <Label htmlFor="analyze-links" className="text-sm font-medium cursor-pointer">
+                              ¿Analizar enlaces? (se agregará la etiqueta "pendiente-analisis")
+                            </Label>
+                          </div>
+
+                          {/* Optional Metadata Section */}
+                          <div className="border border-slate-200 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => setShowLinkMetadata(!showLinkMetadata)}
+                              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-slate-700">Información adicional</span>
+                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                  Opcional
+                                </Badge>
+                              </div>
+                              {showLinkMetadata ? (
+                                <ChevronUp className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-slate-500" />
+                              )}
+                            </button>
+                            
+                            {showLinkMetadata && (
+                              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                                <div className="space-y-2">
+                                  <Label htmlFor="link-title">Título personalizado</Label>
+                                  <Input
+                                    id="link-title"
+                                    placeholder="Ej: Artículos sobre corrupción municipal"
+                                    value={linkTitle}
+                                    onChange={(e) => setLinkTitle(e.target.value)}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="link-description">Descripción</Label>
+                                  <Textarea
+                                    id="link-description"
+                                    placeholder="Breve descripción del contenido de los enlaces..."
+                                    rows={3}
+                                    value={linkDescription}
+                                    onChange={(e) => setLinkDescription(e.target.value)}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="link-tags">Etiquetas</Label>
+                                  <Input 
+                                    id="link-tags" 
+                                    placeholder="Ej: prensa, investigación, reportaje"
+                                    value={linkTags}
+                                    onChange={(e) => setLinkTags(e.target.value)}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="link-project">Proyecto</Label>
+                                  <Select value={linkProject} onValueChange={setLinkProject}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleccionar proyecto" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                                      {userProjects.map((project) => (
+                                        <SelectItem key={project.id} value={project.id}>
+                                          {project.title}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
                       <DialogFooter className="p-6 bg-slate-50 border-t -mx-6 -mb-4 mt-4">
                         <Button
@@ -2516,7 +2907,8 @@ export default function EnhancedCodex() {
                             isUploading ||
                             (selectedSourceType === "note" && (!noteTitle.trim() || !noteContent.trim())) ||
                             (selectedSourceType === "upload" && selectedFiles.length === 0) ||
-                            (selectedSourceType === "drive" && (!isDriveConnected || !selectedDriveFile))
+                            (selectedSourceType === "drive" && (!isDriveConnected || !selectedDriveFile)) ||
+                            (selectedSourceType === "links" && detectedLinks.length === 0)
                           }
                           onClick={() => {
                             if (selectedSourceType === "note") {
@@ -2525,6 +2917,8 @@ export default function EnhancedCodex() {
                               handleUploadFiles()
                             } else if (selectedSourceType === "drive") {
                               handleSaveDriveFile()
+                            } else if (selectedSourceType === "links") {
+                              handleSaveMultipleLinks()
                             }
                           }}
                         >
@@ -2534,6 +2928,7 @@ export default function EnhancedCodex() {
                           {selectedSourceType === "upload" && (isUploading ? "Subiendo archivos..." : `Subir ${selectedFiles.length} archivo(s)`)}
                           {selectedSourceType === "drive" && (isSubmitting ? "Guardando..." : "Guardar desde Drive")}
                           {selectedSourceType === "note" && (isSubmitting ? "Guardando..." : "Guardar Nota")}
+                          {selectedSourceType === "links" && (isSubmitting ? "Guardando..." : `Guardar ${detectedLinks.length} enlace(s)`)}
                         </Button>
                       </DialogFooter>
                     </div>

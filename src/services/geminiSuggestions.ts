@@ -1,9 +1,10 @@
 import { Project, ProjectDecision, SuggestionsResponse, ProjectSuggestion } from '../types/projects';
 import { updateProject } from './projects';
+import { EXTRACTORW_API_URL } from './api';
 
 // URL del backend para obtener sugerencias
 // Usar siempre el servidor de producción por ahora hasta que el servidor local esté configurado
-const BACKEND_URL = 'https://server.standatpd.com';
+const BACKEND_URL = EXTRACTORW_API_URL.replace(/\/api$/, ''); // quitar /api si está
 
 /**
  * Obtiene sugerencias inteligentes para un proyecto usando Gemini 1.5 Flash

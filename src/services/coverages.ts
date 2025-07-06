@@ -4,6 +4,7 @@
 // ===================================================================
 
 import { supabase } from './supabase';
+import { EXTRACTORW_API_URL } from './api';
 
 // ===================================================================
 // TIPOS Y INTERFACES
@@ -137,7 +138,7 @@ export async function getCoverages(
       )
     });
 
-    const response = await fetch(`https://server.standatpd.com/api/coverages?${params}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages?${params}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
