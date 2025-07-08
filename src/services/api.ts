@@ -63,7 +63,8 @@ function resolveExtractorWUrl(): string {
   // 2. Variable de entorno explícita
   const envUrl = (import.meta.env.VITE_EXTRACTORW_URL || import.meta.env.VITE_EXTRACTORW_API_URL) as string | undefined;
   if (envUrl && envUrl.trim() !== '') {
-    return envUrl.trim().replace(/\/$/, '');
+    const cleaned = envUrl.trim().replace(/\/$/, '');
+    return cleaned.endsWith('/api') ? cleaned : `${cleaned}/api`;
   }
 
   // 3. Fallback producción
