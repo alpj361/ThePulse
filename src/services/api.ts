@@ -55,8 +55,7 @@ function resolveExtractorWUrl(): string {
   // 1. Entorno de desarrollo o hostname localhost → usar backend local
   if (
     import.meta.env.DEV ||
-    ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname) ||
-    window.location.protocol === 'http:'
+    ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname)
   ) {
     return 'http://localhost:8080/api';
   }
