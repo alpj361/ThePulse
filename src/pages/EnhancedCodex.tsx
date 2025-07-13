@@ -116,6 +116,8 @@ interface FolderCardProps {
   onViewItem: (item: CodexItem) => void;
   onDownloadItem: (item: CodexItem) => void;
   onTranscribeItem: (item: CodexItem) => void;
+  onShowTranscription: (item: CodexItem) => void;
+  onEditItem: (item: CodexItem) => void;
   // selección
   selectionMode: boolean;
   selectedIds: string[];
@@ -130,6 +132,8 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
   onViewItem,
   onDownloadItem,
   onTranscribeItem,
+  onShowTranscription,
+  onEditItem,
   selectionMode,
   selectedIds,
   toggleSelectItem
@@ -162,9 +166,11 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
         getGroupStats(groupUuid)
       ]);
       setChildren(groupItems);
+      const fallbackCount = groupItems.length;
+      const fallbackSize = groupItems.reduce((acc, curr) => acc + (curr.tamano || 0), 0);
       setStats({ 
-        count: groupStats?.item_count || 0, 
-        size: groupStats?.total_size || 0 
+        count: (groupStats?.item_count ?? 0) > 0 ? groupStats.item_count : fallbackCount, 
+        size: (groupStats?.total_size ?? 0) > 0 ? groupStats.total_size : fallbackSize 
       });
     } catch (error) {
       console.error("Error fetching group data:", error);
@@ -182,14 +188,20 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
   };
   
   useEffect(() => {
-    if (groupUuid) {
-      getGroupStats(groupUuid)
-        .then(gs => setStats({ count: gs?.item_count || 0, size: gs?.total_size || 0 }))
-        .catch(error => {
-          console.error("Error loading group stats:", error);
-          setStats({ count: 0, size: 0 });
-        });
-    }
+    if (!groupUuid) return;
+    (async () => {
+      try {
+        const gs = await getGroupStats(groupUuid);
+        if (gs && gs.item_count !== undefined) {
+          setStats({ count: gs.item_count, size: gs.total_size });
+        } else {
+          const items = await getGroupItems(groupUuid, item.user_id);
+          setStats({ count: items.length, size: items.reduce((acc, curr)=>acc+(curr.tamano||0),0) });
+        }
+      } catch (error) {
+        console.error("Error loading group stats:", error);
+      }
+    })();
   }, [groupUuid])
 
   const formatFileSize = (bytes?: number) => {
@@ -252,24 +264,26 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
             <div className="space-y-2">
               {children.length > 0 ? children.map(child => {
                 const IconComponent = getTypeIcon(child.tipo);
+                const hasTranscription = !!(child.audio_transcription || (child as any).transcription);
                 return (
                   <div key={child.id} className="flex items-center justify-between p-2 pl-4 rounded-md bg-white hover:bg-slate-100 border border-slate-200">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <IconComponent className="h-5 w-5 text-slate-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-slate-700 truncate block" title={child.titulo}>{child.titulo}</span>
-                        {child.audio_transcription && (
-                          <span className="text-xs text-green-600 cursor-pointer hover:underline" onClick={() => onViewItem(child)} title="Tiene transcripción - click para ver">
+                        {hasTranscription && (
+                          <span className="text-xs text-green-600 cursor-pointer hover:underline" onClick={() => onShowTranscription(child)} title="Tiene transcripción - click para ver">
                             Transcripción disponible
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {child.audio_transcription && <Button variant="ghost" size="icon" onClick={() => onViewItem(child)} title="Ver Transcripción" className="text-green-600"><Mic className="h-4 w-4"/></Button>}
+                      {hasTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child)} title="Ver Transcripción" className="text-green-600"><Mic className="h-4 w-4"/></Button>}
                       {canTranscribe(child) && !child.audio_transcription && <Button variant="ghost" size="icon" onClick={() => onTranscribeItem(child)} title="Transcribir"><Mic className="h-4 w-4"/></Button>}
                       {child.storage_path && <Button variant="ghost" size="icon" onClick={() => onDownloadItem(child)} title="Descargar"><Download className="h-4 w-4"/></Button>}
                       <Button variant="ghost" size="icon" onClick={() => onViewItem(child)} title="Ver Detalles"><Eye className="h-4 w-4"/></Button>
+                      <Button variant="ghost" size="icon" onClick={() => onEditItem(child)} title="Editar"><Edit className="h-4 w-4"/></Button>
                     </div>
                   </div>
                 )
@@ -899,25 +913,26 @@ export default function EnhancedCodex() {
   }
 
   const handleEditItem = (item: CodexItem) => {
-    setEditingItem(item)
+    setEditingItem(item);
     
     // Si tiene project_id, usar ese; sino buscar por nombre del proyecto; sino usar "sin-proyecto"
-    let projectValue = 'sin-proyecto'
+    let projectValue = 'sin-proyecto';
     if (item.project_id) {
-      projectValue = item.project_id
+      projectValue = item.project_id;
     } else if (item.proyecto && item.proyecto !== 'Sin proyecto') {
       // Buscar el proyecto por nombre para obtener el ID
-      const foundProject = userProjects.find(p => p.title === item.proyecto)
-      projectValue = foundProject ? foundProject.id : 'sin-proyecto'
+      const foundProject = userProjects.find(p => p.title === item.proyecto);
+      projectValue = foundProject ? foundProject.id : 'sin-proyecto';
     }
     
     setEditForm({
       titulo: item.titulo,
       descripcion: item.descripcion || '',
       etiquetas: item.etiquetas.join(', '),
-      proyecto: projectValue
-    })
-    setIsEditModalOpen(true)
+      proyecto: projectValue,
+      url: item.tipo === 'enlace' ? item.url || '' : '' // Mostrar URL si es un enlace
+    });
+    setIsEditModalOpen(true);
   }
 
   const handleSaveEdit = async () => {
@@ -934,7 +949,8 @@ export default function EnhancedCodex() {
         descripcion: editForm.descripcion.trim() || null,
         etiquetas: editForm.etiquetas.split(',').map(tag => tag.trim()).filter(tag => tag),
         proyecto: selectedProjectData ? selectedProjectData.title : 'Sin proyecto',
-        project_id: selectedProjectData ? editForm.proyecto : null
+        project_id: selectedProjectData ? editForm.proyecto : null,
+        url: editingItem?.tipo === 'enlace' ? editForm.url.trim() || null : editingItem?.url || null
       }
 
       const { data, error } = await supabase
@@ -3182,6 +3198,8 @@ export default function EnhancedCodex() {
                       onViewItem={handleViewItem}
                       onDownloadItem={handleDownloadItem}
                       onTranscribeItem={handleTranscribeItem}
+                      onShowTranscription={handleShowTranscription}
+                      onEditItem={handleEditItem}
                       selectionMode={selectionMode}
                       selectedIds={selectedIds}
                       toggleSelectItem={toggleSelectItem}
@@ -3478,6 +3496,22 @@ export default function EnhancedCodex() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Campo URL - Solo para enlaces */}
+            {editingItem?.tipo === 'enlace' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  URL del Enlace *
+                </label>
+                <Input
+                  value={editForm.url}
+                  onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                  placeholder="https://ejemplo.com"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  type="url"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">

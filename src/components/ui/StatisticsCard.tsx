@@ -187,7 +187,14 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ statistics }) => {
 
   // Obtener datos de controversia
   const controversyData = React.useMemo(() => {
-    // Intentar obtener datos de categorías de diferentes fuentes
+    const levelDist = (statistics as any).controversyStatistics?.level_distribution || (statistics as any).controversy_statistics?.level_distribution;
+    if (levelDist) {
+      return {
+        alto: (levelDist.alta || levelDist.muy_alta || 0),
+        medio: levelDist.media || 0,
+        bajo: (levelDist.baja || levelDist.muy_baja || 0)
+      };
+    }
     const categoryData = (statistics as any).category_data || (statistics as any).categoryData || [];
     return calculateControversyLevels(categoryData);
   }, [statistics]);

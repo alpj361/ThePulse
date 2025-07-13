@@ -117,6 +117,11 @@ export const Trends = () => {
   const [nitterTweetsExpanded, setNitterTweetsExpanded] = useState(false);
 
   const [statisticsExpanded, setStatisticsExpanded] = useState(false);
+  // NUEVO: Estado para datos de controversia
+  const [controversyAnalyses, setControversyAnalyses] = useState<any[]>([]);
+  const [controversyStatistics, setControversyStatistics] = useState<any>({});
+  const [controversyChartData, setControversyChartData] = useState<any>({});
+  const [controversyExpanded, setControversyExpanded] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -148,7 +153,23 @@ export const Trends = () => {
             setAboutInfo(latestData.about);
           }
           if (latestData.statistics) {
-            setStatistics(latestData.statistics);
+            // FIJO: Fusionar datos de controversia en el objeto statistics
+            const enhancedStatistics = {
+              ...latestData.statistics,
+              controversyStatistics: latestData.controversyStatistics || {},
+              controversy_statistics: latestData.controversyStatistics || {}
+            };
+            setStatistics(enhancedStatistics);
+          }
+          // NUEVO: Cargar datos de controversia
+          if (latestData.controversyAnalyses && latestData.controversyAnalyses.length > 0) {
+            setControversyAnalyses(latestData.controversyAnalyses);
+          }
+          if (latestData.controversyStatistics) {
+            setControversyStatistics(latestData.controversyStatistics);
+          }
+          if (latestData.controversyChartData) {
+            setControversyChartData(latestData.controversyChartData);
           }
           
           setLastUpdated(new Date(latestData.timestamp));
@@ -211,7 +232,23 @@ export const Trends = () => {
           setAboutInfo(data.about);
         }
         if (data.statistics) {
-          setStatistics(data.statistics);
+          // FIJO: Fusionar datos de controversia en el objeto statistics
+          const enhancedStatistics = {
+            ...data.statistics,
+            controversyStatistics: data.controversyStatistics || {},
+            controversy_statistics: data.controversyStatistics || {}
+          };
+          setStatistics(enhancedStatistics);
+        }
+        // NUEVO: Actualizar datos de controversia
+        if (data.controversyAnalyses && data.controversyAnalyses.length > 0) {
+          setControversyAnalyses(data.controversyAnalyses);
+        }
+        if (data.controversyStatistics) {
+          setControversyStatistics(data.controversyStatistics);
+        }
+        if (data.controversyChartData) {
+          setControversyChartData(data.controversyChartData);
         }
         
         setLastUpdated(new Date(data.timestamp || new Date()));
@@ -279,7 +316,13 @@ export const Trends = () => {
                 setAboutExpanded(true);
               }
               if (statusData.data.statistics) {
-                setStatistics(statusData.data.statistics);
+                // FIJO: Fusionar datos de controversia en el objeto statistics
+                const enhancedStatistics = {
+                  ...statusData.data.statistics,
+                  controversyStatistics: statusData.data.controversyStatistics || {},
+                  controversy_statistics: statusData.data.controversyStatistics || {}
+                };
+                setStatistics(enhancedStatistics);
                 setStatisticsExpanded(true);
               }
               if (statusData.data.categoryData && Array.isArray(statusData.data.categoryData)) {
@@ -290,6 +333,17 @@ export const Trends = () => {
                 }));
                 setCategoryData(transformedCategoryData);
                 setShowCategoryUpdate(true);
+              }
+              // NUEVO: Actualizar datos de controversia del polling
+              if (statusData.data.controversyAnalyses && Array.isArray(statusData.data.controversyAnalyses)) {
+                setControversyAnalyses(statusData.data.controversyAnalyses);
+                setControversyExpanded(true);
+              }
+              if (statusData.data.controversyStatistics) {
+                setControversyStatistics(statusData.data.controversyStatistics);
+              }
+              if (statusData.data.controversyChartData) {
+                setControversyChartData(statusData.data.controversyChartData);
               }
               
               setIsPollingForDetails(false);
@@ -351,7 +405,13 @@ export const Trends = () => {
               setAboutExpanded(true); // Auto-expandir
             }
             if (statusData.data.statistics) {
-              setStatistics(statusData.data.statistics);
+              // FIJO: Fusionar datos de controversia en el objeto statistics
+              const enhancedStatistics = {
+                ...statusData.data.statistics,
+                controversyStatistics: statusData.data.controversyStatistics || {},
+                controversy_statistics: statusData.data.controversyStatistics || {}
+              };
+              setStatistics(enhancedStatistics);
               setStatisticsExpanded(true); // Auto-expandir
             }
             setIsPollingForDetails(false);

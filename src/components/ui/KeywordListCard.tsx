@@ -31,6 +31,14 @@ const KeywordListCard: React.FC<KeywordListCardProps> = ({
 }) => {
   const theme = useTheme();
   
+  // DEBUG: Mostrar los datos que llegan
+  React.useEffect(() => {
+    console.log('🔍 KeywordListCard - Datos recibidos:', keywords);
+    keywords.slice(0, 3).forEach((keyword, index) => {
+      console.log(`  ${index + 1}. ${keyword.keyword}: count=${keyword.count} (tipo: ${typeof keyword.count})`);
+    });
+  }, [keywords]);
+  
   // Función para seleccionar el icono según la posición
   const getRankIcon = (index: number) => {
     switch(index) {
@@ -258,7 +266,8 @@ const KeywordListCard: React.FC<KeywordListCardProps> = ({
                   {keyword.keyword}
                 </Typography>
                 
-                <Chip
+                {/* Commenting out the Chip component that displays the mention count */}
+                {/* <Chip
                   icon={<TagIcon sx={{ fontSize: '0.8rem !important' }} />}
                   label={formatMentions(typeof keyword.count === 'number' ? keyword.count : 0)}
                   size="small"
@@ -280,7 +289,7 @@ const KeywordListCard: React.FC<KeywordListCardProps> = ({
                       borderColor: alpha(getRankColor(index), 0.25)
                     }
                   }}
-                />
+                /> */}
               </Box>
             </ListItem>
             {index < keywords.length - 1 && index < 9 && (
@@ -302,51 +311,16 @@ const KeywordListCard: React.FC<KeywordListCardProps> = ({
         ))}
       </List>
       
-      <Box
-        sx={{
-          p: 2.5,
-          borderTop: '1px solid',
-          borderColor: alpha(theme.palette.info.main, 0.1),
-          display: 'flex',
-          justifyContent: 'center',
-          bgcolor: alpha(theme.palette.info.main, 0.02),
-          backdropFilter: 'blur(8px)'
-        }}
+      {/* Commenting out the option to view all topics */}
+      {/* Assuming there is a button or link that allows viewing all topics, comment it out or remove it */}
+      {/* <Button
+        onClick={handleViewAllTopics}
+        variant="text"
+        size="small"
+        sx={{ mt: 1, color: 'text.secondary' }}
       >
-        <Button
-          color="primary"
-          endIcon={<ArrowForwardIcon />}
-          sx={{ 
-            textTransform: 'none',
-            fontWeight: '500',
-            fontSize: '0.875rem',
-            px: 3,
-            py: 1.5,
-            borderRadius: 3,
-            bgcolor: alpha(theme.palette.info.main, 0.08),
-            border: `1px solid ${alpha(theme.palette.info.main, 0.15)}`,
-            backdropFilter: 'blur(8px)',
-            color: theme.palette.info.main,
-            fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
-            letterSpacing: '-0.01em',
-            '&:hover': {
-              bgcolor: alpha(theme.palette.info.main, 0.12),
-              borderColor: alpha(theme.palette.info.main, 0.25),
-              transform: 'translateX(4px)',
-              boxShadow: `0 4px 16px ${alpha(theme.palette.info.main, 0.2)}`,
-              '& .MuiButton-endIcon': {
-                transform: 'translateX(2px)'
-              }
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '& .MuiButton-endIcon': {
-              transition: 'transform 0.3s ease'
-            }
-          }}
-        >
-          Ver todos los temas
-        </Button>
-      </Box>
+        Ver todos los temas
+      </Button> */}
     </Paper>
   );
 };

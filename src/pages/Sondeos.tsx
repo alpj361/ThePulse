@@ -49,6 +49,7 @@ import PieChartVisual from '../components/ui/PieChartVisual';
 import ModernBarChart from '../components/ui/ModernBarChart';
 import ModernLineChart from '../components/ui/ModernLineChart';
 import ModernPieChart from '../components/ui/ModernPieChart';
+import SentimentAreaChart from '../components/ui/SentimentAreaChart';
 import MultiContextSelector from '../components/ui/MultiContextSelector';
 import AIResponseDisplay from '../components/ui/AIResponseDisplay';
 import SondeoConfigModal from '../components/ui/SondeoConfigModal';
@@ -119,6 +120,8 @@ const Sondeos: React.FC = () => {
   const [llmSources, setLlmSources] = useState<any>(null);
   const [sondeos, setSondeos] = useState<SondeoHistorial[]>([]);
   const [loadingSondeos, setLoadingSondeos] = useState(false);
+  const [selectedMonitoreos, setSelectedMonitoreos] = useState<string[]>([]);
+  const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
   
   // Nuevo estado para datos de visualización
   const [datosAnalisis, setDatosAnalisis] = useState<any>(null);
@@ -310,6 +313,105 @@ const Sondeos: React.FC = () => {
         />
       );
       insights = getInsights('documentos_codex');
+    } else if (primaryContext === 'monitoreos') {
+      switch (question.id) {
+        case 1: // Análisis de sentimiento
+          if (datosAnalisis.analisis_sentimiento) {
+            chartComponent = (
+              <ModernPieChart
+                data={datosAnalisis.analisis_sentimiento.map((item: any) => ({ 
+                  name: item.sentimiento, 
+                  value: item.valor,
+                  color: item.color 
+                }))}
+                height={280}
+                showLegend={true}
+              />
+            );
+          }
+          insights = getInsights('analisis_sentimiento');
+          break;
+          
+        case 2: // Evolución del sentimiento
+          if (datosAnalisis.evolucion_sentimiento) {
+            chartComponent = (
+              <SentimentAreaChart
+                data={datosAnalisis.evolucion_sentimiento}
+                height={280}
+                title="Evolución del Sentimiento a lo Largo del Tiempo"
+              />
+            );
+          }
+          insights = getInsights('evolucion_sentimiento');
+          break;
+          
+        case 3: // Emociones detectadas
+          if (datosAnalisis.emociones_detectadas) {
+            chartComponent = (
+              <ModernBarChart 
+                data={datosAnalisis.emociones_detectadas.map((item: any) => ({ 
+                  name: item.emocion, 
+                  value: item.valor 
+                }))} 
+                height={280} 
+                gradient={true}
+                glassmorphism={true}
+              />
+            );
+          }
+          insights = getInsights('emociones_detectadas');
+          break;
+          
+        case 4: // Intenciones comunicativas
+          if (datosAnalisis.intenciones_comunicativas) {
+            chartComponent = (
+              <ModernPieChart
+                data={datosAnalisis.intenciones_comunicativas.map((item: any) => ({ 
+                  name: item.intencion, 
+                  value: item.valor 
+                }))}
+                height={280}
+                showLegend={true}
+              />
+            );
+          }
+          insights = getInsights('intenciones_comunicativas');
+          break;
+          
+        case 5: // Engagement temporal
+          if (datosAnalisis.engagement_temporal) {
+            chartComponent = (
+              <ModernLineChart 
+                data={datosAnalisis.engagement_temporal.map((item: any) => ({ 
+                  name: item.hora, 
+                  value: item.engagement 
+                }))}
+                height={280}
+                showArea={true}
+              />
+            );
+          }
+          insights = getInsights('engagement_temporal');
+          break;
+          
+        default:
+          // Fallback para monitoreos
+          if (datosAnalisis.monitoreos_relevantes) {
+            chartComponent = (
+              <ModernBarChart 
+                data={datosAnalisis.monitoreos_relevantes.map((item: any) => ({ 
+                  name: item.titulo, 
+                  value: item.relevancia 
+                }))} 
+                height={280} 
+                gradient={true}
+                glassmorphism={true}
+              />
+            );
+          }
+          insights = getInsights('monitoreos_relevantes');
+          break;
+      }
     }
 
     return chartComponent;
@@ -409,6 +511,14 @@ const Sondeos: React.FC = () => {
   const handleContextChange = (contexts: string[]) => {
     setSelectedContexts(contexts);
     updateSelectedContexts(contexts);
+  };
+
+  const handleMonitoreosChange = (monitoreosIds: string[]) => {
+    setSelectedMonitoreos(monitoreosIds);
+  };
+
+  const handleTrendsChange = (trends: string[]) => {
+    setSelectedTrends(trends);
   };
 
   const isFormValid = () => {

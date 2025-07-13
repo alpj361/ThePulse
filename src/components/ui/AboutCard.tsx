@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -139,6 +139,8 @@ const AboutCard: React.FC<AboutCardProps> = ({ keyword, aboutInfo, index }) => {
 
   const relevanceIndicator = getRelevanceIndicator(aboutInfo.relevancia);
   const categoryColor = getCategoryColor(aboutInfo.categoria);
+  const [expanded, setExpanded] = useState(false);
+  const toggleExpanded = () => setExpanded(prev=>!prev);
 
   return (
     <Card
@@ -212,11 +214,24 @@ const AboutCard: React.FC<AboutCardProps> = ({ keyword, aboutInfo, index }) => {
                 fontStyle: 'italic',
                 color: 'text.primary',
                 fontSize: '0.85rem',
-                pl: 3
+                pl: 3,
+                display: expanded ? 'block' : '-webkit-box',
+                WebkitLineClamp: expanded ? 'initial' : 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
               }}
             >
               {aboutInfo.razon_tendencia}
             </Typography>
+            {aboutInfo.razon_tendencia.length > 120 && (
+              <Typography
+                variant="caption"
+                onClick={toggleExpanded}
+                sx={{ color: 'primary.main', cursor: 'pointer', pl: 3 }}
+              >
+                {expanded ? 'Ver menos' : 'Ver más'}
+              </Typography>
+            )}
           </Box>
         )}
 

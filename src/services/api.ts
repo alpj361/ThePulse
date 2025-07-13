@@ -17,6 +17,10 @@ export interface TrendResponse {
   statistics?: any;
   timestamp: string;
   processing_status?: string;
+  // NUEVO: Campos de controversia
+  controversyAnalyses?: any[];
+  controversyStatistics?: any;
+  controversyChartData?: any;
 }
 
 // Types for backend response with about and statistics
@@ -247,17 +251,52 @@ export async function fetchTrendsFromExtractorW(rawTrendsData?: any, authToken?:
     const data = await response.json();
     console.log('✅ Respuesta rápida recibida de ExtractorW:', data);
     
+    // DEBUG: Mostrar específicamente los topKeywords
+    console.log('🔍 DEBUG - topKeywords del backend:', data.topKeywords?.slice(0, 3));
+    data.topKeywords?.slice(0, 3).forEach((keyword: any, index: number) => {
+      console.log(`  ${index + 1}. ${keyword.keyword}: count=${keyword.count}`);
+    });
+    
+    // FIJO: Intentar usar datos de volumen reales si están disponibles
+    let processedTopKeywords = data.topKeywords || [];
+    
+    // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
+    const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
+    if (allHaveCountOne && data.wordCloudData && data.wordCloudData.length > 0) {
+      console.log('🔧 FIJO: Detectado count=1 para todos en fetchTrends, usando volúmenes de wordCloudData');
+      
+      // Crear un mapa de volúmenes desde wordCloudData
+      const volumeMap = new Map();
+      data.wordCloudData.forEach((item: any) => {
+        volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
+      });
+      
+      // Actualizar topKeywords con volúmenes reales
+      processedTopKeywords = processedTopKeywords.map((keyword: any) => {
+        const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
+        console.log(`  📊 ${keyword.keyword}: ${keyword.count} → ${realVolume}`);
+        return {
+          ...keyword,
+          count: realVolume
+        };
+      });
+    }
+    
     // La respuesta inicial viene sin about y statistics
     // Estos se procesan en background
     
     return {
       wordCloudData: data.wordCloudData || [],
-      topKeywords: data.topKeywords || [],
+      topKeywords: processedTopKeywords,
       categoryData: data.categoryData || [],
       about: data.about || [],
       statistics: data.statistics || {},
       timestamp: data.timestamp,
-      processing_status: data.processing_status || 'basic_completed'
+      processing_status: data.processing_status || 'basic_completed',
+      // NUEVO: Campos de controversia
+      controversyAnalyses: data.controversyAnalyses || [],
+      controversyStatistics: data.controversyStatistics || {},
+      controversyChartData: data.controversyChartData || {}
     };
   } catch (error) {
     console.error('❌ Error in fetchTrendsFromExtractorW:', error);
@@ -362,17 +401,53 @@ export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | n
       timestamp: data.timestamp,
       status: data.processing_status,
       has_about: data.about?.length > 0,
-      has_statistics: Object.keys(data.statistics || {}).length > 0
+      has_statistics: Object.keys(data.statistics || {}).length > 0,
+      has_controversy: data.controversyAnalyses?.length > 0
     });
+    
+    // DEBUG: Mostrar específicamente los topKeywords desde latestTrends
+    console.log('🔍 DEBUG - topKeywords desde latestTrends:', data.topKeywords?.slice(0, 3));
+    data.topKeywords?.slice(0, 3).forEach((keyword: any, index: number) => {
+      console.log(`  ${index + 1}. ${keyword.keyword}: count=${keyword.count}`);
+    });
+    
+    // FIJO: Intentar usar datos de volumen reales si están disponibles
+    let processedTopKeywords = data.topKeywords || [];
+    
+    // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
+    const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
+    if (allHaveCountOne && data.wordCloudData && data.wordCloudData.length > 0) {
+      console.log('🔧 FIJO: Detectado count=1 para todos, intentando usar volúmenes de wordCloudData');
+      
+      // Crear un mapa de volúmenes desde wordCloudData
+      const volumeMap = new Map();
+      data.wordCloudData.forEach((item: any) => {
+        volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
+      });
+      
+      // Actualizar topKeywords con volúmenes reales
+      processedTopKeywords = processedTopKeywords.map((keyword: any) => {
+        const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
+        console.log(`  📊 ${keyword.keyword}: ${keyword.count} → ${realVolume}`);
+        return {
+          ...keyword,
+          count: realVolume
+        };
+      });
+    }
     
     return {
       wordCloudData: data.wordCloudData || [],
-      topKeywords: data.topKeywords || [],
+      topKeywords: processedTopKeywords,
       categoryData: data.categoryData || [],
       about: data.about || [],
       statistics: data.statistics || {},
       timestamp: data.timestamp,
-      processing_status: data.processing_status || 'unknown'
+      processing_status: data.processing_status || 'unknown',
+      // NUEVO: Campos de controversia
+      controversyAnalyses: data.controversyAnalyses || [],
+      controversyStatistics: data.controversyStatistics || {},
+      controversyChartData: data.controversyChartData || {}
     };
   } catch (error) {
     console.error('❌ Error getting latest trends from ExtractorW:', error);
@@ -455,18 +530,52 @@ export async function getLatestTrends(): Promise<TrendResponse | null> {
         timestamp: supabaseData.timestamp,
         wordCloudCount: supabaseData.word_cloud_data?.length || 0,
         keywordsCount: supabaseData.top_keywords?.length || 0,
-        categoriesCount: supabaseData.category_data?.length || 0
+        categoriesCount: supabaseData.category_data?.length || 0,
+        has_controversy: supabaseData.controversy_analyses?.length > 0
       });
+      
+      // FIJO: También aplicar fix de volúmenes para datos de Supabase
+      let processedTopKeywords = supabaseData.top_keywords || [];
+      
+      // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
+      const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
+      if (allHaveCountOne && supabaseData.word_cloud_data && supabaseData.word_cloud_data.length > 0) {
+        console.log('🔧 FIJO: Detectado count=1 en Supabase, usando volúmenes de wordCloudData');
+        
+        // Crear un mapa de volúmenes desde wordCloudData
+        const volumeMap = new Map();
+        supabaseData.word_cloud_data.forEach((item: any) => {
+          volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
+        });
+        
+        // Actualizar topKeywords con volúmenes reales
+        processedTopKeywords = processedTopKeywords.map((keyword: any) => {
+          const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
+          console.log(`  📊 Supabase ${keyword.keyword}: ${keyword.count} → ${realVolume}`);
+          return {
+            ...keyword,
+            count: realVolume
+          };
+        });
+      }
       
       // Asegurar que los datos de Supabase tienen la estructura correcta
       return {
         wordCloudData: supabaseData.word_cloud_data || [],
-        topKeywords: supabaseData.top_keywords || [],
+        topKeywords: processedTopKeywords,
         categoryData: supabaseData.category_data || [],
         about: supabaseData.about || [],
-        statistics: supabaseData.statistics || null,
+        statistics: {
+          ...(supabaseData.statistics || {}),
+          controversyStatistics: supabaseData.controversy_statistics || {},
+          controversyChartData: supabaseData.controversy_chart_data || {}
+        },
         timestamp: supabaseData.timestamp || new Date().toISOString(),
-        processing_status: supabaseData.processing_status || 'unknown'
+        processing_status: supabaseData.processing_status || 'unknown',
+        // NUEVO: Campos de controversia desde Supabase
+        controversyAnalyses: supabaseData.controversy_analyses || [],
+        controversyStatistics: supabaseData.controversy_statistics || {},
+        controversyChartData: supabaseData.controversy_chart_data || {}
       };
     }
     

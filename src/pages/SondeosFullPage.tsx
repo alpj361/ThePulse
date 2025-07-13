@@ -394,6 +394,8 @@ const SondeosFullPage: React.FC = () => {
                 onContextChange={handleContextChange}
                 onMonitoreosChange={handleMonitoreosChange}
                 onTrendsChange={handleTrendsChange}
+                selectedMonitoreos={selectedMonitoreos}
+                selectedTrends={selectedTrends}
                 disabled={loadingSondeo}
               />
             </div>

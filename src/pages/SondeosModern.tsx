@@ -84,6 +84,8 @@ const SondeosModern: React.FC = () => {
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>('preparing');
   const [progress, setProgress] = useState<number>(0);
+  const [selectedMonitoreos, setSelectedMonitoreos] = useState<string[]>([]);
+  const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
 
   // Estados para la UI moderna
   const [selectedChartType, setSelectedChartType] = useState<'bar' | 'line' | 'pie'>('bar');
@@ -250,7 +252,9 @@ const SondeosModern: React.FC = () => {
         currentInput,
         currentContexts,
         user.id,
-        session?.access_token
+        session?.access_token,
+        selectedMonitoreos,
+        selectedTrends
       );
       
       setCurrentStep('analyzing');
@@ -294,6 +298,14 @@ const SondeosModern: React.FC = () => {
   const handleContextChange = (contexts: string[]) => {
     setSelectedContexts(contexts);
     updateSelectedContexts(contexts);
+  };
+
+  const handleMonitoreosChange = (monitoreosIds: string[]) => {
+    setSelectedMonitoreos(monitoreosIds);
+  };
+
+  const handleTrendsChange = (trends: string[]) => {
+    setSelectedTrends(trends);
   };
 
   const isFormValid = () => {
@@ -552,6 +564,10 @@ const SondeosModern: React.FC = () => {
             <MultiContextSelector
               selectedContexts={selectedContexts}
               onContextChange={handleContextChange}
+              onMonitoreosChange={handleMonitoreosChange}
+              onTrendsChange={handleTrendsChange}
+              selectedMonitoreos={selectedMonitoreos}
+              selectedTrends={selectedTrends}
               disabled={loading || loadingSondeo}
             />
             <p className="mt-1 text-xs text-gray-500">Selecciona las fuentes de datos para el análisis.</p>
