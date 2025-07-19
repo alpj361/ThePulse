@@ -22,8 +22,12 @@ interface MultiContextSelectorProps {
   onContextChange: (contexts: string[]) => void;
   onMonitoreosChange?: (monitoreosIds: string[]) => void;
   onTrendsChange?: (trends: string[]) => void;
+  onNoticiasChange?: (noticias: string[]) => void;
+  onCodexChange?: (codex: string[]) => void;
   selectedMonitoreos?: string[];
   selectedTrends?: string[];
+  selectedNoticias?: string[];
+  selectedCodex?: string[];
   disabled?: boolean;
 }
 
@@ -67,8 +71,12 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
   onContextChange,
   onMonitoreosChange,
   onTrendsChange,
+  onNoticiasChange,
+  onCodexChange,
   selectedMonitoreos = [],
   selectedTrends = [],
+  selectedNoticias = [],
+  selectedCodex = [],
   disabled = false
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -222,8 +230,12 @@ const MultiContextSelector: React.FC<MultiContextSelectorProps> = ({
         onContextChange={onContextChange}
         onMonitoreosChange={onMonitoreosChange}
         onTrendsChange={onTrendsChange}
+        onNoticiasChange={onNoticiasChange}
+        onCodexChange={onCodexChange}
         selectedMonitoreos={selectedMonitoreos}
         selectedTrends={selectedTrends}
+        selectedNoticias={selectedNoticias}
+        selectedCodex={selectedCodex}
       />
     </>
   );

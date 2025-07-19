@@ -61,6 +61,9 @@ import SondeoConfigModal from '../components/ui/SondeoConfigModal';
 import SondeoProgressIndicator from '../components/ui/SondeoProgressIndicator';
 import CardSondeo from '../components/sondeos/CardSondeo';
 import AnalisisGenerado from '../components/sondeos/AnalisisGenerado';
+// Import new chart components
+import SentimentAreaChart from '../components/ui/SentimentAreaChart';
+import StorytellingChart from '../components/ui/StorytellingChart';
 
 // Tipo para el historial de sondeos
 interface SondeoHistorial {
@@ -90,6 +93,8 @@ const SondeosFullPage: React.FC = () => {
   const [monitoreos, setMonitoreos] = useState<RecentScrape[]>([]);
   const [selectedMonitoreos, setSelectedMonitoreos] = useState<string[]>([]);
   const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
+  const [selectedNoticias, setSelectedNoticias] = useState<string[]>([]);
+  const [selectedCodex, setSelectedCodex] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSondeo, setLoadingSondeo] = useState(false);
   const [error, setError] = useState('');
@@ -114,6 +119,21 @@ const SondeosFullPage: React.FC = () => {
     temasMasAnalizados: 4,
     efectividad: 87
   });
+
+  // Utility function to map context to chart context types
+  const getContextType = (context: string): 'politica' | 'economia' | 'social' | 'tecnologia' | 'general' => {
+    const contextMap: Record<string, 'politica' | 'economia' | 'social' | 'tecnologia' | 'general'> = {
+      'tendencias': 'general',
+      'noticias': 'politica',
+      'codex': 'social',
+      'monitoreos': 'social',
+      'politica': 'politica',
+      'economia': 'economia',
+      'social': 'social',
+      'tecnologia': 'tecnologia'
+    };
+    return contextMap[context] || 'general';
+  };
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -175,7 +195,9 @@ const SondeosFullPage: React.FC = () => {
         user.id,
         session?.access_token,
         selectedMonitoreos,
-        selectedTrends
+        selectedTrends,
+        selectedNoticias,
+        selectedCodex
       );
       
       // Procesar respuesta
@@ -394,8 +416,12 @@ const SondeosFullPage: React.FC = () => {
                 onContextChange={handleContextChange}
                 onMonitoreosChange={handleMonitoreosChange}
                 onTrendsChange={handleTrendsChange}
+                onNoticiasChange={setSelectedNoticias}
+                onCodexChange={setSelectedCodex}
                 selectedMonitoreos={selectedMonitoreos}
                 selectedTrends={selectedTrends}
+                selectedNoticias={selectedNoticias}
+                selectedCodex={selectedCodex}
                 disabled={loadingSondeo}
               />
             </div>
@@ -562,6 +588,60 @@ const SondeosFullPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Advanced Analytics Section */}
+        {datosAnalisis && (() => {
+          console.log('🎯 Debug SondeosFullPage - Advanced Analytics:', {
+            tieneEvolucionSentimiento: !!datosAnalisis.evolucion_sentimiento,
+            tieneCronologiaEventos: !!datosAnalisis.cronologia_eventos,
+            contextType: getContextType(selectedContexts[0]),
+            todasLasKeys: Object.keys(datosAnalisis)
+          });
+          return (
+            <div className="mt-12 grid lg:grid-cols-2 gap-8">
+              {/* Sentiment Evolution Chart */}
+              {datosAnalisis.evolucion_sentimiento ? (
+                <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
+                  <SentimentAreaChart
+                    data={datosAnalisis.evolucion_sentimiento}
+                    height={300}
+                    title="Evolución del Sentimiento"
+                    contextType={getContextType(selectedContexts[0])}
+                    showEvents={true}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
+                  <div className="text-center text-gray-400 py-12">
+                    📈 Gráfico de sentimientos no disponible
+                    <br />
+                    <small>Datos: {JSON.stringify(datosAnalisis.evolucion_sentimiento || 'no found')}</small>
+                  </div>
+                </div>
+              )}
+
+              {/* Storytelling Timeline */}
+              {datosAnalisis.cronologia_eventos ? (
+                <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
+                  <StorytellingChart
+                    events={datosAnalisis.cronologia_eventos}
+                    title="Cronología de Eventos"
+                    contextType={getContextType(selectedContexts[0])}
+                    maxEvents={3}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
+                  <div className="text-center text-gray-400 py-12">
+                    📖 Cronología de eventos no disponible
+                    <br />
+                    <small>Datos: {JSON.stringify(datosAnalisis.cronologia_eventos || 'no found')}</small>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Historial de Sondeos */}
         {sondeos.length > 0 && (

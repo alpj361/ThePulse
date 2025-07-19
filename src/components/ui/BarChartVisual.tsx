@@ -84,19 +84,86 @@ const BarChartVisual: React.FC<BarChartVisualProps> = ({
     10
   );
 
-  // Función para acortar etiquetas largas
+  // Smart label formatter - extracts key information instead of truncating
   const formatXAxisTick = (value: string) => {
     if (!value) return '';
     
-    // Determinar longitud máxima según pantalla y número de elementos
-    const maxLength = isMobile ? 
+    // Define max characters based on screen size and data density
+    const maxChars = isMobile ? 
       (processedData.length > 5 ? 8 : 12) : 
-      (processedData.length > 7 ? 12 : 20);
+      (processedData.length > 7 ? 12 : 18);
     
-    if (value.length <= maxLength) return value;
+    // If already short enough, return as-is
+    if (value.length <= maxChars) return value;
     
-    // Acortar y añadir puntos suspensivos
-    return `${value.substring(0, maxLength)}...`;
+    // Smart keyword extraction for common patterns
+    
+    // Remove common prefixes that add noise
+    let cleaned = value.replace(/^(.*?)\s*-\s*/, ''); // Remove "Question - " pattern
+    
+    // Extract key political/economic terms
+    const politicalTerms = ['política', 'político', 'gobierno', 'elecciones', 'partido', 'congreso', 'presidente'];
+    const economicTerms = ['economía', 'económico', 'inversión', 'financiero', 'comercio', 'empleo', 'desarrollo'];
+    const socialTerms = ['educación', 'salud', 'cultura', 'social', 'comunidad', 'familia'];
+    const geoTerms = ['guatemala', 'zona metro', 'occidente', 'oriente', 'norte', 'capital'];
+    
+    // Check for abbreviated forms
+    if (cleaned.toLowerCase().includes('política') || politicalTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Política';
+    }
+    if (cleaned.toLowerCase().includes('económ') || economicTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Economía';
+    }
+    if (cleaned.toLowerCase().includes('internacional') || cleaned.toLowerCase().includes('exterior')) {
+      return 'Internacional';
+    }
+    if (cleaned.toLowerCase().includes('tecnolog') || cleaned.toLowerCase().includes('digital')) {
+      return 'Tecnología';
+    }
+    if (socialTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Social';
+    }
+    
+    // Geographic abbreviations
+    if (cleaned.toLowerCase().includes('guatemala') && cleaned.toLowerCase().includes('ciudad')) {
+      return 'Guatemala Capital';
+    }
+    if (cleaned.toLowerCase().includes('zona metro')) {
+      return 'Zona Metro';
+    }
+    if (geoTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      const foundTerm = geoTerms.find(term => cleaned.toLowerCase().includes(term));
+      return foundTerm!.charAt(0).toUpperCase() + foundTerm!.slice(1);
+    }
+    
+    // For news titles and other long content, extract first meaningful words
+    const words = cleaned.split(' ').filter(word => word.length > 2);
+    if (words.length >= 2) {
+      // Take first 2-3 meaningful words
+      const keyWords = words.slice(0, 3).join(' ');
+      if (keyWords.length <= maxChars) {
+        return keyWords;
+      }
+      // Try with just 2 words
+      const twoWords = words.slice(0, 2).join(' ');
+      if (twoWords.length <= maxChars) {
+        return twoWords;
+      }
+      // Fall back to first word if still too long
+      return words[0].length <= maxChars ? words[0] : words[0].substring(0, maxChars - 3) + '...';
+    }
+    
+    // Last resort: smart truncation at word boundaries
+    if (cleaned.length > maxChars) {
+      const truncated = cleaned.substring(0, maxChars);
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > maxChars * 0.7) { // Only use word boundary if it's not too early
+        return truncated.substring(0, lastSpace) + '...';
+      }
+      return truncated + '...';
+    }
+    
+    return cleaned;
   };
 
   // Calcular el valor promedio para la línea de referencia

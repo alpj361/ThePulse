@@ -26,6 +26,59 @@ const BarChart: React.FC<BarChartProps> = ({ data, title = 'Distribución por Ca
   // Sortear datos por conteo (más alto primero) - manteniendo la lógica original
   const sortedData = [...data].sort((a, b) => b.count - a.count);
   
+  // Smart label formatter - extracts key information instead of truncating
+  const smartLabelFormatter = (value: string) => {
+    if (!value) return '';
+    
+    // Define max characters for this compact chart
+    const maxChars = 12;
+    
+    // If already short enough, return as-is
+    if (value.length <= maxChars) return value;
+    
+    // Remove common prefixes that add noise
+    let cleaned = value.replace(/^(.*?)\s*-\s*/, ''); // Remove "Question - " pattern
+    
+    // Extract key political/economic terms
+    const politicalTerms = ['política', 'político', 'gobierno', 'elecciones', 'partido'];
+    const economicTerms = ['economía', 'económico', 'inversión', 'financiero', 'comercio'];
+    const socialTerms = ['educación', 'salud', 'cultura', 'social', 'comunidad'];
+    
+    // Check for abbreviated forms
+    if (cleaned.toLowerCase().includes('política') || politicalTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Política';
+    }
+    if (cleaned.toLowerCase().includes('económ') || economicTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Economía';
+    }
+    if (cleaned.toLowerCase().includes('internacional')) {
+      return 'Internacional';
+    }
+    if (cleaned.toLowerCase().includes('tecnolog')) {
+      return 'Tecnología';
+    }
+    if (socialTerms.some(term => cleaned.toLowerCase().includes(term))) {
+      return 'Social';
+    }
+    
+    // For other content, extract first meaningful words
+    const words = cleaned.split(' ').filter(word => word.length > 2);
+    if (words.length >= 1) {
+      const firstWord = words[0];
+      if (firstWord.length <= maxChars) {
+        return firstWord;
+      }
+    }
+    
+    // Last resort: smart truncation
+    const truncated = cleaned.substring(0, maxChars - 3);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxChars * 0.6) {
+      return truncated.substring(0, lastSpace) + '...';
+    }
+    return truncated + '...';
+  };
+
   // Paleta de colores profesional - inspirada en tu WordCloud
   const barColors = [
     '#1e40af', // Política - azul oscuro
@@ -181,6 +234,7 @@ const BarChart: React.FC<BarChartProps> = ({ data, title = 'Distribución por Ca
               textAnchor="end"
               height={60}
               interval={0}
+              tickFormatter={smartLabelFormatter}
             />
             
             <YAxis

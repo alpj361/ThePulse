@@ -76,42 +76,22 @@ export function deleteTask(tasks: ProjectTask[], taskId: string): ProjectTask[] 
 }
 
 /**
- * Genera tareas de ejemplo para un proyecto
+ * Genera tareas vacías para un proyecto
  */
-export function generateExampleTasks(projectId: string): TasksResponse {
-  const exampleTasks: ProjectTask[] = [
-    {
-      id: '1',
-      title: 'Definir objetivos del proyecto',
-      completed: true,
-      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      project_id: projectId
-    },
-    {
-      id: '2',
-      title: 'Recopilar documentación inicial',
-      completed: true,
-      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      project_id: projectId
-    },
-    {
-      id: '3',
-      title: 'Revisar decisiones estratégicas',
-      completed: false,
-      created_at: new Date().toISOString(),
-      project_id: projectId
-    },
-    {
-      id: '4',
-      title: 'Preparar presentación de resultados',
-      completed: false,
-      created_at: new Date().toISOString(),
-      project_id: projectId
-    }
-  ];
-
+export function generateEmptyTasks(projectId: string): TasksResponse {
   return {
-    tasks: exampleTasks,
+    tasks: [],
     updatedAt: new Date().toISOString()
   };
+}
+
+/**
+ * Alterna el estado completado de una tarea
+ */
+export function toggleTaskCompletion(tasks: ProjectTask[], taskId: string): ProjectTask[] {
+  return tasks.map(task => 
+    task.id === taskId 
+      ? { ...task, completed: !task.completed }
+      : task
+  );
 } 

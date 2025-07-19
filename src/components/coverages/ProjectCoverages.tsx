@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FiMapPin, FiAlertTriangle, FiRefreshCw, FiChevronDown, FiGrid, FiLayers } from 'react-icons/fi';
+import { FiMapPin, FiAlertTriangle, FiRefreshCw, FiChevronDown, FiGrid, FiLayers, FiMap } from 'react-icons/fi';
 import { getCoverages, Coverage, CoverageType, formatCoverageName, getFindingsForCoverage, CapturadoCard } from '../../services/coverages';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import CoveragesByTheme from '../ui/CoveragesByTheme';
+import CoberturaMap from './CoberturaMap';
 
 interface Props {
   projectId: string;
@@ -14,7 +15,7 @@ export default function ProjectCoverages({ projectId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'standard' | 'by-theme'>('by-theme');
+  const [activeTab, setActiveTab] = useState<'standard' | 'by-theme' | 'map'>('by-theme');
 
   useEffect(() => {
     async function fetchCoverages() {
@@ -90,9 +91,20 @@ export default function ProjectCoverages({ projectId }: Props) {
             <FiGrid className="w-4 h-4" />
             Vista Estándar
           </button>
+          <button
+            onClick={() => setActiveTab('map')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'map'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <FiMap className="w-4 h-4" />
+            Mapa
+          </button>
         </div>
         
-        {activeTab === 'standard' && (
+        {(activeTab === 'standard' || activeTab === 'map') && (
           <button
             onClick={handleRefresh}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-auto"
@@ -105,6 +117,23 @@ export default function ProjectCoverages({ projectId }: Props) {
       {/* Contenido según la pestaña activa */}
       {activeTab === 'by-theme' ? (
         <CoveragesByTheme projectId={projectId} />
+      ) : activeTab === 'map' ? (
+        <div className="space-y-4">
+          <CoberturaMap 
+            coverages={coverages}
+            height="500px"
+            onCoverageClick={(coverage) => {
+              console.log('Coverage clicked:', coverage);
+              // Aquí puedes agregar lógica adicional como mostrar detalles
+            }}
+          />
+          {coverages.length > 0 && (
+            <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+              Total de coberturas: {coverages.length} | 
+              Con coordenadas: {coverages.filter(c => c.coordinates).length}
+            </div>
+          )}
+        </div>
       ) : (
         <StandardCoveragesView 
           coverages={coverages}

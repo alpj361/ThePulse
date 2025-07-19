@@ -116,7 +116,7 @@ interface FolderCardProps {
   onViewItem: (item: CodexItem) => void;
   onDownloadItem: (item: CodexItem) => void;
   onTranscribeItem: (item: CodexItem) => void;
-  onShowTranscription: (item: CodexItem) => void;
+  onShowTranscription: (item: CodexItem, type?: 'audio' | 'text') => void;
   onEditItem: (item: CodexItem) => void;
   // selección
   selectionMode: boolean;
@@ -264,22 +264,33 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
             <div className="space-y-2">
               {children.length > 0 ? children.map(child => {
                 const IconComponent = getTypeIcon(child.tipo);
-                const hasTranscription = !!(child.audio_transcription || (child as any).transcription);
+                const hasAudioTranscription = !!child.audio_transcription;
+                const hasTextTranscription = !!(child as any).transcripcion;
                 return (
                   <div key={child.id} className="flex items-center justify-between p-2 pl-4 rounded-md bg-white hover:bg-slate-100 border border-slate-200">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <IconComponent className="h-5 w-5 text-slate-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-slate-700 truncate block" title={child.titulo}>{child.titulo}</span>
-                        {hasTranscription && (
-                          <span className="text-xs text-green-600 cursor-pointer hover:underline" onClick={() => onShowTranscription(child)} title="Tiene transcripción - click para ver">
-                            Transcripción disponible
-                          </span>
+                        {(hasAudioTranscription || hasTextTranscription) && (
+                          <div className="flex gap-2 items-center">
+                            {hasAudioTranscription && (
+                              <span className="text-xs text-blue-600 cursor-pointer hover:underline" onClick={() => onShowTranscription(child, 'audio')} title="Transcripción de audio - click para ver">
+                                🎤 Audio
+                              </span>
+                            )}
+                            {hasTextTranscription && (
+                              <span className="text-xs text-green-600 cursor-pointer hover:underline" onClick={() => onShowTranscription(child, 'text')} title="Transcripción de texto - click para ver">
+                                📝 Texto
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {hasTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child)} title="Ver Transcripción" className="text-green-600"><Mic className="h-4 w-4"/></Button>}
+                      {hasAudioTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'audio')} title="Ver Transcripción de Audio" className="text-blue-600"><Mic className="h-4 w-4"/></Button>}
+                      {hasTextTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'text')} title="Ver Transcripción de Texto" className="text-green-600"><FileText className="h-4 w-4"/></Button>}
                       {canTranscribe(child) && !child.audio_transcription && <Button variant="ghost" size="icon" onClick={() => onTranscribeItem(child)} title="Transcribir"><Mic className="h-4 w-4"/></Button>}
                       {child.storage_path && <Button variant="ghost" size="icon" onClick={() => onDownloadItem(child)} title="Descargar"><Download className="h-4 w-4"/></Button>}
                       <Button variant="ghost" size="icon" onClick={() => onViewItem(child)} title="Ver Detalles"><Eye className="h-4 w-4"/></Button>
@@ -897,9 +908,16 @@ export default function EnhancedCodex() {
   // Modal de transcripción
   // ------------------------------
 
-  const handleShowTranscription = (item: CodexItem) => {
-    if (item.audio_transcription && item.audio_transcription.trim().length > 0) {
-      setTranscriptionModalItem(item)
+  const handleShowTranscription = (item: CodexItem, type: 'audio' | 'text' = 'audio') => {
+    const hasAudioTranscription = item.audio_transcription && item.audio_transcription.trim().length > 0;
+    const hasTextTranscription = (item as any).transcripcion && (item as any).transcripcion.trim().length > 0;
+    
+    if (type === 'audio' && hasAudioTranscription) {
+      setTranscriptionModalItem({...item, transcriptionType: 'audio'} as any)
+    } else if (type === 'text' && hasTextTranscription) {
+      setTranscriptionModalItem({...item, transcriptionType: 'text'} as any)
+    } else {
+      setError('No hay transcripción disponible para este elemento')
     }
   }
 
@@ -3252,9 +3270,15 @@ export default function EnhancedCodex() {
                                   </DropdownMenuItem>
                                 )}
                                 {item.audio_transcription && (
-                                  <DropdownMenuItem onClick={() => handleShowTranscription(item)}>
+                                  <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
                                     <Mic className="h-4 w-4 mr-2" />
-                                    Transcripción
+                                    Transcripción Audio
+                                  </DropdownMenuItem>
+                                )}
+                                {(item as any).transcripcion && (
+                                  <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Transcripción Texto
                                   </DropdownMenuItem>
                                 )}
                                 {canBeGrouped(item) && !item.group_id && (
@@ -3323,8 +3347,13 @@ export default function EnhancedCodex() {
                               </Badge>
                             )}
                             {item.audio_transcription && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item)}>
-                                🎤 Transcripción
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'audio')}>
+                                🎤 Audio
+                              </Badge>
+                            )}
+                            {(item as any).transcripcion && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'text')}>
+                                📝 Texto
                               </Badge>
                             )}
                           </div>
@@ -3562,14 +3591,21 @@ export default function EnhancedCodex() {
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Mic className="w-5 h-5 text-purple-600" />
-                Transcripción de "{transcriptionModalItem.titulo}"
+                {(transcriptionModalItem as any).transcriptionType === 'audio' ? (
+                  <Mic className="w-5 h-5 text-blue-600" />
+                ) : (
+                  <FileText className="w-5 h-5 text-green-600" />
+                )}
+                Transcripción de {(transcriptionModalItem as any).transcriptionType === 'audio' ? 'Audio' : 'Texto'} - "{transcriptionModalItem.titulo}"
               </DialogTitle>
               <DialogDescription>Vista de solo lectura</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto prose">
-              {transcriptionModalItem.audio_transcription?.split('\n').map((p, idx) => (
+              {((transcriptionModalItem as any).transcriptionType === 'audio' ? 
+                transcriptionModalItem.audio_transcription : 
+                (transcriptionModalItem as any).transcripcion
+              )?.split('\n').map((p, idx) => (
                 <p key={idx}>{p}</p>
               ))}
             </div>

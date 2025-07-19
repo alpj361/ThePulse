@@ -223,3 +223,50 @@
     opacity: 0.3;
   }
 }
+
+/* MapBox Coverage Map Styles */
+.coverage-popup .mapboxgl-popup-content {
+  @apply rounded-lg shadow-lg border border-gray-200 dark:border-gray-700;
+  @apply bg-white dark:bg-gray-800;
+  @apply p-0;
+  min-width: 200px;
+}
+
+.coverage-popup .mapboxgl-popup-tip {
+  @apply border-t-gray-200 dark:border-t-gray-700;
+}
+
+.coverage-popup .mapboxgl-popup-close-button {
+  @apply text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300;
+  @apply text-lg font-bold;
+  right: 8px;
+  top: 8px;
+}
+
+/* MapBox Control Buttons */
+.mapboxgl-ctrl-group {
+  @apply bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700;
+  @apply rounded-lg;
+}
+
+.mapboxgl-ctrl button {
+  @apply text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white;
+  @apply bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700;
+}
+
+/* Coverage Markers Animation */
+.coverage-marker {
+  animation: marker-bounce 0.3s ease-out;
+}
+
+@keyframes marker-bounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

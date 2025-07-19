@@ -65,5 +65,23 @@ export interface TrendingTweet {
   updated_at: string;
 }
 
+export interface UserProfile {
+  id: string;
+  role?: 'admin' | 'user' | 'guest';
+  is_admin?: boolean;
+  [key: string]: any;  // Permitir propiedades adicionales
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  role?: 'admin' | 'user' | 'guest';
+  is_admin?: boolean;
+  profile?: UserProfile;
+  [key: string]: any;  // Permitir propiedades adicionales
+}
+
 // Re-export project types
 export * from './projects';

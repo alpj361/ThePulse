@@ -117,6 +117,13 @@ export default function Projects() {
         onSubmit={handleCreateProject}
         loading={isCreating}
       />
+      
+      {/* Feature Preview Cards */}
+      <div className="py-8 bg-gray-50">
+        <div className="container mx-auto px-4">
+          {/* CompactFeaturePreview was removed, so this section is now empty */}
+        </div>
+      </div>
     </div>
   );
 } 

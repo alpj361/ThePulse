@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,7 +14,8 @@ import {
   IconButton,
   Divider,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Card
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -27,6 +28,12 @@ import {
 } from '@mui/icons-material';
 import TrendSelector from './TrendSelector';
 import MonitoreosSelector from './MonitoreosSelector';
+import NoticiasSelector from './NoticiasSelector';
+import CodexSelector from './CodexSelector';
+import { previewPrompt } from '../../services/sondeos';
+import { useAuth } from '../../context/AuthContext';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import { CircularProgress } from '@mui/material';
 
 interface ContextSelectorModalProps {
   open: boolean;
@@ -35,8 +42,13 @@ interface ContextSelectorModalProps {
   onContextChange: (contexts: string[]) => void;
   onMonitoreosChange?: (monitoreosIds: string[]) => void;
   onTrendsChange?: (trends: string[]) => void;
+  onNoticiasChange?: (noticias: string[]) => void;
+  onCodexChange?: (codex: string[]) => void;
   selectedMonitoreos?: string[];
   selectedTrends?: string[];
+  selectedNoticias?: string[];
+  selectedCodex?: string[];
+  input?: string;  // Añadir input opcional para preview
 }
 
 interface ContextSection {
@@ -63,7 +75,7 @@ const contextSections: ContextSection[] = [
     description: 'Analiza noticias recientes de medios de comunicación',
     icon: <ArticleIcon />,
     color: '#0EA5E9',
-    hasSubSelector: false
+    hasSubSelector: true
   },
   {
     value: 'codex',
@@ -71,7 +83,7 @@ const contextSections: ContextSection[] = [
     description: 'Analiza documentos y contenido de tu biblioteca personal',
     icon: <LibraryBooksIcon />,
     color: '#10B981',
-    hasSubSelector: false
+    hasSubSelector: true
   },
   {
     value: 'monitoreos',
@@ -90,13 +102,40 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
   onContextChange,
   onMonitoreosChange,
   onTrendsChange,
+  onNoticiasChange,
+  onCodexChange,
   selectedMonitoreos = [],
-  selectedTrends = []
+  selectedTrends = [],
+  selectedNoticias = [],
+  selectedCodex = [],
+  input = 'Análisis de Tendencias'
 }) => {
+  const { user, isAdmin } = useAuth();
   const [expandedAccordions, setExpandedAccordions] = useState<string[]>([]);
   const [localSelectedContexts, setLocalSelectedContexts] = useState<string[]>(selectedContexts);
   const [localSelectedMonitoreos, setLocalSelectedMonitoreos] = useState<string[]>(selectedMonitoreos);
   const [localSelectedTrends, setLocalSelectedTrends] = useState<string[]>(selectedTrends);
+  const [localSelectedNoticias, setLocalSelectedNoticias] = useState<string[]>(selectedNoticias);
+  const [localSelectedCodex, setLocalSelectedCodex] = useState<string[]>(selectedCodex);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<{
+    prompt_preview?: string;
+    prompt_length?: number;
+    contexto_stats?: any;
+  }>({});
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  // Verificar rol de admin al montar el componente
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        const adminStatus = await isAdmin();
+        setIsUserAdmin(adminStatus);
+      }
+    };
+    checkAdminStatus();
+  }, [user, isAdmin]);
 
   const handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedAccordions(prev => 
@@ -130,6 +169,14 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
     setLocalSelectedTrends(trends);
   };
 
+  const handleNoticiasChange = (noticias: string[]) => {
+    setLocalSelectedNoticias(noticias);
+  };
+
+  const handleCodexChange = (codex: string[]) => {
+    setLocalSelectedCodex(codex);
+  };
+
   const handleConfirm = () => {
     // Aplicar todos los cambios
     onContextChange(localSelectedContexts);
@@ -142,6 +189,14 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
       onTrendsChange(localSelectedTrends);
     }
     
+    if (onNoticiasChange) {
+      onNoticiasChange(localSelectedNoticias);
+    }
+    
+    if (onCodexChange) {
+      onCodexChange(localSelectedCodex);
+    }
+    
     onClose();
   };
 
@@ -150,7 +205,37 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
     setLocalSelectedContexts(selectedContexts);
     setLocalSelectedMonitoreos(selectedMonitoreos);
     setLocalSelectedTrends(selectedTrends);
+    setLocalSelectedNoticias(selectedNoticias);
+    setLocalSelectedCodex(selectedCodex);
     onClose();
+  };
+
+  const handlePreviewPrompt = async () => {
+    if (!isUserAdmin) {
+      alert('Solo administradores pueden ver preview del prompt');
+      return;
+    }
+
+    try {
+      setLoadingPreview(true);
+      const preview = await previewPrompt(
+        input,
+        localSelectedContexts,
+        user?.id || '',
+        {
+          selectedTrends: localSelectedTrends,
+          selectedNoticias: localSelectedNoticias,
+          selectedCodex: localSelectedCodex
+        }
+      );
+      setPromptPreview(preview);
+      setPreviewModalOpen(true);
+    } catch (error) {
+      console.error('Error al generar preview:', error);
+      alert('No se pudo generar el preview');
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const getSelectedItemsCount = (contextValue: string): number => {
@@ -159,6 +244,10 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
         return localSelectedMonitoreos.length;
       case 'tendencias':
         return localSelectedTrends.length;
+      case 'noticias':
+        return localSelectedNoticias.length;
+      case 'codex':
+        return localSelectedCodex.length;
       default:
         return 0;
     }
@@ -167,8 +256,8 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
   return (
     <Dialog 
       open={open} 
-      onClose={handleCancel}
-      maxWidth="md"
+      onClose={onClose} 
+      maxWidth="md" 
       fullWidth
       PaperProps={{
         sx: {
@@ -197,7 +286,7 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
             }}
           />
         </Box>
-        <IconButton onClick={handleCancel} size="small">
+        <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -327,6 +416,30 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
                       />
                     </Box>
                   )}
+                  
+                  {section.value === 'noticias' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 500 }}>
+                        Selecciona noticias específicas:
+                      </Typography>
+                      <NoticiasSelector 
+                        selectedNoticias={localSelectedNoticias}
+                        onNoticiasChange={handleNoticiasChange}
+                      />
+                    </Box>
+                  )}
+                  
+                  {section.value === 'codex' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 500 }}>
+                        Selecciona documentos específicos:
+                      </Typography>
+                      <CodexSelector 
+                        selectedCodex={localSelectedCodex}
+                        onCodexChange={handleCodexChange}
+                      />
+                    </Box>
+                  )}
                 </AccordionDetails>
               )}
             </Accordion>
@@ -336,7 +449,7 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
 
       <DialogActions sx={{ p: 3, pt: 2 }}>
         <Button 
-          onClick={handleCancel}
+          onClick={onClose}
           variant="outlined"
           sx={{ borderColor: 'var(--color-border)' }}
         >
@@ -355,7 +468,51 @@ const ContextSelectorModal: React.FC<ContextSelectorModalProps> = ({
         >
           Confirmar Selección
         </Button>
+
+        {/* Nuevo botón de preview para admins */}
+        {isUserAdmin && (
+          <Button 
+            variant="outlined" 
+            color="secondary" 
+            onClick={handlePreviewPrompt}
+            disabled={loadingPreview}
+            startIcon={loadingPreview ? <CircularProgress size={20} /> : <VisibilityIcon />}
+          >
+            {loadingPreview ? 'Generando Preview...' : 'Preview del Prompt'}
+          </Button>
+        )}
       </DialogActions>
+
+      {/* Modal de Preview */}
+      <Dialog 
+        open={previewModalOpen} 
+        onClose={() => setPreviewModalOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>Preview del Prompt</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Longitud del Prompt: {promptPreview.prompt_length} caracteres
+          </Typography>
+          <Card variant="outlined" style={{ marginTop: 16, padding: 16 }}>
+            <Typography variant="body2" style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+              {promptPreview.prompt_preview}
+            </Typography>
+          </Card>
+          {promptPreview.contexto_stats && (
+            <Box mt={2}>
+              <Typography variant="h6">Estadísticas del Contexto</Typography>
+              <pre>{JSON.stringify(promptPreview.contexto_stats, null, 2)}</pre>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewModalOpen(false)} color="primary">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

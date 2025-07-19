@@ -638,7 +638,7 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
       configuracion: {
         detalle_nivel: 'alto',
         incluir_recomendaciones: true,
-        incluir_visualizaciones: true,
+        incluir_visualizaciones: false, // 🔧 FORZAR USO DE DATOS REALES
         tipo_analisis: contextoArmado.tipo_contexto || 'general',
         contexto_original: contextoArmado // Incluir contexto original para referencia
       }
@@ -730,4 +730,62 @@ export const transformTrendData = (backendData: any): AboutInfo[] => {
       model: item.model || 'sonar'
     };
   });
-}; 
+};
+
+// Obtener historial de sondeos del usuario
+export async function getSondeoHistorial(limit: number = 10, offset: number = 0) {
+  try {
+    const accessToken = localStorage.getItem('supabase.auth.token');
+    
+    if (!accessToken) {
+      throw new Error('No hay token de acceso disponible');
+    }
+
+    const response = await fetch(`${EXTRACTORW_API_URL}/api/sondeo/historial?limit=${limit}&offset=${offset}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error obteniendo historial: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo historial de sondeos:', error);
+    throw error;
+  }
+}
+
+// Obtener un sondeo específico por ID
+export async function getSondeoById(id: string) {
+  try {
+    const accessToken = localStorage.getItem('supabase.auth.token');
+    
+    if (!accessToken) {
+      throw new Error('No hay token de acceso disponible');
+    }
+
+    const response = await fetch(`${EXTRACTORW_API_URL}/api/sondeo/${id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error obteniendo sondeo: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo sondeo por ID:', error);
+    throw error;
+  }
+} 

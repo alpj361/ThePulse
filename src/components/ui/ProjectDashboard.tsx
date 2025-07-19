@@ -59,7 +59,7 @@ import {
   createNewTask,
   updateTask,
   deleteTask,
-  generateExampleTasks
+  generateEmptyTasks
 } from '../../services/projectTasks';
 import { TasksResponse, ProjectTask } from '../../types/projects';
 import AddAssetsModal from './AddAssetsModal';
@@ -346,18 +346,10 @@ export function ProjectDashboard({
         console.log('✅ Tareas cargadas desde base de datos:', dbTasks.tasks.length);
         setProjectTasks(dbTasks.tasks);
       } else {
-        console.log('🔄 No hay tareas en base de datos, generando tareas de ejemplo...');
-        // Si no hay tareas, generar ejemplos y guardarlas
-        const exampleTasks = generateExampleTasks(project.id);
-        setProjectTasks(exampleTasks.tasks);
-        
-        // Guardar las tareas de ejemplo en la base de datos
-        try {
-          await saveTasksToDatabase(project.id, exampleTasks);
-          console.log('💾 Tareas de ejemplo guardadas en base de datos');
-        } catch (error) {
-          console.warn('⚠️ Error guardando tareas de ejemplo:', error);
-        }
+        console.log('🔄 No hay tareas en base de datos, iniciando con lista vacía...');
+        // Si no hay tareas, inicializar con lista vacía
+        const emptyTasks = generateEmptyTasks(project.id);
+        setProjectTasks(emptyTasks.tasks);
       }
     } catch (error) {
       console.error('❌ Error cargando tareas:', error);
@@ -510,22 +502,24 @@ export function ProjectDashboard({
     
     setLoadingDocuments(true);
     try {
-      // Obtener todos los elementos del codex del proyecto
+      // Obtener todos los elementos del codex del proyecto (incluyendo campos de enlaces)
       const { data, error } = await supabase
         .from('codex_items')
-        .select('id, titulo, tipo, nombre_archivo, storage_path, audio_transcription, document_analysis, created_at')
+        .select('id, titulo, tipo, nombre_archivo, storage_path, url, descripcion, audio_transcription, transcripcion, document_analysis, created_at')
         .eq('project_id', projectForDetails.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Filtrar solo elementos que pueden generar hallazgos (tienen transcripción, análisis o son documentos analizables)
+      // Filtrar solo elementos que pueden generar hallazgos (incluye enlaces analizados)
       const analyzableItems = (data || []).filter((item: any) => {
-        const hasTranscription = item.audio_transcription && item.audio_transcription.trim();
+        const hasAudioTranscription = item.audio_transcription && item.audio_transcription.trim();
+        const hasTranscription = item.transcripcion && item.transcripcion.trim(); // 🆕 Transcripción general
         const hasDocumentAnalysis = item.document_analysis && item.document_analysis.trim();
+        const hasLinkDescription = item.tipo === 'enlace' && item.descripcion && item.descripcion.trim(); // 🆕 Enlaces básicos
         const isAnalyzableDocument = item.tipo === 'documento' && item.storage_path;
         
-        return hasTranscription || hasDocumentAnalysis || isAnalyzableDocument;
+        return hasAudioTranscription || hasTranscription || hasDocumentAnalysis || hasLinkDescription || isAnalyzableDocument;
       });
 
       setAvailableDocuments(analyzableItems);
@@ -1974,10 +1968,10 @@ export function ProjectDashboard({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Seleccionar Documentos para Analizar
+                    Seleccionar Contenido para Analizar
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Elige qué documentos quieres procesar para extraer hallazgos
+                    Elige qué documentos, enlaces o archivos quieres procesar para extraer hallazgos
                   </p>
                 </div>
                 <button
@@ -2000,10 +1994,10 @@ export function ProjectDashboard({
                 <div className="text-center py-8">
                   <FiFileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No hay documentos analizables
+                    No hay contenido analizable
                   </h4>
                   <p className="text-gray-500 dark:text-gray-400">
-                    Este proyecto no tiene documentos con transcripciones, análisis previos o archivos analizables.
+                    Este proyecto no tiene documentos con transcripciones, análisis previos, enlaces analizados o archivos procesables.
                   </p>
                 </div>
               ) : (
@@ -2030,19 +2024,27 @@ export function ProjectDashboard({
                   {/* Lista de documentos */}
                   {availableDocuments.map((item: any) => {
                     const isSelected = selectedDocuments.includes(item.id);
-                    const hasTranscription = item.audio_transcription && item.audio_transcription.trim();
+                    const hasAudioTranscription = item.audio_transcription && item.audio_transcription.trim();
+                    const hasTranscription = item.transcripcion && item.transcripcion.trim(); // 🆕 Transcripción general
                     const hasDocumentAnalysis = item.document_analysis && item.document_analysis.trim();
+                    const hasLinkDescription = item.tipo === 'enlace' && item.descripcion && item.descripcion.trim(); // 🆕 Enlaces básicos
                     const isAnalyzableDocument = item.tipo === 'documento' && item.storage_path;
                     
                     let statusText = '';
                     let statusColor = '';
                     
-                    if (hasTranscription) {
-                      statusText = 'Con transcripción';
+                    if (hasAudioTranscription) {
+                      statusText = 'Con transcripción de audio';
                       statusColor = 'text-green-600 bg-green-50';
+                    } else if (hasTranscription) {
+                      statusText = 'Con transcripción';
+                      statusColor = 'text-emerald-600 bg-emerald-50';
                     } else if (hasDocumentAnalysis) {
                       statusText = 'Con análisis';
                       statusColor = 'text-blue-600 bg-blue-50';
+                    } else if (hasLinkDescription) {
+                      statusText = 'Enlace con contexto';
+                      statusColor = 'text-indigo-600 bg-indigo-50';
                     } else if (isAnalyzableDocument) {
                       statusText = 'Pendiente análisis';
                       statusColor = 'text-orange-600 bg-orange-50';
@@ -2105,8 +2107,8 @@ export function ProjectDashboard({
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedDocuments.length > 0 
-                    ? `${selectedDocuments.length} documento(s) seleccionado(s)`
-                    : 'Selecciona al menos un documento'
+                    ? `${selectedDocuments.length} elemento(s) seleccionado(s)`
+                    : 'Selecciona al menos un elemento'
                   }
                 </div>
                 

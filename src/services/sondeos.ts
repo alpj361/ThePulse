@@ -2,6 +2,7 @@ import { getLatestTrends, sendSondeoToExtractorW } from './api';
 import { getLatestNews, getCodexItemsByUser } from './supabase.ts';
 import { getRecentScrapes, getRecentScrapeById, RecentScrape } from './recentScrapes';
 import type { NewsItem } from '../types';
+import { supabase } from './supabase';
 
 // Utilidad para filtrar por relevancia
 function filtrarPorRelevancia(texto: string, input: string): boolean {
@@ -24,15 +25,17 @@ function resumirTexto(texto: string, maxLen = 220): string {
 
 // Generar datos de prueba para visualizaciones
 export function generarDatosPrueba(tipo: string, consulta: string) {
+  console.log('🎨 Generando datos de prueba para:', { tipo, consulta });
+  
   // Datos mejorados para tendencias con etiquetas más cortas y respuestas conclusivas
   if (tipo === 'tendencias') {
-    return {
+    const datosGenerados = {
       temas_relevantes: [
-        { tema: `${consulta} - Política`, valor: 85, descripcion: "Impacto en políticas públicas nacionales" },
-        { tema: `${consulta} - Economía`, valor: 67, descripcion: "Efectos en el desarrollo económico regional" },
-        { tema: `${consulta} - Internacional`, valor: 54, descripcion: "Relaciones y cooperación internacional" },
-        { tema: `${consulta} - Tecnología`, valor: 42, descripcion: "Innovación y transformación digital" },
-        { tema: `${consulta} - Cultura`, valor: 38, descripcion: "Expresiones culturales y sociales" }
+        { tema: "Política", valor: 85, descripcion: "Impacto en políticas públicas nacionales" },
+        { tema: "Economía", valor: 67, descripcion: "Efectos en el desarrollo económico regional" },
+        { tema: "Internacional", valor: 54, descripcion: "Relaciones y cooperación internacional" },
+        { tema: "Tecnología", valor: 42, descripcion: "Innovación y transformación digital" },
+        { tema: "Cultura", valor: 38, descripcion: "Expresiones culturales y sociales" }
       ],
       distribucion_categorias: [
         { categoria: 'Política', valor: 35 },
@@ -55,21 +58,76 @@ export function generarDatosPrueba(tipo: string, consulta: string) {
         { subtema: 'Impacto Social', relacion: 53 },
         { subtema: 'Inversión', relacion: 47 }
       ],
+      // Nuevos datos para gráfico de sentimientos
+      evolucion_sentimiento: [
+        { tiempo: 'Lun', positivo: 45, neutral: 30, negativo: 25, fecha: '2024-01-01', evento: 'Inicio de análisis' },
+        { tiempo: 'Mar', positivo: 38, neutral: 35, negativo: 27, fecha: '2024-01-02' },
+        { tiempo: 'Mié', positivo: 52, neutral: 28, negativo: 20, fecha: '2024-01-03', evento: 'Anuncio oficial' },
+        { tiempo: 'Jue', positivo: 48, neutral: 32, negativo: 20, fecha: '2024-01-04' },
+        { tiempo: 'Vie', positivo: 55, neutral: 25, negativo: 20, fecha: '2024-01-05' },
+        { tiempo: 'Sab', positivo: 42, neutral: 33, negativo: 25, fecha: '2024-01-06' },
+        { tiempo: 'Dom', positivo: 40, neutral: 35, negativo: 25, fecha: '2024-01-07' }
+      ],
+      // Nuevos datos para storytelling
+      cronologia_eventos: [
+        {
+          id: '1',
+          fecha: '2024-01-03',
+          titulo: `Anuncio oficial sobre ${consulta}`,
+          descripcion: `Las autoridades competentes realizaron un anuncio oficial sobre ${consulta}, estableciendo las bases para las próximas acciones gubernamentales en esta materia.`,
+          impacto: 'alto' as const,
+          categoria: 'politica' as const,
+          sentimiento: 'positivo' as const,
+          keywords: ['anuncio', 'oficial', 'gobierno', consulta],
+          fuentes: ['Presidencia de la República', 'Diario de Centro América', 'Prensa Libre']
+        },
+        {
+          id: '2',
+          fecha: '2024-01-05',
+          titulo: `Reacciones ciudadanas a ${consulta}`,
+          descripcion: `La ciudadanía guatemalteca ha expresado diversas opiniones sobre ${consulta} en redes sociales y medios de comunicación, mostrando un interés creciente en el tema.`,
+          impacto: 'medio' as const,
+          categoria: 'social' as const,
+          sentimiento: 'neutral' as const,
+          keywords: ['ciudadanía', 'opiniones', 'redes sociales', consulta],
+          fuentes: ['Twitter Guatemala', 'Facebook público', 'Encuestas locales']
+        },
+        {
+          id: '3',
+          fecha: '2024-01-07',
+          titulo: `Análisis económico de ${consulta}`,
+          descripcion: `Expertos económicos han evaluado el impacto potencial de ${consulta} en la economía nacional, proyectando efectos a mediano y largo plazo.`,
+          impacto: 'alto' as const,
+          categoria: 'economia' as const,
+          sentimiento: 'positivo' as const,
+          keywords: ['economía', 'impacto', 'expertos', 'proyecciones', consulta],
+          fuentes: ['BANGUAT', 'CACIF', 'Universidad del Valle']
+        }
+      ],
       // Respuestas conclusivas para cada gráfico
       conclusiones: {
         temas_relevantes: `Los temas relacionados con ${consulta} muestran mayor relevancia en el ámbito político (85%) y económico (67%), indicando que este tema tiene un impacto significativo en las decisiones gubernamentales y el desarrollo económico del país.`,
         distribucion_categorias: `La distribución por categorías revela que ${consulta} se concentra principalmente en Política (35%) y Economía (28%), representando el 63% de toda la conversación, lo que sugiere una alta prioridad en la agenda nacional.`,
         mapa_menciones: `Geográficamente, ${consulta} tiene mayor resonancia en Guatemala capital (48%) y la Zona Metropolitana (35%), concentrando el 83% de las menciones en el área central del país.`,
-        subtemas_relacionados: `Los subtemas más relacionados son Financiamiento (85%) y Regulación (72%), indicando que ${consulta} requiere principalmente atención en aspectos económicos y marco normativo.`
+        subtemas_relacionados: `Los subtemas más relacionados son Financiamiento (85%) y Regulación (72%), indicando que ${consulta} requiere principalmente atención en aspectos económicos y marco normativo.`,
+        evolucion_sentimiento: `El análisis de sentimiento muestra una tendencia positiva hacia ${consulta}, con un pico de aprobación (55%) el viernes tras el anuncio oficial, manteniendo un balance favorable en la opinión pública.`,
+        cronologia_eventos: `La cronología de eventos sobre ${consulta} revela una secuencia coherente: anuncio oficial (impacto alto), reacciones ciudadanas (engagement medio) y análisis especializado (validación económica), mostrando un desarrollo orgánico del tema.`
       },
       // Información sobre cómo se obtuvo cada gráfica
       metodologia: {
         temas_relevantes: "Análisis de tendencias actuales filtradas por relevancia semántica y frecuencia de mención",
         distribucion_categorias: "Clasificación automática de contenido usando categorías predefinidas del sistema",
         mapa_menciones: "Geolocalización de menciones basada en datos de ubicación y referencias geográficas",
-        subtemas_relacionados: "Análisis de co-ocurrencia y correlación semántica entre términos relacionados"
+        subtemas_relacionados: "Análisis de co-ocurrencia y correlación semántica entre términos relacionados",
+        evolucion_sentimiento: "Procesamiento de lenguaje natural para clasificación de sentimientos en tiempo real",
+        cronologia_eventos: "Extracción y ordenamiento cronológico de eventos relevantes con análisis de impacto"
       }
     };
+    
+    console.log('✅ Datos de tendencias generados con keys:', Object.keys(datosGenerados));
+    console.log('📊 Evolucion sentimiento incluido:', !!datosGenerados.evolucion_sentimiento);
+    console.log('📖 Cronologia eventos incluida:', !!datosGenerados.cronologia_eventos);
+    return datosGenerados;
   } 
   // Datos mejorados para noticias con etiquetas más cortas
   else if (tipo === 'noticias') {
@@ -177,7 +235,9 @@ export async function sondearTema(
   userId: string,
   accessToken?: string,
   selectedMonitoreos?: string[],
-  selectedTrends?: string[]
+  selectedTrends?: string[],
+  selectedNoticias?: string[],
+  selectedCodex?: string[]
 ) {
   console.log('🎯 Iniciando sondearTema:', { input, selectedContexts, userId, hasToken: !!accessToken, monitoreosCount: selectedMonitoreos?.length });
   
@@ -218,7 +278,7 @@ export async function sondearTema(
     // Obtener noticias si se seleccionó ese contexto
     if (selectedContexts.includes('noticias')) {
       console.log('📰 Obteniendo noticias...');
-      const newsData = await getLatestNews(10);
+      const newsData = await getLatestNews();
       if (newsData && newsData.length > 0) {
         console.log('✅ Noticias obtenidas:', newsData.length);
         
@@ -306,16 +366,54 @@ export async function sondearTema(
       }
     }
     
+    // Preparar contexto original con selecciones específicas
+    const contextoOriginal = {
+      ...contextoArmado,
+      tendencias: selectedTrends || [],
+      noticias: selectedNoticias || [],
+      codex: selectedCodex || [],
+      monitoreos: selectedMonitoreos || []
+    };
+
     // Enviar sondeo a ExtractorW
-    console.log('🚀 Enviando sondeo a ExtractorW con contexto:', Object.keys(contextoArmado));
-    const result = await sendSondeoToExtractorW(contextoArmado, input, accessToken);
+    console.log('🚀 Enviando sondeo a ExtractorW con contexto:', Object.keys(contextoOriginal));
+    console.log('📋 Selecciones específicas:', {
+      tendencias: selectedTrends?.length || 0,
+      noticias: selectedNoticias?.length || 0,
+      codex: selectedCodex?.length || 0,
+      monitoreos: selectedMonitoreos?.length || 0
+    });
+    const result = await sendSondeoToExtractorW(contextoOriginal, input, accessToken);
     
     // Procesar resultado
+    // Log para debug
+    console.log('🔍 Debug - Resultado de ExtractorW:', {
+      tieneResultado: !!result?.resultado,
+      tieneDatosVisualizacion: !!result?.resultado?.datos_visualizacion,
+      tieneDatosAnalisisEnResultado: !!result?.resultado?.datos_analisis,
+      tieneDatosAnalisis: !!result?.datos_analisis,
+      keys: result ? Object.keys(result) : 'sin result',
+      resultadoKeys: result?.resultado ? Object.keys(result.resultado) : 'sin resultado'
+    });
+
+    // Usar datos de prueba mejorados como fallback que incluyen los nuevos gráficos
+    // El backend envía los datos de visualización en resultado.datos_analisis
+    const datosAnalisisFinal = result?.resultado?.datos_analisis || 
+                                result?.resultado?.datos_visualizacion || 
+                                result?.datos_analisis || 
+                                generarDatosPrueba(selectedContexts[0] || 'tendencias', input);
+
+    console.log('📊 Datos de análisis finales:', {
+      tieneEvolucionSentimiento: !!datosAnalisisFinal?.evolucion_sentimiento,
+      tieneCronologiaEventos: !!datosAnalisisFinal?.cronologia_eventos,
+      keys: datosAnalisisFinal ? Object.keys(datosAnalisisFinal) : 'sin datos'
+    });
+
     return {
       contexto: contextoArmado,
       llmResponse: result?.resultado?.respuesta || result?.respuesta || 'No se obtuvo respuesta del servicio.',
       llmSources: result?.resultado?.fuentes || result?.fuentes || null,
-      datosAnalisis: result?.resultado?.datos_visualizacion || result?.datos_analisis || generarDatosPrueba(selectedContexts[0] || 'tendencias', input)
+      datosAnalisis: datosAnalisisFinal
     };
     
   } catch (error) {
@@ -331,11 +429,11 @@ export function generarDatosMejorados(tipo: string, consulta: string) {
   if (tipo === 'tendencias') {
     return {
       temas_relevantes: [
-        { tema: `Política`, valor: 85, descripcion: "Impacto en políticas públicas nacionales" },
-        { tema: `Economía`, valor: 67, descripcion: "Efectos en el desarrollo económico regional" },
-        { tema: `Internacional`, valor: 54, descripcion: "Relaciones y cooperación internacional" },
-        { tema: `Tecnología`, valor: 42, descripcion: "Innovación y transformación digital" },
-        { tema: `Cultura`, valor: 38, descripcion: "Expresiones culturales y sociales" }
+        { tema: "Política", valor: 85, descripcion: "Impacto en políticas públicas nacionales" },
+        { tema: "Economía", valor: 67, descripcion: "Efectos en el desarrollo económico regional" },
+        { tema: "Internacional", valor: 54, descripcion: "Relaciones y cooperación internacional" },
+        { tema: "Tecnología", valor: 42, descripcion: "Innovación y transformación digital" },
+        { tema: "Cultura", valor: 38, descripcion: "Expresiones culturales y sociales" }
       ],
       distribucion_categorias: [
         { categoria: 'Política', valor: 35 },
@@ -358,19 +456,57 @@ export function generarDatosMejorados(tipo: string, consulta: string) {
         { subtema: 'Impacto Social', relacion: 53 },
         { subtema: 'Inversión', relacion: 47 }
       ],
+      // Datos de sentimiento para tendencias
+      evolucion_sentimiento: [
+        { tiempo: 'Lun', positivo: 45, neutral: 30, negativo: 25, fecha: '2024-01-01', evento: 'Inicio de tendencia' },
+        { tiempo: 'Mar', positivo: 38, neutral: 35, negativo: 27, fecha: '2024-01-02' },
+        { tiempo: 'Mié', positivo: 52, neutral: 28, negativo: 20, fecha: '2024-01-03', evento: 'Pico de popularidad' },
+        { tiempo: 'Jue', positivo: 48, neutral: 32, negativo: 20, fecha: '2024-01-04' },
+        { tiempo: 'Vie', positivo: 55, neutral: 25, negativo: 20, fecha: '2024-01-05' },
+        { tiempo: 'Sab', positivo: 42, neutral: 33, negativo: 25, fecha: '2024-01-06' },
+        { tiempo: 'Dom', positivo: 40, neutral: 35, negativo: 25, fecha: '2024-01-07' }
+      ],
+      // Cronología para tendencias
+      cronologia_eventos: [
+        {
+          id: '1',
+          fecha: '2024-01-03',
+          titulo: `Emergencia de ${consulta} como tendencia`,
+          descripcion: `La tendencia sobre ${consulta} comenzó a ganar tracción en redes sociales y medios digitales, alcanzando un nivel significativo de engagement ciudadano.`,
+          impacto: 'alto' as const,
+          categoria: 'social' as const,
+          sentimiento: 'positivo' as const,
+          keywords: ['tendencia', 'emergencia', 'digital', consulta],
+          fuentes: ['Redes sociales', 'Medios digitales', 'Análisis de hashtags']
+        },
+        {
+          id: '2',
+          fecha: '2024-01-05',
+          titulo: `Impacto mediático de ${consulta}`,
+          descripcion: `Los medios tradicionales comenzaron a cubrir ${consulta}, amplificando su alcance y generando debate público sobre sus implicaciones.`,
+          impacto: 'medio' as const,
+          categoria: 'politica' as const,
+          sentimiento: 'neutral' as const,
+          keywords: ['medios', 'cobertura', 'debate', consulta],
+          fuentes: ['Prensa nacional', 'Televisión', 'Radio']
+        }
+      ],
       // Respuestas conclusivas para cada gráfico
       conclusiones: {
         temas_relevantes: `Los temas relacionados con ${consulta} muestran mayor relevancia en el ámbito político (85%) y económico (67%), indicando que este tema tiene un impacto significativo en las decisiones gubernamentales y el desarrollo económico del país.`,
         distribucion_categorias: `La distribución por categorías revela que ${consulta} se concentra principalmente en Política (35%) y Economía (28%), representando el 63% de toda la conversación, lo que sugiere una alta prioridad en la agenda nacional.`,
         mapa_menciones: `Geográficamente, ${consulta} tiene mayor resonancia en Guatemala capital (48%) y la Zona Metropolitana (35%), concentrando el 83% de las menciones en el área central del país.`,
-        subtemas_relacionados: `Los subtemas más relacionados son Financiamiento (85%) y Regulación (72%), indicando que ${consulta} requiere principalmente atención en aspectos económicos y marco normativo.`
+        subtemas_relacionados: `Los subtemas más relacionados son Financiamiento (85%) y Regulación (72%), indicando que ${consulta} requiere principalmente atención en aspectos económicos y marco normativo.`,
+        evolucion_sentimiento: `El análisis de sentimiento sobre ${consulta} muestra una evolución positiva, con picos el miércoles (52%) y viernes (55%), indicando una recepción favorable en el desarrollo de la tendencia.`,
+        cronologia_eventos: `La cronología revela que ${consulta} emergió como tendencia social antes de recibir cobertura mediática, mostrando un patrón orgánico de adopción que comenzó en redes sociales.`
       },
-      // Información sobre cómo se obtuvo cada gráfica
       metodologia: {
         temas_relevantes: "Análisis de tendencias actuales filtradas por relevancia semántica y frecuencia de mención",
         distribucion_categorias: "Clasificación automática de contenido usando categorías predefinidas del sistema",
         mapa_menciones: "Geolocalización de menciones basada en datos de ubicación y referencias geográficas",
-        subtemas_relacionados: "Análisis de co-ocurrencia y correlación semántica entre términos relacionados"
+        subtemas_relacionados: "Análisis de co-ocurrencia y correlación semántica entre términos relacionados",
+        evolucion_sentimiento: "Procesamiento de lenguaje natural para clasificación de sentimientos en tiempo real",
+        cronologia_eventos: "Extracción y ordenamiento cronológico de eventos relevantes con análisis de impacto"
       }
     };
   } 
@@ -515,4 +651,112 @@ export function generarDatosMejorados(tipo: string, consulta: string) {
       { etiqueta: 'Categoría 4', valor: 25 }
     ]
   };
+} 
+
+// ================= PREVIEW DEL PROMPT =================
+/**
+ * Genera una vista previa del prompt y el contexto SIN llamar a GPT-4o.
+ * Sólo funcionará si el usuario autenticado es admin. Devuelve los primeros caracteres del prompt
+ * y estadísticas básicas del contexto para mostrar en un modal.
+ */
+export async function previewPrompt(
+  input: string,
+  selectedContexts: string[],
+  userId: string,
+  options: {
+    selectedMonitoreos?: string[];
+    selectedTrends?: string[];
+    selectedNoticias?: string[];
+    selectedCodex?: string[];
+  } = {}
+) {
+  console.log('👁️  Solicitando vista previa de prompt:', { input, selectedContexts });
+
+  // Obtener el token de autenticación
+  const session = await supabase.auth.getSession();
+  const token = session.data.session?.access_token;
+
+  if (!token) {
+    console.error('❌ No se encontró token de autenticación');
+    throw new Error('No autorizado: Inicia sesión nuevamente');
+  }
+
+  const body: any = {
+    pregunta: input,
+    selectedContexts,
+    configuracion: {
+      revisar_contexto: true, // Flag que activa el modo preview en el backend
+      detalle_nivel: 'alto',
+      include_visualizaciones: false,
+      ...options
+    }
+  };
+
+  if (options.selectedMonitoreos?.length) {
+    body.configuracion.contexto_original = {
+      monitoreos: options.selectedMonitoreos
+    };
+  }
+  if (options.selectedTrends?.length) {
+    body.configuracion.contexto_original = {
+      ...(body.configuracion.contexto_original || {}),
+      tendencias: options.selectedTrends
+    };
+  }
+  if (options.selectedNoticias?.length) {
+    body.configuracion.contexto_original = {
+      ...(body.configuracion.contexto_original || {}),
+      noticias: options.selectedNoticias
+    };
+  }
+  if (options.selectedCodex?.length) {
+    body.configuracion.contexto_original = {
+      ...(body.configuracion.contexto_original || {}),
+      codex: options.selectedCodex
+    };
+  }
+
+  try {
+    const resp = await fetch('/api/sondeo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // Agregar token de autorización
+      },
+      body: JSON.stringify(body)
+    });
+
+    const responseText = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Error parseando respuesta:', responseText);
+      throw new Error('Respuesta del servidor no es un JSON válido');
+    }
+
+    if (!resp.ok) {
+      console.error('❌ Error solicitando preview:', data);
+      
+      // Manejar específicamente errores de autorización
+      if (resp.status === 403 || resp.status === 401) {
+        throw new Error('No tienes permisos para ver el preview. Requiere rol de administrador.');
+      }
+      
+      // Usar mensaje de error del servidor si está disponible
+      const errorMessage = data.message || 'Error solicitando vista previa de contexto';
+      throw new Error(errorMessage);
+    }
+
+    // Validar que la respuesta contenga preview
+    if (!data.preview) {
+      console.warn('⚠️  La respuesta no contiene preview; podría no ser usuario admin');
+      throw new Error('No se pudo generar el preview. Verifica tus permisos de administrador.');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error en previewPrompt:', error);
+    throw error;  // Re-lanzar para que el llamador pueda manejar el error
+  }
 } 

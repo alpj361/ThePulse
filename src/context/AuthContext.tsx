@@ -8,6 +8,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  isAdmin: () => Promise<boolean>;  // Nuevo método para verificar admin
 };
 
 // Crear el contexto
@@ -65,12 +66,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Método para verificar si el usuario es admin
+  const isAdmin = async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      // Consultar el perfil del usuario en Supabase
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error verificando rol de admin:', error);
+        return false;
+      }
+
+      return data?.role === 'admin';
+    } catch (error) {
+      console.error('Error en verificación de admin:', error);
+      return false;
+    }
+  };
+
   // Valor del contexto
   const value = {
     session,
     user,
     loading,
-    signOut
+    signOut,
+    isAdmin  // Agregar el nuevo método
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

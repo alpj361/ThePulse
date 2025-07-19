@@ -841,12 +841,20 @@ export async function createCodexBucket() {
  */
 export async function getLatestNews() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  
+  console.log('🔍 getLatestNews: Iniciando consulta...');
   const { data, error } = await supabase
     .from('news')
     .select('*')
     .order('fecha', { ascending: false })
     .limit(10);
-  if (error) throw error;
+  
+  if (error) {
+    console.error('❌ getLatestNews: Error en consulta:', error);
+    throw error;
+  }
+  
+  console.log('📊 getLatestNews: Datos raw de BD:', data?.[0]);
   
   // Función para limpiar HTML y fragmentos de código
   const cleanText = (text: string) => {
@@ -860,7 +868,7 @@ export async function getLatestNews() {
   };
   
   // Mapear a NewsItem
-  return (data || []).map((item: any) => ({
+  const mappedData = (data || []).map((item: any) => ({
     id: item.id,
     title: item.titulo,
     source: item.fuente,
@@ -870,6 +878,10 @@ export async function getLatestNews() {
     keywords: item.keywords || [],
     url: item.url
   }));
+  
+  console.log('🗺️ getLatestNews: Datos mapeados:', mappedData?.[0]);
+  
+  return mappedData;
 }
 
 /**

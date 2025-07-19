@@ -26,7 +26,13 @@ import {
   VideoLibrary as VideoIcon,
   Link as LinkIcon,
   DriveFolderUpload as DriveIcon,
-  Storage as StorageIcon
+  Storage as StorageIcon,
+  Mic as MicIcon,
+  TextFields as TextIcon,
+  FolderOpen as FolderIcon,
+  SelectAll as SelectAllIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { getAvailableCodexItems, assignCodexItemToProject } from '../../services/supabase';
@@ -43,6 +49,15 @@ interface CodexItem {
   url?: string;
   nombre_archivo?: string;
   tamano?: number;
+  audio_transcription?: string;
+  transcripcion?: string;
+  // Campos de agrupamiento
+  group_id?: string;
+  is_group_parent?: boolean;
+  group_name?: string;
+  group_description?: string;
+  part_number?: number;
+  total_parts?: number;
 }
 
 interface AddAssetsModalProps {
@@ -69,6 +84,11 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [transcriptionModalOpen, setTranscriptionModalOpen] = useState(false);
+  const [transcriptionModalItem, setTranscriptionModalItem] = useState<CodexItem | null>(null);
+  const [transcriptionType, setTranscriptionType] = useState<'audio' | 'text'>('audio');
+  const [groupedItems, setGroupedItems] = useState<Map<string, CodexItem[]>>(new Map());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Cargar items disponibles del Codex
   useEffect(() => {
@@ -86,6 +106,18 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
     try {
       const items = await getAvailableCodexItems(user.id);
       setAvailableItems(items);
+      
+      // Agrupar items por group_id
+      const grouped = new Map<string, CodexItem[]>();
+      items.forEach(item => {
+        if (item.group_id) {
+          if (!grouped.has(item.group_id)) {
+            grouped.set(item.group_id, []);
+          }
+          grouped.get(item.group_id)!.push(item);
+        }
+      });
+      setGroupedItems(grouped);
     } catch (err: any) {
       setError('Error cargando items del Codex: ' + err.message);
     } finally {
@@ -93,16 +125,86 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
     }
   };
 
+  // Mostrar transcripción
+  const handleShowTranscription = (item: CodexItem, type: 'audio' | 'text') => {
+    const hasAudioTranscription = item.audio_transcription && item.audio_transcription.trim().length > 0;
+    const hasTextTranscription = item.transcripcion && item.transcripcion.trim().length > 0;
+    
+    if (type === 'audio' && hasAudioTranscription) {
+      setTranscriptionModalItem(item);
+      setTranscriptionType('audio');
+      setTranscriptionModalOpen(true);
+    } else if (type === 'text' && hasTextTranscription) {
+      setTranscriptionModalItem(item);
+      setTranscriptionType('text');
+      setTranscriptionModalOpen(true);
+    } else {
+      setError('No hay transcripción disponible para este elemento');
+    }
+  };
+
+  // Seleccionar todo un grupo
+  const handleSelectGroup = (groupId: string) => {
+    const groupItems = groupedItems.get(groupId) || [];
+    const newSelected = new Set(selectedItems);
+    
+    // Verificar si todos los items del grupo están seleccionados
+    const allGroupSelected = groupItems.every(item => newSelected.has(item.id));
+    
+    if (allGroupSelected) {
+      // Deseleccionar todos los items del grupo
+      groupItems.forEach(item => newSelected.delete(item.id));
+    } else {
+      // Seleccionar todos los items del grupo
+      groupItems.forEach(item => newSelected.add(item.id));
+    }
+    
+    setSelectedItems(newSelected);
+  };
+
+  // Expandir/colapsar grupo
+  const toggleGroupExpansion = (groupId: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupId)) {
+      newExpanded.delete(groupId);
+    } else {
+      newExpanded.add(groupId);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
   // Filtrar items según búsqueda y tipo
   const filteredItems = availableItems.filter(item => {
+    // Mostrar items que son parent de grupo o items individuales (no parte de un grupo)
+    // O items individuales de grupos expandidos
+    const isDisplayable = item.is_group_parent || 
+                          !item.group_id || 
+                          (item.group_id && expandedGroups.has(item.group_id));
+    
     const matchesSearch = searchTerm === '' || 
       item.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.etiquetas.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      item.etiquetas.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.is_group_parent && item.group_name?.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = typeFilter === 'all' || item.tipo === typeFilter;
     
-    return matchesSearch && matchesType;
+    return isDisplayable && matchesSearch && matchesType;
+  });
+
+  // Ordenar items para mostrar primero los parents de grupo, luego sus hijos
+  const sortedFilteredItems = filteredItems.sort((a, b) => {
+    // Si ambos tienen el mismo group_id, el parent va primero
+    if (a.group_id === b.group_id) {
+      if (a.is_group_parent && !b.is_group_parent) return -1;
+      if (!a.is_group_parent && b.is_group_parent) return 1;
+      // Si ambos son del mismo grupo y no son parents, ordenar por part_number
+      if (!a.is_group_parent && !b.is_group_parent) {
+        return (a.part_number || 0) - (b.part_number || 0);
+      }
+    }
+    // Ordenar por fecha por defecto
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   // Manejar selección de items
@@ -290,7 +392,7 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
-        ) : filteredItems.length === 0 ? (
+        ) : sortedFilteredItems.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography color="text.secondary">
               {availableItems.length === 0 
@@ -301,7 +403,7 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
           </Box>
         ) : (
           <Grid container spacing={2}>
-            {filteredItems.map((item) => (
+            {sortedFilteredItems.map((item) => (
               <Grid item xs={12} sm={6} md={4} key={item.id}>
                 <Card 
                   variant="outlined"
@@ -311,9 +413,17 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
                     border: selectedItems.has(item.id) ? 2 : 1,
                     borderColor: selectedItems.has(item.id) ? 'primary.main' : 'divider',
                     '&:hover': {
-                      shadow: 2,
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3,
                       borderColor: 'primary.light'
-                    }
+                    },
+                    // Styling especial para elementos individuales de grupo expandido
+                    ...(item.group_id && !item.is_group_parent && {
+                      ml: 2,
+                      borderLeft: '3px solid',
+                      borderLeftColor: 'primary.main',
+                      backgroundColor: 'grey.50'
+                    })
                   }}
                   onClick={() => handleItemToggle(item.id)}
                 >
@@ -338,11 +448,25 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
                             noWrap
                             sx={{ fontWeight: 600 }}
                           >
-                            {item.titulo}
+                            {item.is_group_parent ? item.group_name : item.titulo}
                           </Typography>
+                          {item.is_group_parent && (
+                            <Chip
+                              size="small"
+                              label={`${item.total_parts || 0} elementos`}
+                              sx={{ ml: 1, fontSize: '0.7rem', height: 18 }}
+                            />
+                          )}
+                          {item.group_id && !item.is_group_parent && (
+                            <Chip
+                              size="small"
+                              label={`Parte ${item.part_number || 1} de ${item.total_parts || 1}`}
+                              sx={{ ml: 1, fontSize: '0.7rem', height: 18, backgroundColor: 'primary.light', color: 'white' }}
+                            />
+                          )}
                         </Box>
                         
-                        {item.descripcion && (
+                        {(item.descripcion || item.group_description) && (
                           <Typography 
                             variant="body2" 
                             color="text.secondary"
@@ -354,7 +478,7 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
                               overflow: 'hidden'
                             }}
                           >
-                            {item.descripcion}
+                            {item.group_description || item.descripcion}
                           </Typography>
                         )}
 
@@ -363,6 +487,62 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
                             {new Date(item.fecha).toLocaleDateString()}
                             {item.tamano && ` • ${formatFileSize(item.tamano)}`}
                           </Typography>
+                        </Box>
+
+                        {/* Indicadores de transcripción y selección de grupo */}
+                        <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                          {item.audio_transcription && (
+                            <Chip
+                              icon={<MicIcon />}
+                              label="Audio"
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem', height: 20, cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShowTranscription(item, 'audio');
+                              }}
+                            />
+                          )}
+                          {item.transcripcion && (
+                            <Chip
+                              icon={<TextIcon />}
+                              label="Texto"
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem', height: 20, cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShowTranscription(item, 'text');
+                              }}
+                            />
+                          )}
+                          {item.is_group_parent && (
+                            <>
+                              <Chip
+                                icon={<SelectAllIcon />}
+                                label="Seleccionar grupo"
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem', height: 20, cursor: 'pointer' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectGroup(item.group_id!);
+                                }}
+                              />
+                              <Chip
+                                icon={expandedGroups.has(item.group_id!) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                label={expandedGroups.has(item.group_id!) ? "Colapsar" : "Expandir"}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem', height: 20, cursor: 'pointer' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleGroupExpansion(item.group_id!);
+                                }}
+                              />
+                            </>
+                          )}
                         </Box>
 
                         {item.etiquetas.length > 0 && (
@@ -412,6 +592,54 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
           }
         </Button>
       </DialogActions>
+
+      {/* Modal de transcripción */}
+      <Dialog
+        open={transcriptionModalOpen}
+        onClose={() => setTranscriptionModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {transcriptionType === 'audio' ? (
+              <MicIcon sx={{ color: 'primary.main' }} />
+            ) : (
+              <TextIcon sx={{ color: 'success.main' }} />
+            )}
+            <Typography variant="h6">
+              Transcripción de {transcriptionType === 'audio' ? 'Audio' : 'Texto'}
+            </Typography>
+          </Box>
+          <Typography variant="subtitle2" color="text.secondary">
+            {transcriptionModalItem?.is_group_parent ? 
+              transcriptionModalItem.group_name : 
+              transcriptionModalItem?.titulo
+            }
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ 
+            maxHeight: '60vh', 
+            overflowY: 'auto',
+            p: 2,
+            backgroundColor: 'grey.50',
+            borderRadius: 1
+          }}>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {transcriptionType === 'audio' ? 
+                transcriptionModalItem?.audio_transcription :
+                transcriptionModalItem?.transcripcion
+              }
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTranscriptionModalOpen(false)}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

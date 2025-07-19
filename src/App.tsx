@@ -234,13 +234,7 @@ function App() {
               </Layout>
             </VerifiedRoute>
           } />
-          <Route path="/projectos" element={
-            <VerifiedRoute>
-              <Layout>
-                <Projects />
-              </Layout>
-            </VerifiedRoute>
-          } />
+
           <Route path="/timeline-demo" element={
             <VerifiedRoute>
               <Layout>

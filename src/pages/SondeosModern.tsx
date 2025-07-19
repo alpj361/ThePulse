@@ -86,6 +86,8 @@ const SondeosModern: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [selectedMonitoreos, setSelectedMonitoreos] = useState<string[]>([]);
   const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
+  const [selectedNoticias, setSelectedNoticias] = useState<string[]>([]);
+  const [selectedCodex, setSelectedCodex] = useState<string[]>([]);
 
   // Estados para la UI moderna
   const [selectedChartType, setSelectedChartType] = useState<'bar' | 'line' | 'pie'>('bar');
@@ -254,7 +256,9 @@ const SondeosModern: React.FC = () => {
         user.id,
         session?.access_token,
         selectedMonitoreos,
-        selectedTrends
+        selectedTrends,
+        selectedNoticias,
+        selectedCodex
       );
       
       setCurrentStep('analyzing');
@@ -400,8 +404,8 @@ const SondeosModern: React.FC = () => {
     setLoading(true);
     
     Promise.all([
-      getLatestNews(20),
-      getCodexItemsByUser(user.email, 10)
+      getLatestNews(),
+      getCodexItemsByUser(user.id)
     ])
       .then(([newsData, codexData]) => {
         console.log('📊 Datos cargados:', { news: newsData?.length || 0, codex: codexData?.length || 0 });
@@ -566,8 +570,12 @@ const SondeosModern: React.FC = () => {
               onContextChange={handleContextChange}
               onMonitoreosChange={handleMonitoreosChange}
               onTrendsChange={handleTrendsChange}
+              onNoticiasChange={setSelectedNoticias}
+              onCodexChange={setSelectedCodex}
               selectedMonitoreos={selectedMonitoreos}
               selectedTrends={selectedTrends}
+              selectedNoticias={selectedNoticias}
+              selectedCodex={selectedCodex}
               disabled={loading || loadingSondeo}
             />
             <p className="mt-1 text-xs text-gray-500">Selecciona las fuentes de datos para el análisis.</p>

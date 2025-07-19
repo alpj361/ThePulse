@@ -431,6 +431,8 @@ export function filterCoveragesBySearch(coverages: Coverage[], searchText: strin
   );
 }
 
+import { normalizeCountryName as normalizeCountryNameMaps } from './mapsService';
+
 /**
  * Detecta coberturas automáticamente desde hallazgos agrupadas por tema
  */
@@ -441,14 +443,14 @@ export async function autoDetectCoverages(projectId: string): Promise<AutoDetect
     
     // Consolidar países (evitar duplicados como 'México' y 'Mexico')
     const consolidatedCountries = new Map<string, string>();
-    Object.values(findings).flat().forEach(card => {
+    for (const card of Object.values(findings).flat()) {
       if (card.pais) {
-        const normalized = normalizeCountryName(card.pais);
+        const normalized = await normalizeCountryNameMaps(card.pais);
         if (!consolidatedCountries.has(normalized)) {
           consolidatedCountries.set(normalized, card.pais);
         }
       }
-    });
+    }
     
     const response = await fetch(`https://server.standatpd.com/api/coverages/auto-detect`, {
       method: 'POST',
@@ -512,16 +514,8 @@ export async function getFindingsByTheme(projectId: string): Promise<Record<stri
  */
 export async function getFindingsForCoverage(projectId: string, coverage: Coverage): Promise<CapturadoCard[]> {
   try {
-    // Agregar normalización de nombres de países
-    const normalizeCountryName = (name: string) => {
-      const countryMap: Record<string, string> = {
-        'méxico': 'México',
-        'eeuu': 'Estados Unidos',
-        // ... otros mapeos necesarios
-      };
-      const normalized = name.toLowerCase().trim();
-      return countryMap[normalized] || name;
-    };
+    // Usar agente Maps para normalización de países
+    const normalizeCountryNameLocal = normalizeCountryNameMaps;
 
     // Si el proyecto es público o el usuario tiene sesión, supabase ya tiene la sesión
     const { data: sessionData } = await supabase.auth.getSession();

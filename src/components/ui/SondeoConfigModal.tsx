@@ -17,7 +17,8 @@ import {
   Tooltip,
   TextField,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import {
   DndContext,
@@ -54,6 +55,10 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import TemplateIcon from '@mui/icons-material/ViewModule';
 import TrendSelector from './TrendSelector';
+import { previewPrompt } from '../../services/sondeos';
+import { useAuth } from '../../context/AuthContext';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import { User } from '../../types';  // Importar tipo User
 
 interface SondeoConfigModalProps {
   open: boolean;
@@ -499,9 +504,17 @@ const SondeoConfigModal: React.FC<SondeoConfigModalProps> = ({
   onClose,
   selectedContexts
 }) => {
+  const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
   const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<{
+    prompt_preview?: string;
+    prompt_length?: number;
+    contexto_stats?: any;
+  }>({});
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Configurar sensores para drag and drop
   const sensors = useSensors(
@@ -715,6 +728,49 @@ const SondeoConfigModal: React.FC<SondeoConfigModalProps> = ({
 
   const enabledCount = questions.filter(q => q.enabled).length;
 
+  const handlePreviewPrompt = async () => {
+    const isAdmin = !!(
+      (user as any)?.is_admin || 
+      (user as any)?.profile?.is_admin || 
+      (user as any)?.profile?.role === 'admin' || 
+      (user as any)?.role === 'admin'
+    );
+
+    if (!user || !isAdmin) {
+      alert('Solo administradores pueden ver preview del prompt');
+      return;
+    }
+
+    try {
+      setLoadingPreview(true);
+      const preview = await previewPrompt(
+        // Usar la primera pregunta como input
+        questions[0]?.title || 'Análisis de Tendencias',
+        selectedContexts,
+        (user as any).id,
+        {
+          selectedTrends: selectedTrends || [], 
+          selectedNoticias: questions.filter(q => q.context === 'noticias').map(q => q.title),
+          selectedCodex: questions.filter(q => q.context === 'codex').map(q => q.title)
+        }
+      );
+      setPromptPreview(preview);
+      setPreviewModalOpen(true);
+    } catch (error) {
+      console.error('Error al generar preview:', error);
+      alert('No se pudo generar el preview');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const isAdmin = !!(
+    (user as any)?.is_admin || 
+    (user as any)?.profile?.is_admin || 
+    (user as any)?.profile?.role === 'admin' || 
+    (user as any)?.role === 'admin'
+  );
+
   return (
     <Dialog
       open={open}
@@ -918,7 +974,44 @@ const SondeoConfigModal: React.FC<SondeoConfigModalProps> = ({
         >
           Guardar Configuración
         </Button>
+        {isAdmin && (
+          <Button 
+            variant="outlined" 
+            color="secondary" 
+            onClick={handlePreviewPrompt}
+            disabled={loadingPreview}
+            startIcon={loadingPreview ? <CircularProgress size={20} /> : <VisibilityIcon />}
+          >
+            {loadingPreview ? 'Generando Preview...' : 'Preview del Prompt'}
+          </Button>
+        )}
       </DialogActions>
+
+      {/* Modal de Preview */}
+      <Dialog open={previewModalOpen} onClose={() => setPreviewModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Preview del Prompt</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Longitud del Prompt: {promptPreview.prompt_length} caracteres
+          </Typography>
+          <Card variant="outlined" style={{ marginTop: 16, padding: 16 }}>
+            <Typography variant="body2" style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+              {promptPreview.prompt_preview}
+            </Typography>
+          </Card>
+          {promptPreview.contexto_stats && (
+            <Box mt={2}>
+              <Typography variant="h6">Estadísticas del Contexto</Typography>
+              <pre>{JSON.stringify(promptPreview.contexto_stats, null, 2)}</pre>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewModalOpen(false)} color="primary">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

@@ -5,24 +5,15 @@ import {
   Typography,
   Button,
   Container,
-  Grid,
-  Paper,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  TrendingUp,
-  Satellite,
-  FolderOpen,
-  MenuBook,
-  Chat,
-  ArrowForward,
-  AudioFile,
-} from '@mui/icons-material';
+import { ArrowForward } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { BackgroundPaths } from '@/components/ui/BackgroundPaths';
-import { GlowCard } from '@/components/ui/spotlight-card';
 import Logo from '../components/common/Logo';
+import { FeaturesSectionWithHoverEffects } from '../components/ui/feature-section-with-hover-effects';
+import { Gallery4 } from '../components/ui/gallery4';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -32,41 +23,6 @@ const Home: React.FC = () => {
   const handleStart = () => {
     navigate('/login');
   };
-
-  // Usando el logo original de login
-
-  const features = [
-    {
-      icon: TrendingUp,
-      title: "Monitoreo de Tendencias Locales",
-      description: "Detecta temas en auge y coyunturas relevantes en Guatemala, incluyendo menciones de leyes, actores políticos y crisis emergentes en tiempo real.",
-    },
-    {
-      icon: Satellite,
-      title: "Monitoreo de Redes y Medios",
-      description: "Conecta con X, medios digitales y blogs locales para rastrear publicaciones clave, hashtags y cambios en el discurso público.",
-    },
-    {
-      icon: FolderOpen,
-      title: "Proyectos y Coberturas",
-      description: "Crea proyectos temáticos para organizar investigaciones, guardar tendencias relevantes y documentar avances de coberturas periodísticas.",
-    },
-    {
-      icon: MenuBook,
-      title: "Códex y Librería",
-      description: "Una librería viva con recursos, referencias, leyes y conceptos clave. Base de conocimiento confiable y actualizada para comunicadores.",
-    },
-    {
-      icon: AudioFile,
-      title: "Transcripción de Audio/Video",
-      description: "Convierte automáticamente archivos de audio y video en texto con IA avanzada. Perfecto para entrevistas y conferencias de prensa.",
-    },
-    {
-      icon: Chat,
-      title: "Chat de Apoyo",
-      description: "Asistente inteligente que responde preguntas, ayuda a redactar contenido y brinda soporte contextual basado en tus proyectos activos.",
-    },
-  ];
 
   return (
     <BackgroundPaths>
@@ -167,53 +123,22 @@ const Home: React.FC = () => {
                 </Typography>
               </motion.div>
 
-              {/* Features Cards */}
-              <Grid container spacing={3} sx={{ mb: 8 }}>
-                {features.map((feature, index) => (
-                  <Grid item xs={12} md={6} lg={4} key={feature.title}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
-                      style={{ height: '100%' }}
-                    >
-                      <GlowCard 
-                        customSize={true}
-                        glowColor="blue"
-                        className="h-full w-full flex flex-col"
-                      >
-                        <Box sx={{ 
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          height: '100%',
-                          gap: 2
-                        }}>
-                          <Box sx={{ 
-                            width: 56, 
-                            height: 56, 
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)', 
-                            borderRadius: 4, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 1
-                          }}>
-                            <feature.icon sx={{ fontSize: 28, color: 'primary.main' }} />
-                          </Box>
-                          <Typography variant="h6" fontWeight="semibold" gutterBottom color="text.primary">
-                            {feature.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, flexGrow: 1 }}>
-                            {feature.description}
-                          </Typography>
-                        </Box>
-                      </GlowCard>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 1.1 }}
+              >
+                <FeaturesSectionWithHoverEffects />
+              </motion.div>
+
+              {/* GIF Gallery */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 1.2 }}
+              >
+                <Gallery4 />
+              </motion.div>
 
               {/* CTA Section */}
               <motion.div
@@ -221,7 +146,7 @@ const Home: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 1.3 }}
               >
-                <Paper 
+                <Box 
                   sx={{ 
                     p: 4, 
                     maxWidth: 400, 
@@ -286,7 +211,7 @@ const Home: React.FC = () => {
                       Ver Términos y Condiciones
                     </Button>
                   </Box>
-                </Paper>
+                </Box>
               </motion.div>
             </Box>
           </Container>
@@ -410,8 +335,6 @@ const Home: React.FC = () => {
             </motion.div>
           </Container>
         </Box>
-
-
       </Box>
     </BackgroundPaths>
   );

@@ -1,6 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  PieChart,
+  ShowChart,
+  Timeline,
+  Search,
+  AutoGraph,
+  Insights,
+  TrendingUp,
+  BarChart,
+  FilterAlt,
+  ExpandMore,
+  ExpandLess,
+  ArrowForward,
+  PlayArrow,
+  Stop,
+  Autorenew
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -16,8 +34,8 @@ import {
   MenuItem
 } from '@mui/material';
 import {
-  BarChart,
-  TrendingUp,
+  BarChart as MuiBarChart,
+  TrendingUp as TrendingUpIcon,
   LocationOn,
   Assessment,
   Search as SearchIcon,
@@ -30,10 +48,10 @@ import {
   Percent,
   AttachMoney,
   Tune,
-  ExpandMore,
-  PieChart,
-  ShowChart,
-  Timeline
+  ExpandMore as ExpandMoreIcon,
+  PieChart as PieChartIcon,
+  ShowChart as ShowChartIcon,
+  Timeline as TimelineIcon
 } from '@mui/icons-material';
 import { getLatestNews, getCodexItemsByUser, getSondeosByUser } from '../services/supabase.ts';
 import { sendSondeoToExtractorW, getLatestTrends } from '../services/api';
@@ -53,6 +71,7 @@ import SentimentAreaChart from '../components/ui/SentimentAreaChart';
 import MultiContextSelector from '../components/ui/MultiContextSelector';
 import AIResponseDisplay from '../components/ui/AIResponseDisplay';
 import SondeoConfigModal from '../components/ui/SondeoConfigModal';
+import SondeoHistoryModal from '../components/ui/SondeoHistoryModal';
 import SondeoProgressIndicator from '../components/ui/SondeoProgressIndicator';
 import { useSondeoConfig } from '../hooks/useSondeoConfig';
 import { useSondeoForm } from '../hooks/useSondeoForm';
@@ -60,6 +79,7 @@ import { useI18n } from '../hooks/useI18n';
 import { useLogRocketEvents } from '../hooks/useLogRocketEvents';
 import CardSondeo from '../components/sondeos/CardSondeo';
 import AnalisisGenerado from '../components/sondeos/AnalisisGenerado';
+import StorytellingChart from '../components/ui/StorytellingChart';
 
 // Tipo para el historial de sondeos
 interface SondeoHistorial {
@@ -122,12 +142,17 @@ const Sondeos: React.FC = () => {
   const [loadingSondeos, setLoadingSondeos] = useState(false);
   const [selectedMonitoreos, setSelectedMonitoreos] = useState<string[]>([]);
   const [selectedTrends, setSelectedTrends] = useState<string[]>([]);
+  const [selectedNoticias, setSelectedNoticias] = useState<string[]>([]);
+  const [selectedCodex, setSelectedCodex] = useState<string[]>([]);
   
   // Nuevo estado para datos de visualización
   const [datosAnalisis, setDatosAnalisis] = useState<any>(null);
   
   // Estado para el modal de configuración
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  
+  // Estado para el modal de historial
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   
   // Estados para el indicador de progreso
   const [currentStep, setCurrentStep] = useState<string>('preparing');
@@ -136,6 +161,21 @@ const Sondeos: React.FC = () => {
   // Estados para la UI moderna
   const [selectedChartType, setSelectedChartType] = useState<'bar' | 'line' | 'pie'>('bar');
   const [selectedPeriod, setSelectedPeriod] = useState('last-7-days');
+
+  // Utility function to map context to chart context types
+  const getContextType = (context: string): 'politica' | 'economia' | 'social' | 'tecnologia' | 'general' => {
+    const contextMap: Record<string, 'politica' | 'economia' | 'social' | 'tecnologia' | 'general'> = {
+      'tendencias': 'general',
+      'noticias': 'politica',
+      'codex': 'social',
+      'monitoreos': 'social',
+      'politica': 'politica',
+      'economia': 'economia',
+      'social': 'social',
+      'tecnologia': 'tecnologia'
+    };
+    return contextMap[context] || 'general';
+  };
 
   // Opciones para el dropdown de contexto
   const opcionesContexto = [
@@ -461,7 +501,11 @@ const Sondeos: React.FC = () => {
         currentInput,
         currentContexts,
         user.id,
-        session?.access_token
+        session?.access_token,
+        selectedMonitoreos,
+        selectedTrends,
+        selectedNoticias,
+        selectedCodex
       );
       
       // Paso 3: Analizando con IA
@@ -472,6 +516,16 @@ const Sondeos: React.FC = () => {
       setCurrentStep('generating');
       setProgress(100);
       
+      console.log('🎯 Debug - Resultado final recibido:', {
+        contexto: !!result.contexto,
+        llmResponse: !!result.llmResponse,
+        llmSources: !!result.llmSources,
+        datosAnalisis: !!result.datosAnalisis,
+        evolucionSentimiento: !!result.datosAnalisis?.evolucion_sentimiento,
+        cronologiaEventos: !!result.datosAnalisis?.cronologia_eventos,
+        keysAnalisis: result.datosAnalisis ? Object.keys(result.datosAnalisis) : 'sin datos'
+      });
+
       setContexto(result.contexto);
       setLlmResponse(result.llmResponse);
       setLlmSources(result.llmSources);
@@ -631,6 +685,37 @@ const Sondeos: React.FC = () => {
     setShowContext(true);
   };
 
+  // Función para cargar un sondeo previo
+  const handleSelectSondeo = (sondeo: any) => {
+    try {
+      // Cargar los datos del sondeo seleccionado
+      setInput(sondeo.pregunta || '');
+      
+      // Cargar contextos utilizados
+      if (sondeo.contextos_utilizados && Array.isArray(sondeo.contextos_utilizados)) {
+        setSelectedContexts(sondeo.contextos_utilizados);
+      }
+      
+      // Cargar respuesta de la IA
+      if (sondeo.respuesta_ia) {
+        setLlmResponse(sondeo.respuesta_ia);
+      }
+      
+      // Cargar datos de visualización si existen
+      if (sondeo.datos_visualizacion) {
+        setDatosAnalisis(sondeo.datos_visualizacion);
+      }
+      
+      // Mostrar el contexto
+      setShowContext(true);
+      
+      console.log('✅ Sondeo cargado exitosamente:', sondeo.pregunta);
+    } catch (error) {
+      console.error('Error cargando sondeo:', error);
+      setError('Error al cargar el sondeo seleccionado');
+    }
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     if (!user?.email) return;
@@ -638,8 +723,8 @@ const Sondeos: React.FC = () => {
     setLoading(true);
     
     Promise.all([
-      getLatestNews(20),
-      getCodexItemsByUser(user.email, 10)
+      getLatestNews(),
+      getCodexItemsByUser(user.id)
     ])
       .then(([newsData, codexData]) => {
         console.log('📊 Datos cargados:', { news: newsData?.length || 0, codex: codexData?.length || 0 });
@@ -803,6 +888,14 @@ const Sondeos: React.FC = () => {
             <MultiContextSelector
               selectedContexts={selectedContexts}
               onContextChange={handleContextChange}
+              onMonitoreosChange={setSelectedMonitoreos}
+              onTrendsChange={setSelectedTrends}
+              onNoticiasChange={setSelectedNoticias}
+              onCodexChange={setSelectedCodex}
+              selectedMonitoreos={selectedMonitoreos}
+              selectedTrends={selectedTrends}
+              selectedNoticias={selectedNoticias}
+              selectedCodex={selectedCodex}
               disabled={loading || loadingSondeo}
             />
             <p className="mt-1 text-xs text-gray-500">Selecciona las fuentes de datos para el análisis.</p>
@@ -877,6 +970,18 @@ const Sondeos: React.FC = () => {
               <RefreshIcon className="w-4 h-4" />
               Datos Demo
             </button>
+            
+            <button
+              onClick={() => setHistoryModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 transition"
+            >
+              <div className="w-4 h-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </div>
+              Historial
+            </button>
           </div>
         </aside>
 
@@ -948,6 +1053,60 @@ const Sondeos: React.FC = () => {
         ))}
       </section>
 
+      {/* Advanced Analytics Section */}
+      {datosAnalisis && (() => {
+        console.log('🎯 Debug - Renderizando Advanced Analytics:', {
+          tieneEvolucionSentimiento: !!datosAnalisis.evolucion_sentimiento,
+          tieneCronologiaEventos: !!datosAnalisis.cronologia_eventos,
+          contextType: getContextType(selectedContexts[0]),
+          todasLasKeys: Object.keys(datosAnalisis)
+        });
+        return (
+          <section className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-8 animate-entry opacity-0 translate-y-8">
+          {/* Sentiment Evolution Chart */}
+          {datosAnalisis.evolucion_sentimiento ? (
+            <div className="bg-gray-900/70 ring-1 ring-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-lg">
+              <SentimentAreaChart
+                data={datosAnalisis.evolucion_sentimiento}
+                height={300}
+                title="Evolución del Sentimiento"
+                contextType={getContextType(selectedContexts[0])}
+                showEvents={true}
+              />
+            </div>
+          ) : (
+            <div className="bg-gray-900/70 ring-1 ring-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-lg">
+              <div className="text-center text-gray-400 py-12">
+                📈 Gráfico de sentimientos no disponible
+                <br />
+                <small>Datos: {JSON.stringify(datosAnalisis.evolucion_sentimiento || 'no found')}</small>
+              </div>
+            </div>
+          )}
+
+          {/* Storytelling Timeline */}
+          {datosAnalisis.cronologia_eventos ? (
+            <div className="bg-gray-900/70 ring-1 ring-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-lg">
+              <StorytellingChart
+                events={datosAnalisis.cronologia_eventos}
+                title="Cronología de Eventos"
+                contextType={getContextType(selectedContexts[0])}
+                maxEvents={3}
+              />
+            </div>
+          ) : (
+            <div className="bg-gray-900/70 ring-1 ring-white/10 p-6 rounded-2xl backdrop-blur-lg shadow-lg">
+              <div className="text-center text-gray-400 py-12">
+                📖 Cronología de eventos no disponible
+                <br />
+                <small>Datos: {JSON.stringify(datosAnalisis.cronologia_eventos || 'no found')}</small>
+              </div>
+            </div>
+          )}
+          </section>
+        );
+      })()}
+
       {/* Historial de Sondeos */}
       {sondeos.length > 0 && (
         <section className="max-w-7xl mx-auto w-full animate-entry opacity-0 translate-y-8">
@@ -999,6 +1158,13 @@ const Sondeos: React.FC = () => {
         open={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
         selectedContexts={selectedContexts}
+      />
+      
+      {/* Modal de Historial */}
+      <SondeoHistoryModal
+        open={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        onSelectSondeo={handleSelectSondeo}
       />
 
       {/* Skip Link for Accessibility */}
