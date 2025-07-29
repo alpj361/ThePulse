@@ -27,6 +27,7 @@ import { NewsItem } from '../types';
 import ModernBarChart from '../components/ui/ModernBarChart';
 import ModernLineChart from '../components/ui/ModernLineChart';
 import ModernPieChart from '../components/ui/ModernPieChart';
+import SentimentAreaChart from '../components/ui/SentimentAreaChart'; // Radar chart
 import MultiContextSelector from '../components/ui/MultiContextSelector';
 import AIResponseDisplay from '../components/ui/AIResponseDisplay';
 import SondeoConfigModal from '../components/ui/SondeoConfigModal';
@@ -191,11 +192,13 @@ const SondeosModern: React.FC = () => {
           );
           break;
           
-        case 4: // Análisis de sentimiento
+        case 4: // Análisis emocional y tipos de discurso
           chartComponent = (
-            <ModernLineChart 
-              data={data.map((item: any) => ({ name: item.fecha, value: item.sentimiento }))}
-              height={280}
+            <SentimentAreaChart 
+              data={data}
+              height={320}
+              title="Análisis Emocional y Tipos de Discurso"
+              contextType={primaryContext as any}
             />
           );
           break;
@@ -377,12 +380,33 @@ const SondeosModern: React.FC = () => {
       ];
       
       datos.analisis_sentimiento = [
-        { fecha: 'Ene', sentimiento: 65 },
-        { fecha: 'Feb', sentimiento: 72 },
-        { fecha: 'Mar', sentimiento: 58 },
-        { fecha: 'Abr', sentimiento: 68 },
-        { fecha: 'May', sentimiento: 75 },
-        { fecha: 'Jun', sentimiento: 82 }
+        {
+          categoria: "Tendencias Actuales",
+          positivo: 45,
+          neutral: 35,
+          negativo: 20,
+          discurso_informativo: 65,
+          discurso_opinativo: 30,
+          discurso_emocional: 40
+        },
+        {
+          categoria: "Noticias Relevantes",
+          positivo: 55,
+          neutral: 30,
+          negativo: 15,
+          discurso_informativo: 80,
+          discurso_opinativo: 40,
+          discurso_emocional: 25
+        },
+        {
+          categoria: "Análisis de Codex",
+          positivo: 40,
+          neutral: 40,
+          negativo: 20,
+          discurso_informativo: 75,
+          discurso_opinativo: 60,
+          discurso_emocional: 30
+        }
       ];
     }
 
@@ -394,6 +418,59 @@ const SondeosModern: React.FC = () => {
     const datosPrueba = generarDatosPrueba("demostración", consulta);
     setDatosAnalisis(datosPrueba);
     setLlmResponse(`Análisis completado para: "${consulta}"\n\nBasado en el contexto seleccionado (${selectedContexts.join(', ')}), se identificaron patrones relevantes en los datos disponibles. Los resultados muestran tendencias significativas que pueden informar la toma de decisiones estratégicas.\n\nPuntos clave:\n• Alta correlación con temas de interés público\n• Distribución geográfica concentrada en áreas urbanas\n• Evolución temporal positiva en los últimos meses\n• Oportunidades de mejora en cobertura rural\n\nRecomendaciones:\n1. Fortalecer iniciativas en regiones con menor cobertura\n2. Aprovechar el momentum actual en tendencias\n3. Integrar perspectivas multi-sectoriales\n4. Monitorear evolución a mediano plazo`);
+    setShowContext(true);
+  };
+
+  // Función específica para probar las gráficas de radar con mock data (ADMIN ONLY)
+  const cargarGraficasEjemplo = () => {
+    const consulta = input || "análisis emocional de temas políticos";
+    
+    const datosRadar = {
+      ...generarDatosPrueba("radar_demo", consulta),
+      
+      // Datos específicos para el radar chart con más variación
+      analisis_sentimiento: [
+        {
+          categoria: "Política",
+          positivo: 35,
+          neutral: 45,
+          negativo: 20,
+          discurso_informativo: 60,
+          discurso_opinativo: 75,
+          discurso_emocional: 45
+        },
+        {
+          categoria: "Economía",
+          positivo: 55,
+          neutral: 30,
+          negativo: 15,
+          discurso_informativo: 80,
+          discurso_opinativo: 40,
+          discurso_emocional: 25
+        },
+        {
+          categoria: "Social",
+          positivo: 40,
+          neutral: 35,
+          negativo: 25,
+          discurso_informativo: 50,
+          discurso_opinativo: 60,
+          discurso_emocional: 70
+        },
+        {
+          categoria: "Tecnología",
+          positivo: 65,
+          neutral: 25,
+          negativo: 10,
+          discurso_informativo: 85,
+          discurso_opinativo: 30,
+          discurso_emocional: 20
+        }
+      ]
+    };
+    
+    setDatosAnalisis(datosRadar);
+    setLlmResponse(`🎯 Análisis Emocional y Tipos de Discurso - "${consulta}"\n\n📊 **Análisis completado con datos de ejemplo para radar chart**\n\nEste análisis multidimensional evalúa tanto las emociones como los tipos de discurso presentes en el contenido analizado:\n\n**Dimensiones Emocionales:**\n• Positivo (49%): Contenido optimista y propositivo\n• Neutral (34%): Información objetiva y balanceada\n• Negativo (17%): Críticas constructivas y preocupaciones\n\n**Tipos de Discurso:**\n• Informativo (69%): Basado en hechos y datos verificables\n• Opinativo (51%): Análisis y perspectivas personales\n• Emocional (40%): Contenido con carga emocional intensa\n\n**Insights por Categoría:**\n🏛️ **Política**: Alto componente opinativo, discurso emocional moderado\n💰 **Economía**: Predomina lo informativo, baja carga emocional\n👥 **Social**: Balance entre opiniones y emociones\n💻 **Tecnología**: Altamente informativo, mínima carga emocional\n\n**Recomendaciones:**\n1. Mantener el equilibrio entre información y emoción\n2. Aprovechar el tono positivo predominante\n3. Diversificar los tipos de expresión por tema\n4. Monitorear la evolución emocional por categorías`);
     setShowContext(true);
   };
 
@@ -457,13 +534,7 @@ const SondeosModern: React.FC = () => {
     });
   }, []);
 
-  // Métricas calculadas
-  const metrics = {
-    totalSondeos: sondeos.length,
-    creditosUsados: sondeos.reduce((sum, s) => sum + (s.creditos_utilizados || 0), 0),
-    temasMasAnalizados: selectedContexts.length || 3,
-    efectividad: Math.round((sondeos.filter(s => s.respuesta_llm).length / Math.max(sondeos.length, 1)) * 100)
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 antialiased flex flex-col gap-16 py-12 px-6">
@@ -484,59 +555,7 @@ const SondeosModern: React.FC = () => {
       </header>
 
       {/* Metric Cards */}
-      <section className="max-w-7xl mx-auto w-full grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Sondeos Realizados */}
-        <article className="rounded-xl bg-gray-900/70 ring-1 ring-white/10 p-5 flex flex-col gap-3 backdrop-blur-lg shadow-md hover:shadow-lg hover:ring-indigo-400/30 transition focus-within:ring-indigo-400 outline-none animate-entry opacity-0 translate-y-8" tabIndex={0}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">Sondeos</p>
-            <Assessment className="w-5 h-5 text-indigo-400" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight">{metrics.totalSondeos}</h2>
-          <p className="text-xs text-emerald-400 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            +{Math.max(0, metrics.totalSondeos - 3)} este mes
-          </p>
-        </article>
 
-        {/* Contextos Activos */}
-        <article className="rounded-xl bg-gray-900/70 ring-1 ring-white/10 p-5 flex flex-col gap-3 backdrop-blur-lg shadow-md hover:shadow-lg hover:ring-indigo-400/30 transition focus-within:ring-indigo-400 outline-none animate-entry opacity-0 translate-y-8" tabIndex={0}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">Contextos</p>
-            <People className="w-5 h-5 text-indigo-400" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight">{metrics.temasMasAnalizados}</h2>
-          <p className="text-xs text-emerald-400 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            +2 nuevos disponibles
-          </p>
-        </article>
-
-        {/* Efectividad */}
-        <article className="rounded-xl bg-gray-900/70 ring-1 ring-white/10 p-5 flex flex-col gap-3 backdrop-blur-lg shadow-md hover:shadow-lg hover:ring-indigo-400/30 transition focus-within:ring-indigo-400 outline-none animate-entry opacity-0 translate-y-8" tabIndex={0}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">Efectividad</p>
-            <Percent className="w-5 h-5 text-indigo-400" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight">{metrics.efectividad}%</h2>
-          <p className="text-xs text-emerald-400 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            +5.1% este mes
-          </p>
-        </article>
-
-        {/* Créditos Utilizados */}
-        <article className="rounded-xl bg-gray-900/70 ring-1 ring-white/10 p-5 flex flex-col gap-3 backdrop-blur-lg shadow-md hover:shadow-lg hover:ring-indigo-400/30 transition focus-within:ring-indigo-400 outline-none animate-entry opacity-0 translate-y-8" tabIndex={0}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">Créditos</p>
-            <AttachMoney className="w-5 h-5 text-indigo-400" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight">{metrics.creditosUsados}</h2>
-          <p className="text-xs text-emerald-400 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            Optimizado este mes
-          </p>
-        </article>
-      </section>
 
       {/* Editor & Charts */}
       <main className="max-w-7xl mx-auto w-full grid lg:grid-cols-5 gap-8">
@@ -649,6 +668,15 @@ const SondeosModern: React.FC = () => {
             >
               <RefreshIcon className="w-4 h-4" />
               Datos Demo
+            </button>
+            
+            {/* Botón de Radar Chart - Público */}
+            <button
+              onClick={cargarGraficasEjemplo}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium hover:bg-emerald-500/20 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition text-emerald-200"
+            >
+              <Assessment className="w-4 h-4" />
+              🎯 Radar Chart
             </button>
           </div>
         </aside>

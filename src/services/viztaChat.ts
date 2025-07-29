@@ -23,15 +23,28 @@ export interface ViztaChatMessage {
 }
 
 export interface ViztaChatResponse {
-  success: boolean;
-  response: string;
+  success?: boolean;
+  response?: string | {
+    agent?: string;
+    message?: string;
+    type?: string;
+    timestamp?: string;
+  };
+  conversationId?: string | {
+    sessionId?: string;
+    previousMessages?: any[];
+  };
   toolUsed?: string;
   toolArgs?: any;
   toolResult?: any;
-  sessionId: string;
-  requestId: string;
+  sessionId?: string;
+  requestId?: string;
   executionTime?: number;
-  timestamp: string;
+  timestamp?: string;
+  metadata?: {
+    processingTime?: number;
+    [key: string]: any;
+  };
   error?: string;
 }
 

@@ -7,12 +7,18 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { useLogRocketEvents } from '../../hooks/useLogRocketEvents';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import SpreadsheetPanel from '../ui/SpreadsheetPanel';
+import SpreadsheetFloatingButton from '../ui/SpreadsheetFloatingButton';
+import { useSpreadsheet } from '../../context/SpreadsheetContext';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  // Usar el contexto del spreadsheet
+  const { isOpen: isSpreadsheetOpen, openSpreadsheet, closeSpreadsheet } = useSpreadsheet();
+  
   // Configurar LogRocket automáticamente cuando el usuario esté autenticado
   const { profile, error } = useUserProfile();
   const { trackPageView } = useLogRocketEvents();
@@ -55,6 +61,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         
         {/* Vizta Chat */}
         <ViztaChatUI />
+
+        {/* Spreadsheet Floating Button */}
+        <SpreadsheetFloatingButton 
+          onClick={openSpreadsheet}
+        />
+
+        {/* Spreadsheet Panel */}
+        <SpreadsheetPanel 
+          isOpen={isSpreadsheetOpen}
+          onClose={closeSpreadsheet}
+        />
       </div>
     </LanguageProvider>
   );

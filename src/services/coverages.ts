@@ -163,7 +163,7 @@ export async function getCoverages(
  */
 export async function createCoverage(data: CreateCoverageData): Promise<Coverage> {
   try {
-    const response = await fetch(`https://server.standatpd.com/api/coverages`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -193,7 +193,7 @@ export async function createCoverageFromCard(
   projectId: string
 ): Promise<CoverageFromCardResponse> {
   try {
-    const response = await fetch(`https://server.standatpd.com/api/coverages/from-card`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages/from-card`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ export async function updateCoverage(
   updates: Partial<Pick<Coverage, 'name' | 'parent_name' | 'description' | 'relevance' | 'coverage_status' | 'coordinates' | 'tags'>>
 ): Promise<Coverage> {
   try {
-    const response = await fetch(`https://server.standatpd.com/api/coverages/${coverageId}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages/${coverageId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ export async function updateCoverage(
  */
 export async function deleteCoverage(coverageId: string): Promise<void> {
   try {
-    const response = await fetch(`https://server.standatpd.com/api/coverages/${coverageId}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages/${coverageId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
@@ -297,7 +297,7 @@ export async function deleteCoverage(coverageId: string): Promise<void> {
  */
 export async function getCoverageStats(projectId: string): Promise<CoverageStats> {
   try {
-    const response = await fetch(`https://server.standatpd.com/api/coverages/stats/${projectId}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages/stats/${projectId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
@@ -452,7 +452,7 @@ export async function autoDetectCoverages(projectId: string): Promise<AutoDetect
       }
     }
     
-    const response = await fetch(`https://server.standatpd.com/api/coverages/auto-detect`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/coverages/auto-detect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

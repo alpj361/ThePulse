@@ -162,24 +162,45 @@ const ViztaChatUI = () => {
       
       // Enviar consulta al backend
       const response = await sendViztaChatQuery(currentInput, sessionId);
-      
-      if (response.success) {
-        // Filtrar referencias a "nitter" del contenido
-        let cleanContent = response.response;
+      console.log("🔍 Respuesta recibida del servidor:", JSON.stringify(response, null, 2));
+
+      // Manejar diferentes estructuras de respuesta del backend
+      if (response.success || response.response) {
+        let messageContent: string;
+
+        // Lógica defensiva para asegurar que el contenido siempre sea un string
+        if (response.response && typeof response.response === 'object' && 'message' in response.response && typeof response.response.message === 'string') {
+          messageContent = response.response.message;
+        } else if (typeof response.response === 'string') {
+          messageContent = response.response;
+        } else if (response.success === false && response.error) {
+          // Manejar casos de error explícito
+          throw new Error(response.error);
+        } else {
+          // Fallback: si no podemos encontrar el mensaje, mostramos el objeto de respuesta para depurar
+          messageContent = `Respuesta con formato inesperado. Recibido:\n\n\`\`\`json\n${JSON.stringify(response.response || response, null, 2)}\n\`\`\``;
+        }
         
-        // Remover líneas que contengan referencias técnicas a nitter, herramientas, etc.
-        cleanContent = cleanContent.replace(/.*nitter_context.*\n?/gi, '');
-        cleanContent = cleanContent.replace(/.*⏱.*\d+\.\d+s.*\n?/gi, '');
-        cleanContent = cleanContent.replace(/.*#\s*\d+\s*tweets.*\n?/gi, '');
-        cleanContent = cleanContent.replace(/\n\s*\n/g, '\n'); // Limpiar líneas vacías extra
+        // Extraer timestamp y type de manera segura
+        let messageTimestamp = Date.now();
+        let toolType = response.toolUsed;
+        
+        if (response.response && typeof response.response === 'object') {
+          if ('timestamp' in response.response && response.response.timestamp) {
+            messageTimestamp = new Date(response.response.timestamp).getTime();
+          }
+          if ('type' in response.response && response.response.type) {
+            toolType = toolType || response.response.type;
+          }
+        }
         
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: cleanContent.trim(),
+          content: messageContent,
           sender: "assistant",
-          timestamp: new Date(),
-          toolUsed: response.toolUsed,
-          executionTime: response.executionTime,
+          timestamp: new Date(messageTimestamp),
+          toolUsed: toolType,
+          executionTime: response.executionTime || response.metadata?.processingTime,
           tweetsAnalyzed: response.toolResult?.tweets?.length || 0
         };
         setMessages((prev) => [...prev, assistantMessage]);

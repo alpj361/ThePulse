@@ -177,7 +177,7 @@ export function SessionNavBar() {
         {
           icon: <Layers className="h-4 w-4" />,
           label: t.proyectos,
-          path: "/projectos"
+          path: "/Projects"
         }
       ]
     },

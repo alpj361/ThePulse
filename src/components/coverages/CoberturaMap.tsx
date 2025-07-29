@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Coverage, CoverageType } from '../../services/coverages';
@@ -50,6 +50,13 @@ export default function CoberturaMap({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+
+  // Estabilizar función de click para evitar recreaciones
+  const stableOnCoverageClick = useCallback((coverage: Coverage) => {
+    if (onCoverageClick) {
+      onCoverageClick(coverage);
+    }
+  }, [onCoverageClick]);
 
   // Inicializar mapa
   useEffect(() => {
@@ -160,6 +167,8 @@ export default function CoberturaMap({
         offset: 25,
         closeButton: true,
         closeOnClick: false,
+        closeOnMove: false, // ✅ Evitar cierre al mover el mapa
+        focusAfterOpen: false, // ✅ Evitar cambios de foco automáticos
         className: 'coverage-popup'
       }).setHTML(`
         <div class="p-3">
@@ -184,9 +193,7 @@ export default function CoberturaMap({
       markerElement.addEventListener('click', (e) => {
         e.stopPropagation();
         marker.setPopup(popup).togglePopup();
-        if (onCoverageClick) {
-          onCoverageClick(coverage);
-        }
+        stableOnCoverageClick(coverage);
       });
 
       markersRef.current.push(marker);
@@ -215,7 +222,7 @@ export default function CoberturaMap({
         });
       }
     }
-  }, [coverages, isLoaded, onCoverageClick]);
+  }, [coverages, isLoaded]); // ✅ Eliminar onCoverageClick de dependencias
 
   // Función para centrar en Guatemala
   const centerOnGuatemala = () => {
@@ -409,6 +416,13 @@ function FullscreenMap({
   const [isLoaded, setIsLoaded] = useState(false);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
 
+  // Estabilizar función de click para evitar recreaciones
+  const stableOnCoverageClick = useCallback((coverage: Coverage) => {
+    if (onCoverageClick) {
+      onCoverageClick(coverage);
+    }
+  }, [onCoverageClick]);
+
   // Inicializar mapa del modal
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -508,6 +522,8 @@ function FullscreenMap({
         offset: 25,
         closeButton: true,
         closeOnClick: false,
+        closeOnMove: false, // ✅ Evitar cierre al mover el mapa
+        focusAfterOpen: false, // ✅ Evitar cambios de foco automáticos
         className: 'coverage-popup'
       }).setHTML(`
         <div class="p-3">
@@ -531,9 +547,7 @@ function FullscreenMap({
       markerElement.addEventListener('click', (e) => {
         e.stopPropagation();
         marker.setPopup(popup).togglePopup();
-        if (onCoverageClick) {
-          onCoverageClick(coverage);
-        }
+        stableOnCoverageClick(coverage);
       });
 
       markersRef.current.push(marker);
@@ -560,7 +574,7 @@ function FullscreenMap({
         });
       }
     }
-  }, [coverages, isLoaded, onCoverageClick]);
+  }, [coverages, isLoaded]); // ✅ Eliminar onCoverageClick de dependencias
 
   return (
     <div className="w-full h-full relative">

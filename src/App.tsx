@@ -20,10 +20,11 @@ import TestHashtagCard from './components/test/TestHashtagCard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useUserProfile } from './hooks/useUserProfile';
 import { Box, CircularProgress } from '@mui/material';
+import { SpreadsheetProvider } from './context/SpreadsheetContext';
 import EnhancedCodex from './pages/EnhancedCodex';
 import News from './pages/News';
-import Sondeos from './pages/Sondeos';
 import SondeosModern from './pages/SondeosModern';
+const Sondeos = SondeosModern; // Alias para compatibilidad
 import SondeosFullPage from './pages/SondeosFullPage';
 import Projects from './pages/Projects';
 import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
@@ -116,6 +117,7 @@ export function RootRedirect() {
 function App() {
   return (
     <AuthProvider>
+      <SpreadsheetProvider>
       <div style={{ 
         position: 'fixed', 
         left: '20px', 
@@ -258,6 +260,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </SpreadsheetProvider>
     </AuthProvider>
   );
 }

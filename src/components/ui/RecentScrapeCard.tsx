@@ -43,6 +43,9 @@ import { alpha } from '@mui/material/styles';
 import { RecentScrape } from '../../services/recentScrapes';
 import { MagicTweetCard } from './MagicTweetCard';
 import AddLinksToCodexModal from './AddLinksToCodexModal';
+import { useSpreadsheet } from '../../context/SpreadsheetContext';
+import { processScrapeForSpreadsheet, generarResumenProcesamiento } from '../../utils/spreadsheetHelpers';
+import { FaTable } from 'react-icons/fa';
 
 interface RecentScrapeCardProps {
   scrape: RecentScrape;
@@ -67,6 +70,10 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
   const [linksModalOpen, setLinksModalOpen] = useState(false);
   const [analyzeLinks, setAnalyzeLinks] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
+  const [spreadsheetSent, setSpreadsheetSent] = useState(false);
+  
+  // Contexto del spreadsheet
+  const { addTweetData } = useSpreadsheet();
 
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -232,6 +239,28 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
     }, 1200);
   };
 
+  // Función para enviar datos al spreadsheet
+  const handleSendToSpreadsheet = () => {
+    try {
+      const processedData = processScrapeForSpreadsheet(scrape);
+      
+      if (processedData.length === 0) {
+        console.warn('No se encontraron tweets para agregar al spreadsheet');
+        return;
+      }
+
+      const title = scrape.generated_title || scrape.query_original || 'Tweets';
+      addTweetData(processedData, title);
+
+      // Mostrar feedback visual temporal
+      setSpreadsheetSent(true);
+      setTimeout(() => setSpreadsheetSent(false), 2000);
+      
+    } catch (error) {
+      console.error('❌ Error enviando datos al spreadsheet:', error);
+    }
+  };
+
   return (
     <>
       <Card
@@ -342,6 +371,38 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+              {/* Botón para enviar al spreadsheet */}
+              <Tooltip title={spreadsheetSent ? "¡Enviado al spreadsheet!" : "Enviar tweets al spreadsheet"}>
+                <span>
+                  <IconButton
+                    onClick={handleSendToSpreadsheet}
+                    size="small"
+                    sx={{
+                      color: spreadsheetSent ? '#4caf50' : theme.palette.primary.main,
+                      backgroundColor: spreadsheetSent 
+                        ? alpha('#4caf50', 0.15) 
+                        : alpha(theme.palette.primary.main, 0.08),
+                      border: spreadsheetSent 
+                        ? `1.5px solid #4caf50` 
+                        : `1.5px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                      ml: 0.5,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        backgroundColor: spreadsheetSent 
+                          ? alpha('#4caf50', 0.25) 
+                          : alpha(theme.palette.primary.main, 0.18),
+                        border: spreadsheetSent 
+                          ? `1.5px solid #4caf50` 
+                          : `1.5px solid ${theme.palette.primary.main}`
+                      }
+                    }}
+                    disabled={!scrape.tweets || scrape.tweets.length === 0}
+                  >
+                    <FaTable size={14} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              
               {/* Botón de añadir enlaces al Codex */}
               <Tooltip title="Añadir enlaces al Codex">
                 <span>

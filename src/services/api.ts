@@ -640,7 +640,12 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
         incluir_recomendaciones: true,
         incluir_visualizaciones: false, // 🔧 FORZAR USO DE DATOS REALES
         tipo_analisis: contextoArmado.tipo_contexto || 'general',
-        contexto_original: contextoArmado // Incluir contexto original para referencia
+        contexto_original: {
+          tendencias: contextoArmado.tendencias || [],
+          noticias: contextoArmado.noticias || [],
+          codex: contextoArmado.codex || [],
+          monitoreos: contextoArmado.monitoreos || []
+        }
       }
     };
     
@@ -741,7 +746,7 @@ export async function getSondeoHistorial(limit: number = 10, offset: number = 0)
       throw new Error('No hay token de acceso disponible');
     }
 
-    const response = await fetch(`${EXTRACTORW_API_URL}/api/sondeo/historial?limit=${limit}&offset=${offset}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/sondeo/historial?limit=${limit}&offset=${offset}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -770,7 +775,7 @@ export async function getSondeoById(id: string) {
       throw new Error('No hay token de acceso disponible');
     }
 
-    const response = await fetch(`${EXTRACTORW_API_URL}/api/sondeo/${id}`, {
+    const response = await fetch(`${EXTRACTORW_API_URL}/sondeo/${id}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

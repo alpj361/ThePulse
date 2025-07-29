@@ -269,7 +269,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
                       </button>
                     </div>
                     <CardHeader>
-                      <h3 className="font-semibold text-sm pr-12">{card.entity || 'Entidad desconocida'}</h3>
+                      <h3 className="font-semibold text-sm pr-12">{card.entity || card.discovery || 'Hallazgo'}</h3>
                       <p className="text-xs text-gray-500">{new Date(card.created_at).toLocaleDateString()}</p>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">

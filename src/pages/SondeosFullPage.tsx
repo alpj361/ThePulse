@@ -113,12 +113,7 @@ const SondeosFullPage: React.FC = () => {
   const [selectedChartType, setSelectedChartType] = useState<'bar' | 'line' | 'pie'>('bar');
   const [selectedPeriod, setSelectedPeriod] = useState('last-7-days');
 
-  const [metrics, setMetrics] = useState({
-    totalSondeos: 12,
-    creditosUsados: 485,
-    temasMasAnalizados: 4,
-    efectividad: 87
-  });
+
 
   // Utility function to map context to chart context types
   const getContextType = (context: string): 'politica' | 'economia' | 'social' | 'tecnologia' | 'general' => {
@@ -283,6 +278,78 @@ const SondeosFullPage: React.FC = () => {
     return input.trim().length >= 3 && selectedContexts.length > 0;
   };
 
+  // Función específica para probar las gráficas de radar con mock data
+  const cargarGraficasEjemplo = () => {
+    const consulta = input || "análisis emocional de temas políticos";
+    
+    const datosRadar = {
+      temas_relevantes: [
+        { tema: 'Política Nacional', valor: 85 },
+        { tema: 'Economía Local', valor: 72 },
+        { tema: 'Educación', valor: 68 },
+        { tema: 'Salud Pública', valor: 64 },
+        { tema: 'Seguridad', valor: 58 }
+      ],
+      
+      distribucion_categorias: [
+        { categoria: 'Política', valor: 35 },
+        { categoria: 'Economía', valor: 28 },
+        { categoria: 'Social', valor: 22 },
+        { categoria: 'Tecnología', valor: 15 }
+      ],
+      
+      // Datos específicos para el radar chart de emociones y discurso
+      evolucion_sentimiento: [
+        {
+          categoria: "Política",
+          positivo: 35,
+          neutral: 45,
+          negativo: 20,
+          discurso_informativo: 60,
+          discurso_opinativo: 75,
+          discurso_emocional: 45
+        },
+        {
+          categoria: "Economía",
+          positivo: 55,
+          neutral: 30,
+          negativo: 15,
+          discurso_informativo: 80,
+          discurso_opinativo: 40,
+          discurso_emocional: 25
+        },
+        {
+          categoria: "Social",
+          positivo: 40,
+          neutral: 35,
+          negativo: 25,
+          discurso_informativo: 50,
+          discurso_opinativo: 60,
+          discurso_emocional: 70
+        },
+        {
+          categoria: "Tecnología",
+          positivo: 65,
+          neutral: 25,
+          negativo: 10,
+          discurso_informativo: 85,
+          discurso_opinativo: 30,
+          discurso_emocional: 20
+        }
+      ],
+      
+      cronologia_eventos: [
+        { fecha: '2024-01-15', evento: 'Debate presidencial', impacto: 'Alto' },
+        { fecha: '2024-01-10', evento: 'Reforma económica', impacto: 'Medio' },
+        { fecha: '2024-01-05', evento: 'Protesta social', impacto: 'Alto' }
+      ]
+    };
+    
+    setDatosAnalisis(datosRadar);
+    setLlmResponse(`🎯 Análisis Emocional y Tipos de Discurso - "${consulta}"\n\n📊 **Análisis completado con datos de ejemplo para radar chart**\n\nEste análisis multidimensional evalúa tanto las emociones como los tipos de discurso presentes en el contenido analizado:\n\n**Dimensiones Emocionales:**\n• Positivo (49%): Contenido optimista y propositivo\n• Neutral (34%): Información objetiva y balanceada\n• Negativo (17%): Críticas constructivas y preocupaciones\n\n**Tipos de Discurso:**\n• Informativo (69%): Basado en hechos y datos verificables\n• Opinativo (51%): Análisis y perspectivas personales\n• Emocional (40%): Contenido con carga emocional intensa\n\n**Insights por Categoría:**\n🏛️ **Política**: Alto componente opinativo, discurso emocional moderado\n💰 **Economía**: Predomina lo informativo, baja carga emocional\n👥 **Social**: Balance entre opiniones y emociones\n💻 **Tecnología**: Altamente informativo, mínima carga emocional\n\n**Recomendaciones:**\n1. Mantener el equilibrio entre información y emoción\n2. Aprovechar el tono positivo predominante\n3. Diversificar los tipos de expresión por tema\n4. Monitorear la evolución emocional por categorías`);
+    setShowContext(true);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Header */}
@@ -325,56 +392,8 @@ const SondeosFullPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Dashboard */}
+      {/* Main Content Area */}
       <div className="py-12 px-6 lg:px-12 bg-gradient-to-b from-blue-50 to-white">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {/* Metric Cards */}
-          <div className="bg-white rounded-2xl p-6 border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-600 text-white">
-                <Assessment className="w-6 h-6" />
-              </div>
-              <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">+{Math.max(0, metrics.totalSondeos - 3)} este mes</span>
-            </div>
-            <h3 className="text-3xl font-bold text-blue-900 mb-2">{metrics.totalSondeos}</h3>
-            <p className="text-blue-700 text-sm">Sondeos Realizados</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-600 text-white">
-                <AttachMoney className="w-6 h-6" />
-              </div>
-              <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">Eficiente</span>
-            </div>
-            <h3 className="text-3xl font-bold text-blue-900 mb-2">{metrics.creditosUsados}</h3>
-            <p className="text-blue-700 text-sm">Créditos Utilizados</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-600 text-white">
-                <People className="w-6 h-6" />
-              </div>
-              <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">Activos</span>
-            </div>
-            <h3 className="text-3xl font-bold text-blue-900 mb-2">{metrics.temasMasAnalizados}</h3>
-            <p className="text-blue-700 text-sm">Contextos Disponibles</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-600 text-white">
-                <Percent className="w-6 h-6" />
-              </div>
-              <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">Excelente</span>
-            </div>
-            <h3 className="text-3xl font-bold text-blue-900 mb-2">{metrics.efectividad}%</h3>
-            <p className="text-blue-700 text-sm">Tasa de Éxito</p>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
         <div className="grid lg:grid-cols-12 gap-8">
           {/* Left Column - Form & Controls */}
           <div className="lg:col-span-4 space-y-6">
@@ -491,6 +510,15 @@ const SondeosFullPage: React.FC = () => {
                 <SearchIcon className="w-5 h-5" />
                 {loadingSondeo ? 'Analizando...' : 'Iniciar Análisis'}
               </button>
+              
+              {/* Botón de Radar Chart */}
+              <button
+                onClick={cargarGraficasEjemplo}
+                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/25"
+              >
+                <Assessment className="w-5 h-5" />
+                🎯 Prueba Radar Chart
+              </button>
             </div>
           </div>
 
@@ -599,23 +627,22 @@ const SondeosFullPage: React.FC = () => {
           });
           return (
             <div className="mt-12 grid lg:grid-cols-2 gap-8">
-              {/* Sentiment Evolution Chart */}
+              {/* Radar Chart - Análisis Emocional y Tipos de Discurso */}
               {datosAnalisis.evolucion_sentimiento ? (
                 <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
                   <SentimentAreaChart
                     data={datosAnalisis.evolucion_sentimiento}
-                    height={300}
-                    title="Evolución del Sentimiento"
+                    height={400}
+                    title="Análisis Emocional y Tipos de Discurso"
                     contextType={getContextType(selectedContexts[0])}
-                    showEvents={true}
                   />
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-lg">
                   <div className="text-center text-gray-400 py-12">
-                    📈 Gráfico de sentimientos no disponible
+                    🎯 Gráfico radar no disponible
                     <br />
-                    <small>Datos: {JSON.stringify(datosAnalisis.evolucion_sentimiento || 'no found')}</small>
+                    <small>Usa el botón "🎯 Prueba Radar Chart" para ver un ejemplo</small>
                   </div>
                 </div>
               )}
@@ -635,7 +662,7 @@ const SondeosFullPage: React.FC = () => {
                   <div className="text-center text-gray-400 py-12">
                     📖 Cronología de eventos no disponible
                     <br />
-                    <small>Datos: {JSON.stringify(datosAnalisis.cronologia_eventos || 'no found')}</small>
+                    <small>Datos cronológicos aparecerán aquí cuando estén disponibles</small>
                   </div>
                 </div>
               )}

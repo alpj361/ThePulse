@@ -42,7 +42,7 @@ const translations = {
     administration: 'Administración',
     adminPanel: 'Panel Admin',
     comingSoon: 'Próximamente',
-    version: 'Jornal V.0.0462',
+    version: 'Jornal V.0.0900',
     securityDisabled: 'Maintenance',
     securityTooltip: 'En mantenimiento por razones de seguridad'
   },
@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
     {
       icon: <Layers size={20} />,
       label: language === 'es' ? 'Proyectos' : 'Projects',
-      path: '/projects'
+      path: '/Projects'
     },
     {
       icon: <Search size={20} />,
