@@ -38,9 +38,16 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({ childr
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<Record<string, any>[]>([]);
   const [columnConfigs, setColumnConfigs] = useState<SpreadsheetColumnConfig[]>([
-    { id: 'name', title: 'Nombre', type: 'text', minWidth: 200 },
-    { id: 'description', title: 'Descripción', type: 'text', minWidth: 250 },
-    { id: 'completed', title: 'Completado', type: 'checkbox', minWidth: 100 }
+    { id: 'col_a', title: 'Columna A', type: 'text', minWidth: 120 },
+    { id: 'col_b', title: 'Columna B', type: 'text', minWidth: 120 },
+    { id: 'col_c', title: 'Columna C', type: 'number', minWidth: 100 },
+    { id: 'col_d', title: 'Columna D', type: 'number', minWidth: 100 },
+    { id: 'col_e', title: 'Columna E', type: 'float', minWidth: 100 },
+    { id: 'col_f', title: 'Columna F', type: 'text', minWidth: 120 },
+    { id: 'col_g', title: 'Columna G', type: 'checkbox', minWidth: 80 },
+    { id: 'col_h', title: 'Columna H', type: 'date', minWidth: 140 },
+    { id: 'col_i', title: 'Columna I', type: 'integer', minWidth: 100 },
+    { id: 'col_j', title: 'Columna J', type: 'text', minWidth: 120 }
   ]);
   const [lastAddedTitle, setLastAddedTitle] = useState<string>();
 

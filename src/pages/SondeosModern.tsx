@@ -544,6 +544,9 @@ const SondeosModern: React.FC = () => {
         <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-3">
           <BarChart className="w-7 h-7 text-indigo-400" />
           Sondeos Inteligentes
+          <span className="text-xs font-medium text-green-400 bg-green-900/20 border border-green-500/30 px-2 py-1 rounded-full">
+            Experimental
+          </span>
         </h1>
         <button 
           onClick={() => setConfigModalOpen(true)}

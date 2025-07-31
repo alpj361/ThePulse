@@ -366,8 +366,11 @@ const SondeosFullPage: React.FC = () => {
               </div>
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight flex items-center justify-center gap-4">
               Sondeos
+              <span className="text-sm font-medium text-green-200 bg-green-800/30 border border-green-400/30 px-3 py-1 rounded-full">
+                Experimental
+              </span>
             </h1>
             
             <p className="text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">

@@ -9,7 +9,7 @@ import {
   floatColumn 
 } from 'react-datasheet-grid';
 import { X } from 'lucide-react';
-import { FaPlus, FaTrash, FaDownload, FaUpload, FaSave, FaUndo, FaCog, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaDownload, FaUpload, FaSave, FaUndo, FaCog, FaBroom, FaQuestionCircle } from 'react-icons/fa';
 import { useSpreadsheet } from '../../context/SpreadsheetContext';
 import 'react-datasheet-grid/dist/style.css';
 
@@ -38,6 +38,7 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
   const [localData, setLocalData] = useState<Record<string, any>[]>([]);
   const [localColumnConfigs, setLocalColumnConfigs] = useState<ColumnConfig[]>([]);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
+  const [showFormulaHelper, setShowFormulaHelper] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Cargar datos cuando se abre el panel (UNA SOLA VEZ)
@@ -56,26 +57,50 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
           setLocalData([...currentContextData]);
           setLocalColumnConfigs([...currentContextColumns]);
         } else {
-          console.log('📝 Panel: Datos de ejemplo');
-          setLocalData([{
-            id: '1',
-            name: 'Tarea de ejemplo 1',
-            description: 'Esta es una descripción de ejemplo',
-            completed: false,
-            priority: 3,
-            dueDate: new Date('2024-12-31'),
-            category: 'Trabajo',
-            notes: 'Notas adicionales'
-          }]);
+          console.log('📝 Panel: Inicializando spreadsheet en blanco');
+          // Crear múltiples filas vacías para simular Google Sheets
+          const blankRows = Array.from({ length: 20 }, (_, index) => {
+            const row: Record<string, any> = { id: `row_${index + 1}` };
+            // Inicializar columnas según su tipo
+            const columnTypes = {
+              'col_a': 'text', 'col_b': 'text', 'col_c': 'number', 'col_d': 'number', 
+              'col_e': 'float', 'col_f': 'text', 'col_g': 'checkbox', 'col_h': 'date', 
+              'col_i': 'integer', 'col_j': 'text'
+            };
+            
+            Object.entries(columnTypes).forEach(([colId, type]) => {
+              switch (type) {
+                case 'checkbox':
+                  row[colId] = false;
+                  break;
+                case 'date':
+                  row[colId] = null;
+                  break;
+                case 'integer':
+                case 'number':
+                case 'float':
+                  row[colId] = null;
+                  break;
+                default:
+                  row[colId] = '';
+              }
+            });
+            return row;
+          });
+          
+          setLocalData(blankRows);
           
           setLocalColumnConfigs([
-            { id: 'name', title: 'Nombre', type: 'text', minWidth: 200 },
-            { id: 'description', title: 'Descripción', type: 'text', minWidth: 250 },
-            { id: 'completed', title: 'Completado', type: 'checkbox', minWidth: 100 },
-            { id: 'priority', title: 'Prioridad', type: 'integer', minWidth: 100 },
-            { id: 'dueDate', title: 'Fecha límite', type: 'date', minWidth: 150 },
-            { id: 'category', title: 'Categoría', type: 'text', minWidth: 120 },
-            { id: 'notes', title: 'Notas', type: 'text', minWidth: 200 }
+            { id: 'col_a', title: 'Columna A', type: 'text', minWidth: 120 },
+            { id: 'col_b', title: 'Columna B', type: 'text', minWidth: 120 },
+            { id: 'col_c', title: 'Columna C', type: 'number', minWidth: 100 },
+            { id: 'col_d', title: 'Columna D', type: 'number', minWidth: 100 },
+            { id: 'col_e', title: 'Columna E', type: 'float', minWidth: 100 },
+            { id: 'col_f', title: 'Columna F', type: 'text', minWidth: 120 },
+            { id: 'col_g', title: 'Columna G', type: 'checkbox', minWidth: 80 },
+            { id: 'col_h', title: 'Columna H', type: 'date', minWidth: 140 },
+            { id: 'col_i', title: 'Columna I', type: 'integer', minWidth: 100 },
+            { id: 'col_j', title: 'Columna J', type: 'text', minWidth: 120 }
           ]);
         }
         setIsLoading(false);
@@ -92,6 +117,7 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
       setLocalColumnConfigs([]);
       setIsLoading(false);
       setShowColumnEditor(false);
+      setShowFormulaHelper(false);
     }
   }, [isOpen]);
 
@@ -108,6 +134,103 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
   const genId = useCallback(() => {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }, []);
+
+  // Sistema de fórmulas básicas
+  const evaluateFormula = useCallback((formula: string, currentData: Record<string, any>[]): number | string => {
+    if (!formula || !formula.startsWith('=')) {
+      return formula;
+    }
+
+    // Remover el = del inicio
+    const expression = formula.slice(1).toUpperCase();
+    
+    try {
+      // Funciones básicas implementadas
+      if (expression.startsWith('SUM(') && expression.endsWith(')')) {
+        const numbers = extractNumbers(expression, currentData);
+        return numbers.reduce((sum, num) => sum + num, 0);
+      }
+      
+      if (expression.startsWith('SUB(') && expression.endsWith(')')) {
+        const numbers = extractNumbers(expression, currentData);
+        return numbers.length > 0 ? numbers.reduce((result, num, index) => 
+          index === 0 ? num : result - num) : 0;
+      }
+      
+      if (expression.startsWith('MUL(') && expression.endsWith(')')) {
+        const numbers = extractNumbers(expression, currentData);
+        return numbers.reduce((result, num) => result * num, 1);
+      }
+      
+      if (expression.startsWith('DIV(') && expression.endsWith(')')) {
+        const numbers = extractNumbers(expression, currentData);
+        if (numbers.length < 2) return 'Error: DIV requiere al menos 2 números';
+        const result = numbers.reduce((result, num, index) => 
+          index === 0 ? num : result / num);
+        return Number.isFinite(result) ? result : 'Error: División por cero';
+      }
+      
+      // Si no es una función reconocida, intentar evaluar como expresión simple
+      const simpleResult = evaluateSimpleExpression(expression, currentData);
+      return simpleResult;
+      
+    } catch (error) {
+      return `Error: ${formula}`;
+    }
+  }, []);
+
+  // Función auxiliar para extraer números de una función
+  const extractNumbers = (expression: string, currentData: Record<string, any>[]): number[] => {
+    const content = expression.slice(4, -1); // Remover función( y )
+    const parts = content.split(',').map(part => part.trim());
+    
+    return parts.map(part => {
+      // Si es un número directo
+      if (!isNaN(Number(part))) {
+        return Number(part);
+      }
+      
+      // Si es una referencia a celda (formato: ROWNUMBER.COLUMNID)
+      if (part.includes('.')) {
+        const [rowStr, columnId] = part.split('.');
+        const rowIndex = parseInt(rowStr) - 1; // Convertir a índice 0-based
+        
+        if (rowIndex >= 0 && rowIndex < currentData.length) {
+          const value = currentData[rowIndex][columnId.toLowerCase()];
+          return Number(value) || 0;
+        }
+      }
+      
+      return 0;
+    });
+  };
+
+  // Función para evaluar expresiones simples (ej: "5+3", "10*2")
+  const evaluateSimpleExpression = (expression: string, currentData: Record<string, any>[]): number | string => {
+    // Reemplazar referencias de celdas por valores
+    let processedExpression = expression.replace(/(\d+)\.([A-Z_]+)/g, (_match, row, col) => {
+      const rowIndex = parseInt(row) - 1;
+      if (rowIndex >= 0 && rowIndex < currentData.length) {
+        const value = currentData[rowIndex][col.toLowerCase()];
+        return String(Number(value) || 0);
+      }
+      return '0';
+    });
+
+    // Evaluar operaciones básicas de forma segura
+    try {
+      // Solo permitir números, operadores básicos y paréntesis
+      if (!/^[0-9+\-*/().\s]+$/.test(processedExpression)) {
+        return 'Error: Caracteres no válidos';
+      }
+      
+      // Evaluar la expresión
+      const result = Function('"use strict"; return (' + processedExpression + ')')();
+      return Number.isFinite(result) ? result : 'Error: Resultado inválido';
+    } catch (error) {
+      return 'Error: Expresión inválida';
+    }
+  };
 
   // Función para obtener el tipo de columna correcto
   const getColumnType = useCallback((type: string) => {
@@ -147,12 +270,12 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
         case 'checkbox':
           newRow[config.id] = false;
           break;
+        case 'date':
+          newRow[config.id] = null;
+          break;
         case 'integer':
         case 'number':
         case 'float':
-          newRow[config.id] = 0;
-          break;
-        case 'date':
           newRow[config.id] = null;
           break;
         default:
@@ -169,21 +292,6 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
   }), [genId]);
 
   // Funciones para manejar columnas
-  const addColumn = useCallback(() => {
-    const newColumn: ColumnConfig = {
-      id: `col_${genId()}`,
-      title: 'Nueva Columna',
-      type: 'text',
-      minWidth: 150
-    };
-    setLocalColumnConfigs(prev => [...prev, newColumn]);
-    
-    // Agregar la nueva columna a todos los datos existentes
-    setLocalData(prev => prev.map(row => ({
-      ...row,
-      [newColumn.id]: ''
-    })));
-  }, [genId]);
 
   const removeColumn = useCallback((columnId: string) => {
     if (localColumnConfigs.length <= 1) {
@@ -295,6 +403,28 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
     }
   }, [localData.length]);
 
+  // Función para procesar cambios en el spreadsheet y evaluar fórmulas
+  const handleSpreadsheetChange = useCallback((newData: Record<string, any>[]) => {
+    // Procesar fórmulas en los datos
+    const processedData = newData.map(row => {
+      const processedRow = { ...row };
+      
+      // Evaluar fórmulas en cada celda
+      Object.keys(processedRow).forEach(key => {
+        if (key !== 'id' && typeof processedRow[key] === 'string') {
+          const value = processedRow[key];
+          if (value && value.startsWith('=')) {
+            processedRow[key] = evaluateFormula(value, newData);
+          }
+        }
+      });
+      
+      return processedRow;
+    });
+    
+    setLocalData(processedData);
+  }, [evaluateFormula]);
+
   if (!isOpen) return null;
 
   return (
@@ -302,8 +432,11 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
       <div className="bg-white w-full max-w-6xl h-full shadow-xl flex flex-col">
                        {/* Header */}
                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-                 <div className="flex items-center space-x-2">
-                   <h2 className="text-xl font-semibold text-gray-800">Spreadsheet Interno</h2>
+                                 <div className="flex items-center space-x-2">
+                  <h2 className="text-xl font-semibold text-gray-800">Sheets</h2>
+                  <span className="text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                    Experimental
+                  </span>
                    {isLoading ? (
                      <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
                        ⏳ Sincronizando...
@@ -320,6 +453,20 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
           
           {/* Controles */}
           <div className="flex items-center space-x-2">
+            {/* Botón de ayuda para fórmulas */}
+            <button
+              onClick={() => setShowFormulaHelper(!showFormulaHelper)}
+              className={`p-2 rounded-md transition-colors ${
+                showFormulaHelper 
+                  ? 'text-blue-800 bg-blue-100' 
+                  : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+              }`}
+              title="Ayuda de fórmulas"
+            >
+              <FaQuestionCircle size={18} />
+            </button>
+            
+            <div className="border-l border-gray-300 mx-2 h-6"></div>
                          <button
                onClick={addRow}
                disabled={isLoading}
@@ -382,13 +529,13 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
                />
              </label>
              
-                          <button
-               onClick={handleClear}
-               className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
-               title="Limpiar datos"
-             >
-               <FaUndo size={20} />
-             </button>
+                                                   <button
+              onClick={handleClear}
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
+              title="Limpiar todos los datos"
+            >
+              <FaBroom size={20} />
+            </button>
              
              <div className="border-l border-gray-300 mx-2 h-6"></div>
              
@@ -407,20 +554,7 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
                <FaCog size={20} />
              </button>
              
-             <button
-               onClick={addColumn}
-               disabled={isLoading}
-               className={`p-2 rounded-md transition-colors ${
-                 isLoading 
-                   ? 'text-gray-400 cursor-not-allowed' 
-                   : 'text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50'
-               }`}
-               title="Agregar columna"
-             >
-               <FaPlus size={20} />
-             </button>
-             
-             <div className="border-l border-gray-300 mx-2 h-6"></div>
+                          <div className="border-l border-gray-300 mx-2 h-6"></div>
             
             <button
               onClick={onClose}
@@ -437,7 +571,7 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
           <div className="p-4 border-b border-gray-200 bg-gray-50 max-h-60 overflow-auto">
             <h3 className="text-lg font-medium text-gray-800 mb-3">Configuración de Columnas</h3>
                          <div className="space-y-2">
-               {localColumnConfigs.map((column, index) => (
+               {localColumnConfigs.map((column) => (
                 <div key={column.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border">
                   <input
                     type="text"
@@ -483,8 +617,37 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
           </div>
         )}
 
+        {/* Formula Helper */}
+        {showFormulaHelper && (
+          <div className="p-4 border-b border-gray-200 bg-blue-50">
+            <h3 className="text-lg font-medium text-blue-800 mb-3">🧮 Guía de Fórmulas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-semibold text-blue-700 mb-2">Funciones Básicas:</h4>
+                <ul className="space-y-1 text-blue-600">
+                  <li><code>=SUM(10,20,30)</code> → Suma números</li>
+                  <li><code>=MUL(5,3)</code> → Multiplica números</li>
+                  <li><code>=DIV(15,3)</code> → Divide números</li>
+                  <li><code>=SUB(20,5)</code> → Resta números</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-blue-700 mb-2">Referencias de Celdas:</h4>
+                <ul className="space-y-1 text-blue-600">
+                  <li><code>=1.COL_C+2.COL_C</code> → Suma valores de celdas</li>
+                  <li><code>=5+3*2</code> → Operaciones matemáticas</li>
+                  <li><code>=SUM(1.COL_C,2.COL_D)</code> → Combinar funciones</li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-xs text-blue-500 mt-3">
+              💡 Tip: Las referencias usan el formato FILA.COLUMNA (ej: 1.COL_A para la fila 1, columna A)
+            </p>
+          </div>
+        )}
+
                        {/* Spreadsheet */}
-               <div className="flex-1 p-4 overflow-hidden">
+               <div className="flex-1 p-2 overflow-hidden">
                  <div className="h-full border border-gray-200 rounded-lg">
                    {isLoading ? (
                      <div className="flex items-center justify-center h-full text-gray-500">
@@ -496,23 +659,23 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
                      </div>
                    ) : columns.length > 0 && localData.length > 0 ? (
                      <div className="h-full">
-                       <DataSheetGrid
-                         value={localData}
-                         onChange={(newData: any) => setLocalData(newData)}
-                         columns={columns}
-                         createRow={createRow}
-                         duplicateRow={duplicateRow}
-                         lockRows={false}
-                         height={window.innerHeight - 200}
-                         autoAddRow={false}
-                         addRowsComponent={false}
-                       />
+                                             <DataSheetGrid
+                        value={localData}
+                        onChange={handleSpreadsheetChange}
+                        columns={columns}
+                        createRow={createRow}
+                        duplicateRow={duplicateRow}
+                        lockRows={false}
+                        height={window.innerHeight - 160}
+                        autoAddRow={true}
+                        addRowsComponent={false}
+                      />
                      </div>
                    ) : (
                      <div className="flex items-center justify-center h-full text-gray-500">
                        <div className="text-center">
-                         <p className="text-lg mb-2">No hay datos para mostrar</p>
-                         <p className="text-sm">Agrega datos desde las cards de Recent Activity para comenzar</p>
+                         <p className="text-lg mb-2">Inicializando spreadsheet...</p>
+                         <p className="text-sm">Preparando el grid de datos</p>
                        </div>
                      </div>
                    )}
@@ -520,13 +683,13 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
                </div>
 
         {/* Footer con información */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">
-              💡 Consejos: Ctrl+C/V para copiar/pegar • Tab para navegar • Enter para nueva fila
-            </p>
-            <div className="text-sm text-gray-500">
-              {localData.length} filas de datos
+            <div className="text-xs text-gray-600">
+              💡 Usa Ctrl+C/V para copiar/pegar • Tab para navegar • Enter para nueva fila
+            </div>
+            <div className="text-xs text-gray-500">
+              {localData.length} filas
             </div>
           </div>
         </div>
