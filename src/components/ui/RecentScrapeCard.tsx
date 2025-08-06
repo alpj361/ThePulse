@@ -36,14 +36,15 @@ import {
   LocationOn,
   Delete,
   Warning,
-  Link as LinkIcon,
+  Analytics,
   FolderOpen
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { RecentScrape } from '../../services/recentScrapes';
 import { MagicTweetCard } from './MagicTweetCard';
-import AddLinksToCodexModal from './AddLinksToCodexModal';
 import { useSpreadsheet } from '../../context/SpreadsheetContext';
+import { useAuth } from '../../context/AuthContext';
+import { saveCodexItem } from '../../services/supabase';
 import { processScrapeForSpreadsheet, generarResumenProcesamiento } from '../../utils/spreadsheetHelpers';
 import { FaTable } from 'react-icons/fa';
 
@@ -65,12 +66,12 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
   onAddToProject
 }) => {
   const theme = useTheme();
+  const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [linksModalOpen, setLinksModalOpen] = useState(false);
-  const [analyzeLinks, setAnalyzeLinks] = useState(false);
-  const [creatingGroup, setCreatingGroup] = useState(false);
+
   const [spreadsheetSent, setSpreadsheetSent] = useState(false);
+  const [savingToCodex, setSavingToCodex] = useState(false);
   
   // Contexto del spreadsheet
   const { addTweetData } = useSpreadsheet();
@@ -191,53 +192,50 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
     }
   };
 
-  // Extraer todos los enlaces de los tweets de la extracción
-  const extractLinks = (): string[] => {
-    if (!scrape.tweets || !Array.isArray(scrape.tweets)) return [];
-    const urlRegex = /(https?:\/\/[\w\-\.\/?#&=;%+:,~@!$'*\(\)\[\]]+)/g;
-    const links: string[] = [];
-    scrape.tweets.forEach((tweet: any) => {
-      // 1. Campo 'enlace'
-      if (tweet.enlace && typeof tweet.enlace === 'string') {
-        links.push(tweet.enlace);
-      }
-      // 2. Campo 'urls' (array)
-      if (tweet.urls && Array.isArray(tweet.urls)) {
-        links.push(...tweet.urls.filter((u: any) => typeof u === 'string'));
-      }
-      // 3. Extraer URLs del texto/contenido
-      const textFields = [tweet.contenido, tweet.texto];
-      textFields.forEach(field => {
-        if (typeof field === 'string') {
-          const found = field.match(urlRegex);
-          if (found) links.push(...found);
-        }
-      });
-    });
-    // Eliminar duplicados y limpiar
-    return Array.from(new Set(links.map(l => l.trim()).filter(Boolean)));
-  };
-  const links = extractLinks();
 
-  const handleAddLinksClick = () => {
-    setLinksModalOpen(true);
+
+  const handleAddLinksClick = async () => {
+    if (!user?.id) {
+      console.error('Usuario no autenticado');
+      return;
+    }
+
+    setSavingToCodex(true);
+
+    try {
+      // Crear el item del codex de tipo monitoreo
+      const codexItem = {
+        user_id: user.id,
+        tipo: 'monitoreos',
+        titulo: `Monitoreo: ${scrape.query_clean || scrape.query_original || 'Sin título'}`,
+        descripcion: (() => {
+          const tweetCount = scrape.tweets?.length || 0;
+          const herramienta = scrape.herramienta || 'twitter';
+          const query = scrape.query_clean || scrape.query_original || 'consulta';
+          return `Análisis de ${tweetCount} tweets sobre "${query}" usando ${herramienta}`;
+        })(),
+        etiquetas: [
+          scrape.categoria || 'sin-categoria',
+          scrape.herramienta || 'twitter',
+          scrape.location || 'guatemala',
+          `${scrape.tweets?.length || 0} tweets`
+        ].filter(Boolean),
+        proyecto: 'Sin proyecto',
+        recent_scrape_id: scrape.id,
+        fecha: new Date().toISOString()
+      };
+
+      await saveCodexItem(codexItem);
+      console.log('✅ Monitoreo guardado en Codex exitosamente');
+
+    } catch (err) {
+      console.error('❌ Error guardando monitoreo en Codex:', err);
+    } finally {
+      setSavingToCodex(false);
+    }
   };
 
-  const handleLinksModalClose = () => {
-    setLinksModalOpen(false);
-  };
 
-  const handleCreateGroup = async () => {
-    setCreatingGroup(true);
-    // Aquí deberías llamar a la función que crea el grupo en el Codex y opcionalmente analiza los enlaces
-    // Por ahora solo simula un retardo
-    setTimeout(() => {
-      setCreatingGroup(false);
-      setLinksModalOpen(false);
-      setAnalyzeLinks(false);
-      // Aquí podrías mostrar un snackbar de éxito
-    }, 1200);
-  };
 
   // Función para enviar datos al spreadsheet
   const handleSendToSpreadsheet = () => {
@@ -403,25 +401,29 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
                 </span>
               </Tooltip>
               
-              {/* Botón de añadir enlaces al Codex */}
-              <Tooltip title="Añadir enlaces al Codex">
+              {/* Botón de guardar en Codex */}
+              <Tooltip title="Guardar en Codex">
                 <span>
                   <IconButton
                     onClick={handleAddLinksClick}
                     size="small"
                     sx={{
-                      color: theme.palette.info.main,
-                      backgroundColor: alpha(theme.palette.info.main, 0.08),
-                      border: `1.5px solid ${alpha(theme.palette.info.main, 0.3)}`,
+                      color: theme.palette.primary.main,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                      border: `1.5px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                       ml: 0.5,
                       '&:hover': {
-                        backgroundColor: alpha(theme.palette.info.main, 0.18),
-                        border: `1.5px solid ${theme.palette.info.main}`
+                        backgroundColor: alpha(theme.palette.primary.main, 0.18),
+                        border: `1.5px solid ${theme.palette.primary.main}`
                       }
                     }}
-                    disabled={links.length === 0}
+                    disabled={savingToCodex}
                   >
-                    <LinkIcon fontSize="small" />
+                    {savingToCodex ? (
+                      <CircularProgress size={14} />
+                    ) : (
+                      <Analytics fontSize="small" />
+                    )}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -446,6 +448,7 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
                   </IconButton>
                 </Tooltip>
               )}
+              
               {/* Botón de eliminar */}
               {showActions && onDelete && (
                 <Tooltip title="Eliminar extracción">
@@ -568,13 +571,7 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
         </DialogActions>
       </Dialog>
 
-      {/* Modal de añadir enlaces */}
-      <AddLinksToCodexModal
-        open={linksModalOpen}
-        onClose={handleLinksModalClose}
-        initialLinks={links}
-        initialTitle={scrape.generated_title || scrape.query_original}
-      />
+
     </>
   );
 };

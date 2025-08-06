@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   BarChart,
   Bar,
@@ -89,6 +89,28 @@ const ModernBarChart: React.FC<ModernBarChartProps> = ({
   glassmorphism = true,
   darkMode = false
 }) => {
+  // Calcular configuración adaptativa basada en datos
+  // ☕ Buy Me A Coffee button
+  const buyMeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (buyMeRef.current && !buyMeRef.current.querySelector('script')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js';
+      script.setAttribute('data-name', 'bmc-button');
+      script.setAttribute('data-slug', 'pulsejornal');
+      script.setAttribute('data-color', '#5F7FFF');
+      script.setAttribute('data-emoji', '☕');
+      script.setAttribute('data-font', 'Lato');
+      script.setAttribute('data-text', 'Buy me a coffee');
+      script.setAttribute('data-outline-color', '#000000');
+      script.setAttribute('data-font-color', '#ffffff');
+      script.setAttribute('data-coffee-color', '#FFDD00');
+      script.async = true;
+      buyMeRef.current.appendChild(script);
+    }
+  }, []);
+
   // Calcular configuración adaptativa basada en datos
   const dataLength = data.length;
   const maxLabelLength = Math.max(...data.map(item => item.name.length));
@@ -329,6 +351,7 @@ const ModernBarChart: React.FC<ModernBarChartProps> = ({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      <div ref={buyMeRef} className="flex justify-center mt-4"></div>
     </div>
   );
 };

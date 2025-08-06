@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./avatar";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { Button } from "./button";
 import {
   DropdownMenu,
@@ -199,6 +199,27 @@ export function SessionNavBar() {
       ]
     }
   ];
+
+  // ☕ Buy Me A Coffee button setup
+  const buyMeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (buyMeRef.current && !buyMeRef.current.querySelector('script')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js';
+      script.setAttribute('data-name', 'bmc-button');
+      script.setAttribute('data-slug', 'pulsejornal');
+      script.setAttribute('data-color', '#5F7FFF');
+      script.setAttribute('data-emoji', '☕');
+      script.setAttribute('data-font', 'Lato');
+      script.setAttribute('data-text', 'Buy me a coffee');
+      script.setAttribute('data-outline-color', '#000000');
+      script.setAttribute('data-font-color', '#ffffff');
+      script.setAttribute('data-coffee-color', '#FFDD00');
+      script.async = true;
+      buyMeRef.current.appendChild(script);
+    }
+  }, []);
 
   return (
     <motion.div
@@ -431,11 +452,14 @@ export function SessionNavBar() {
                   </DropdownMenu>
                 </div>
                 
-                <motion.div variants={variants} className="mt-2">
+                <motion.div variants={variants} className="mt-2" id="sidebar-bottom">
                   {!isCollapsed && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      {t.version}
-                    </p>
+                    <>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t.version}
+                      </p>
+                      <div ref={buyMeRef} className="flex justify-center mt-2"></div>
+                    </>
                   )}
                 </motion.div>
               </div>

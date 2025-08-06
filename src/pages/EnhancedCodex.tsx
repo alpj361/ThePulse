@@ -46,6 +46,7 @@ import StickyNote from 'lucide-react/dist/esm/icons/sticky-note';
 import LinkIcon from 'lucide-react/dist/esm/icons/link';
 import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
 import Zap from 'lucide-react/dist/esm/icons/zap';
+import Search from 'lucide-react/dist/esm/icons/search';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../context/AuthContext"
 import { useGoogleDrive } from "../hooks/useGoogleDrive"
@@ -66,8 +67,8 @@ import {
 } from "../services/supabase.ts"
 // URL dinámico del backend ExtractorW
 import { EXTRACTORW_API_URL } from "../services/api";
-import Search from 'lucide-react/dist/esm/icons/search';
 import Checkbox from "@mui/material/Checkbox";
+import MonitoreoCard from "../components/ui/MonitoreoCard";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
@@ -87,6 +88,8 @@ interface CodexItem {
   tamano?: number
   fecha: string
   created_at: string
+  recent_scrape_id?: string
+  recent_scrape?: any
   is_drive?: boolean
   drive_file_id?: string
   audio_transcription?: string // NUEVO: transcripción guardada en la BD
@@ -731,6 +734,7 @@ export default function EnhancedCodex() {
       audios: items.filter(item => item.tipo === 'audio').length,
       videos: items.filter(item => item.tipo === 'video').length,
       enlaces: items.filter(item => item.tipo === 'enlace').length,
+      monitoreos: items.filter(item => item.tipo === 'monitoreos').length,
       notas: items.filter(item => item.tipo === 'nota').length
     }
     setStats(newStats)
@@ -824,6 +828,8 @@ export default function EnhancedCodex() {
         return FileText
       case "enlace":
         return Link
+      case "monitoreos":
+        return Search
       case "nota":
         return StickyNote
       default:
@@ -2128,6 +2134,7 @@ export default function EnhancedCodex() {
     { label: "Audios", count: stats.audios, icon: Headphones, color: "bg-purple-500", type: "audio" },
     { label: "Videos", count: stats.videos, icon: Video, color: "bg-green-500", type: "video" },
     { label: "Enlaces", count: stats.enlaces, icon: Link, color: "bg-orange-500", type: "enlace" },
+    { label: "Monitoreos", count: stats.monitoreos || 0, icon: Search, color: "bg-cyan-500", type: "monitoreos" },
     { label: "Notas", count: stats.notas, icon: StickyNote, color: "bg-pink-500", type: "nota" },
   ]
 
@@ -3100,6 +3107,7 @@ export default function EnhancedCodex() {
                     <SelectItem value="audio">Audios</SelectItem>
                     <SelectItem value="video">Videos</SelectItem>
                     <SelectItem value="enlace">Enlaces</SelectItem>
+                    <SelectItem value="monitoreos">Monitoreos</SelectItem>
                     <SelectItem value="nota">Notas</SelectItem>
                   </SelectContent>
                 </Select>
@@ -3223,176 +3231,202 @@ export default function EnhancedCodex() {
                       toggleSelectItem={toggleSelectItem}
                     />
                   } else {
-                    const IconComponent = getTypeIcon(item.tipo)
-                    return (
-                      <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
-                        {selectionMode && (
-                          <Checkbox
-                            checked={selectedIds.includes(item.id)}
-                            onChange={() => toggleSelectItem(item.id)}
-                            className="absolute top-2 left-2 z-20 bg-white rounded"
-                          />
-                        )}
-                        <CardHeader className="p-4 border-b border-slate-200">
-                          {/* Title and menu in the same row */}
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
-                              {item.titulo}
-                            </CardTitle>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="-mr-2 -mt-2 opacity-60 hover:opacity-100">
-                                  <MoreVertical className="h-5 w-5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewItem(item)}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Ver
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                {(item.storage_path || item.url) && (
-                                  <DropdownMenuItem onClick={() => handleDownloadItem(item)}>
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Descargar
-                                  </DropdownMenuItem>
-                                )}
-                                {canTranscribe(item) && !item.audio_transcription && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleTranscribeItem(item)}
-                                    disabled={isTranscribing}
-                                  >
-                                    <Mic className="h-4 w-4 mr-2" />
-                                    {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
-                                  </DropdownMenuItem>
-                                )}
-                                {item.audio_transcription && (
-                                  <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
-                                    <Mic className="h-4 w-4 mr-2" />
-                                    Transcripción Audio
-                                  </DropdownMenuItem>
-                                )}
-                                {(item as any).transcripcion && (
-                                  <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    Transcripción Texto
-                                  </DropdownMenuItem>
-                                )}
-                                {canBeGrouped(item) && !item.group_id && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => handleOpenGroupModal(item)}>
-                                      <FolderPlus className="h-4 w-4 mr-2" />
-                                      Crear Grupo
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleOpenAddToGroupModal(item)}>
-                                      <Users className="h-4 w-4 mr-2" />
-                                      Agregar a Grupo
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                {item.group_id && !item.is_group_parent && (
-                                  <DropdownMenuItem onClick={() => handleRemoveFromGroup(item)} className="text-orange-600">
-                                    <Users className="h-4 w-4 mr-2" />
-                                    Remover del Grupo
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem>
-                                  <Share2 className="h-4 w-4 mr-2" />
-                                  Compartir
-                                </DropdownMenuItem>
-                                {selectionMode && (
-                                  <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggleSelectItem(item.id)} className="mr-2" />
-                                )}
-                                <DropdownMenuItem 
-                                  className="text-red-600"
-                                  onClick={() => handleDeleteItemConfirm(item)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Eliminar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                          {/* Icon and file size below title */}
-                          <div className="flex items-center gap-2 mt-2">
-                            <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
-                              <IconComponent className="h-5 w-5 text-slate-600" />
-                            </div>
-                            <CardDescription className="text-sm text-slate-500">
-                              {formatFileSize(item.tamano)}
-                            </CardDescription>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-3 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
-                              {item.tipo}
-                            </Badge>
-                            {item.is_drive && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                Google Drive
-                              </Badge>
-                            )}
-                            {item.is_group_parent && (
-                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                                📁 Grupo: {item.group_name} ({item.total_parts} partes)
-                              </Badge>
-                            )}
-                            {item.group_id && !item.is_group_parent && (
-                              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                                🔗 Parte {item.part_number}
-                              </Badge>
-                            )}
-                            {item.audio_transcription && (
-                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'audio')}>
-                                🎤 Audio
-                              </Badge>
-                            )}
-                            {(item as any).transcripcion && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'text')}>
-                                📝 Texto
-                              </Badge>
-                            )}
-                          </div>
-
-                          {item.proyecto && (
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Folder className="h-4 w-4" />
-                              <span className="truncate">{item.proyecto}</span>
-                            </div>
+                    // Renderizado condicional: MonitoreoCard para tipo "monitoreos", Card normal para otros tipos
+                    if (item.tipo === 'monitoreos') {
+                      return (
+                        <MonitoreoCard
+                          key={item.id}
+                          monitoreo={{
+                            id: item.id,
+                            titulo: item.titulo,
+                            descripcion: item.descripcion || '',
+                            tipo: 'monitoreos',
+                            recent_scrape_id: item.recent_scrape_id || '',
+                            recent_scrape: item.recent_scrape,
+                            etiquetas: item.etiquetas,
+                            proyecto: item.proyecto,
+                            created_at: item.created_at
+                          }}
+                          layout="expanded"
+                          showActions={true}
+                          onEdit={handleEditItem}
+                          onDelete={(id: string) => handleDeleteItemConfirm(item)}
+                          onAddToProject={() => {/* TODO: Implementar */}}
+                        />
+                      )
+                    } else {
+                      // Card normal para otros tipos (audio, video, documento, enlace, nota)
+                      const IconComponent = getTypeIcon(item.tipo)
+                      return (
+                        <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
+                          {selectionMode && (
+                            <Checkbox
+                              checked={selectedIds.includes(item.id)}
+                              onChange={() => toggleSelectItem(item.id)}
+                              className="absolute top-2 left-2 z-20 bg-white rounded"
+                            />
                           )}
-
-                          <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <Calendar className="h-4 w-4" />
-                            <span>{formatDate(item.fecha)}</span>
-                          </div>
-
-                          {item.etiquetas && item.etiquetas.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {item.etiquetas.slice(0, 2).map((tag, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  {tag}
+                          <CardHeader className="p-4 border-b border-slate-200">
+                            {/* Title and menu in the same row */}
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
+                                {item.titulo}
+                              </CardTitle>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="-mr-2 -mt-2 opacity-60 hover:opacity-100">
+                                    <MoreVertical className="h-5 w-5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleViewItem(item)}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Ver
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEditItem(item)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  {(item.storage_path || item.url) && (
+                                    <DropdownMenuItem onClick={() => handleDownloadItem(item)}>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Descargar
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canTranscribe(item) && !item.audio_transcription && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleTranscribeItem(item)}
+                                      disabled={isTranscribing}
+                                    >
+                                      <Mic className="h-4 w-4 mr-2" />
+                                      {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {item.audio_transcription && (
+                                    <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
+                                      <Mic className="h-4 w-4 mr-2" />
+                                      Transcripción Audio
+                                    </DropdownMenuItem>
+                                  )}
+                                  {(item as any).transcripcion && (
+                                    <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Transcripción Texto
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canBeGrouped(item) && !item.group_id && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleOpenGroupModal(item)}>
+                                        <FolderPlus className="h-4 w-4 mr-2" />
+                                        Crear Grupo
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleOpenAddToGroupModal(item)}>
+                                        <Users className="h-4 w-4 mr-2" />
+                                        Agregar a Grupo
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {item.group_id && !item.is_group_parent && (
+                                    <DropdownMenuItem onClick={() => handleRemoveFromGroup(item)} className="text-orange-600">
+                                      <Users className="h-4 w-4 mr-2" />
+                                      Remover del Grupo
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem>
+                                    <Share2 className="h-4 w-4 mr-2" />
+                                    Compartir
+                                  </DropdownMenuItem>
+                                  {selectionMode && (
+                                    <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggleSelectItem(item.id)} className="mr-2" />
+                                  )}
+                                  <DropdownMenuItem 
+                                    className="text-red-600"
+                                    onClick={() => handleDeleteItemConfirm(item)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            {/* Icon and file size below title */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
+                                <IconComponent className="h-5 w-5 text-slate-600" />
+                              </div>
+                              <CardDescription className="text-sm text-slate-500">
+                                {formatFileSize(item.tamano)}
+                              </CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-3 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
+                                {item.tipo}
+                              </Badge>
+                              {item.is_drive && (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                  Google Drive
                                 </Badge>
-                              ))}
-                              {item.etiquetas.length > 2 && (
-                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  +{item.etiquetas.length - 2}
+                              )}
+                              {item.is_group_parent && (
+                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                                  📁 Grupo: {item.group_name} ({item.total_parts} partes)
+                                </Badge>
+                              )}
+                              {item.group_id && !item.is_group_parent && (
+                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                                  🔗 Parte {item.part_number}
+                                </Badge>
+                              )}
+                              {item.audio_transcription && (
+                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'audio')}>
+                                  🎤 Audio
+                                </Badge>
+                              )}
+                              {(item as any).transcripcion && (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'text')}>
+                                  📝 Texto
                                 </Badge>
                               )}
                             </div>
-                          )}
 
-                          {item.descripcion && (
-                            <p className="text-sm text-slate-600 line-clamp-2">
-                              {item.descripcion}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
+                            {item.proyecto && (
+                              <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Folder className="h-4 w-4" />
+                                <span className="truncate">{item.proyecto}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                              <Calendar className="h-4 w-4" />
+                              <span>{formatDate(item.fecha)}</span>
+                            </div>
+
+                            {item.etiquetas && item.etiquetas.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {item.etiquetas.slice(0, 2).map((tag, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {item.etiquetas.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                    +{item.etiquetas.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+
+                            {item.descripcion && (
+                              <p className="text-sm text-slate-600 line-clamp-2">
+                                {item.descripcion}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    }
                   }
                 })}
               </div>

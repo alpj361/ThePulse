@@ -219,13 +219,44 @@ export async function saveCodexItem(item: any) {
 
 export async function getCodexItemsByUser(user_id: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  
+  // Consulta expandida para incluir datos de recent_scrapes cuando applicable
   const { data, error } = await supabase
     .from('codex_items')
-    .select('*')
+    .select(`
+      *,
+      recent_scrapes:recent_scrape_id (
+        id,
+        query_original,
+        query_clean,
+        herramienta,
+        categoria,
+        tweet_id,
+        usuario,
+        fecha_tweet,
+        texto,
+        enlace,
+        likes,
+        retweets,
+        replies,
+        verified,
+        sentimiento,
+        location,
+        created_at
+      )
+    `)
     .eq('user_id', user_id)
     .order('created_at', { ascending: false });
+    
   if (error) throw error;
-  return data || [];
+  
+  // Mapear los datos para incluir recent_scrape en el nivel superior
+  const mappedData = (data || []).map(item => ({
+    ...item,
+    recent_scrape: item.recent_scrapes || null
+  }));
+  
+  return mappedData;
 }
 
 /**
