@@ -5,28 +5,29 @@ import {
   Typography,
   Box,
   Chip,
-  IconButton,
   Tooltip,
   useTheme,
   Avatar,
   Divider,
   Button,
-  Link
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress
 } from '@mui/material';
 import {
-  Search,
-  SmartToy,
-  TrendingUp,
   AccessTime,
   DataUsage,
   LocationOn,
-  Twitter,
   Link as LinkIcon,
   FolderOpen,
   Analytics
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { RecentScrape } from '../../services/recentScrapes';
+import { MagicTweetCard } from './MagicTweetCard';
 
 interface CodexMonitoreoData {
   id: string;
@@ -58,9 +59,15 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
   onAddToProject
 }) => {
   const theme = useTheme();
-  const [expanded, setExpanded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [loadingTweets, setLoadingTweets] = useState(false);
 
   const scrape = monitoreo.recent_scrape;
+
+  // Debug: Solo mostrar monitoreos con contenido
+  if (scrape && (scrape.tweets?.length > 0 || scrape.tweet_count > 0)) {
+    console.log('✅ Monitoreo con contenido:', monitoreo.titulo);
+  }
 
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -84,18 +91,6 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
     });
   };
 
-  // Colores por herramienta
-  const getToolColor = (herramienta: string) => {
-    const colors = {
-      'nitter_context': theme.palette.primary.main,
-      'nitter_profile': '#8B5CF6',
-      'twitter_search': '#1DA1F2',
-      'news_search': '#FF6B35',
-      'web_search': '#4CAF50'
-    };
-    return colors[herramienta as keyof typeof colors] || theme.palette.grey[500];
-  };
-
   // Colores por categoría
   const getCategoryColor = (categoria: string) => {
     const colors = {
@@ -109,7 +104,19 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
     return colors[categoria as keyof typeof colors] || theme.palette.grey[500];
   };
 
-  const engagement = scrape ? (scrape.likes || 0) + (scrape.retweets || 0) + (scrape.replies || 0) : 0;
+  const openModal = async () => {
+    setModalOpen(true);
+    if (scrape && (!scrape.tweets || scrape.tweets.length === 0)) {
+      // Si no hay tweets cargados, mostrar loading
+      setLoadingTweets(true);
+      // Aquí podrías hacer una llamada para cargar los tweets si es necesario
+      setTimeout(() => setLoadingTweets(false), 1000); // Simulado
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
 
   return (
     <Card
@@ -158,24 +165,13 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
                 overflow: 'hidden'
               }}
             >
-              {monitoreo.titulo}
+{monitoreo.titulo}
             </Typography>
 
-            {/* Metadatos del tweet original */}
-            {scrape && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Twitter sx={{ fontSize: 14, color: '#1DA1F2' }} />
-                <Typography variant="body2" color="text.secondary">
-                  @{scrape.usuario}
-                </Typography>
-                <Typography variant="body2" color="text.disabled">
-                  •
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatDate(scrape.fecha_tweet || scrape.created_at)}
-                </Typography>
-              </Box>
-            )}
+            {/* Fecha de creación */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Creado {formatDate(monitoreo.created_at)}
+            </Typography>
 
             {/* Tags del proyecto y herramienta */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -193,31 +189,32 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
                 />
               )}
               
-              {scrape && (
-                <>
-                  <Chip
-                    size="small"
-                    icon={<Search sx={{ fontSize: 14 }} />}
-                    label={scrape.herramienta}
-                    sx={{
-                      height: 24,
-                      fontSize: '0.75rem',
-                      backgroundColor: alpha(getToolColor(scrape.herramienta), 0.1),
-                      color: getToolColor(scrape.herramienta)
-                    }}
-                  />
-                  
-                  <Chip
-                    size="small"
-                    label={scrape.categoria}
-                    sx={{
-                      height: 24,
-                      fontSize: '0.75rem',
-                      backgroundColor: alpha(getCategoryColor(scrape.categoria), 0.1),
-                      color: getCategoryColor(scrape.categoria)
-                    }}
-                  />
-                </>
+              {/* Chip con número de tweets disponibles */}
+              {scrape && (scrape.tweets?.length || scrape.tweet_count) && (
+                <Chip
+                  size="small"
+                  label={`${scrape.tweets?.length || scrape.tweet_count} tweets`}
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    backgroundColor: alpha(theme.palette.success.main, 0.1),
+                    color: theme.palette.success.main,
+                    fontWeight: 'medium'
+                  }}
+                />
+              )}
+              
+              {scrape && scrape.categoria && (
+                <Chip
+                  size="small"
+                  label={scrape.categoria}
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    backgroundColor: alpha(getCategoryColor(scrape.categoria), 0.1),
+                    color: getCategoryColor(scrape.categoria)
+                  }}
+                />
               )}
             </Box>
           </Box>
@@ -238,26 +235,45 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
                   overflow: 'hidden'
                 }}
               >
-                {scrape.texto}
+                {(scrape as any).texto || 'Contenido del tweet...'}
               </Typography>
               
-              {/* Métricas de engagement */}
-              {engagement > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <TrendingUp sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
-                    <Typography variant="caption" color="text.secondary">
-                      {engagement.toLocaleString()} interacciones
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LocationOn sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
-                    <Typography variant="caption" color="text.secondary">
-                      {scrape.location || 'Guatemala'}
-                    </Typography>
-                  </Box>
+              {/* Ubicación */}
+              {scrape.location && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                  <LocationOn sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {scrape.location}
+                  </Typography>
                 </Box>
               )}
+            </Box>
+          </>
+        )}
+
+        {/* Métricas básicas del scrape */}
+        {scrape && scrape.tweet_count && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.05)
+            }}>
+              <Tooltip title="Contenidos extraídos">
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" fontWeight="bold" color="primary.main">
+                    {scrape.tweet_count}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    contenidos encontrados
+                  </Typography>
+                </Box>
+              </Tooltip>
             </Box>
           </>
         )}
@@ -296,19 +312,20 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
               </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {scrape?.enlace && (
-                <Tooltip title="Ver tweet original">
-                  <IconButton 
-                    size="small" 
-                    component={Link}
-                    href={scrape.enlace}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LinkIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {/* Botón para abrir contenidos */}
+              {scrape && (scrape.tweets?.length > 0 || scrape.tweet_count > 0) && (
+                <Button 
+                  size="small" 
+                  variant="text"
+                  onClick={openModal}
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    '&:hover': { color: theme.palette.primary.main }
+                  }}
+                >
+                  Abrir
+                </Button>
               )}
               
               {onEdit && (
@@ -342,7 +359,93 @@ const MonitoreoCard: React.FC<MonitoreoCardProps> = ({
             </Box>
           </Box>
         )}
+
       </CardContent>
+      
+      {/* Modal para visualización completa */}
+      <Dialog
+        open={modalOpen}
+        onClose={closeModal}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minHeight: '70vh',
+            maxHeight: '90vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}>
+          <Avatar sx={{ 
+            bgcolor: alpha(theme.palette.primary.main, 0.1),
+            color: theme.palette.primary.main,
+            width: 32,
+            height: 32
+          }}>
+            <Analytics />
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6">{monitoreo.titulo}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {scrape && scrape.tweets ? `${scrape.tweets.length} contenidos encontrados` : 'Contenidos del monitoreo'}
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
+          {loadingTweets ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                Cargando contenidos...
+              </Typography>
+            </Box>
+          ) : scrape && scrape.tweets && scrape.tweets.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {scrape.tweets.map((tweet: any, index: number) => (
+                <MagicTweetCard 
+                  key={tweet.tweet_id || tweet.id || index} 
+                  tweet={tweet} 
+                  layout="expanded" 
+                />
+              ))}
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <DataUsage sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No hay contenidos disponibles
+              </Typography>
+              <Typography variant="body2" color="text.disabled">
+                Este monitoreo aún no tiene contenidos extraídos
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          {scrape && (scrape as any).enlace && (
+            <Button 
+              component={Link}
+              href={(scrape as any).enlace}
+              target="_blank"
+              rel="noopener noreferrer"
+              startIcon={<LinkIcon />}
+            >
+              Ver original
+            </Button>
+          )}
+          <Button onClick={closeModal} variant="contained">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };

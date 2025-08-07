@@ -220,6 +220,8 @@ export async function saveCodexItem(item: any) {
 export async function getCodexItemsByUser(user_id: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
   
+  console.log('📊 getCodexItemsByUser - Iniciando consulta para user:', user_id);
+  
   // Consulta expandida para incluir datos de recent_scrapes cuando applicable
   const { data, error } = await supabase
     .from('codex_items')
@@ -231,16 +233,10 @@ export async function getCodexItemsByUser(user_id: string) {
         query_clean,
         herramienta,
         categoria,
-        tweet_id,
-        usuario,
-        fecha_tweet,
-        texto,
-        enlace,
-        likes,
-        retweets,
-        replies,
-        verified,
-        sentimiento,
+        tweet_count,
+        tweets,
+        total_engagement,
+        avg_engagement,
         location,
         created_at
       )
@@ -248,13 +244,35 @@ export async function getCodexItemsByUser(user_id: string) {
     .eq('user_id', user_id)
     .order('created_at', { ascending: false });
     
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error en getCodexItemsByUser:', error);
+    throw error;
+  }
+  
+  console.log('📊 getCodexItemsByUser - Datos obtenidos:', data?.length || 0, 'items');
   
   // Mapear los datos para incluir recent_scrape en el nivel superior
-  const mappedData = (data || []).map(item => ({
-    ...item,
-    recent_scrape: item.recent_scrapes || null
-  }));
+  const mappedData = (data || []).map(item => {
+    const mapped = {
+      ...item,
+      recent_scrape: item.recent_scrapes || null
+    };
+    
+    // Debug: Log solo para monitoreos con recent_scrape_id
+    if (item.tipo === 'monitoreos' && item.recent_scrape_id) {
+      console.log('🔍 Codex Monitoreo DEBUG:', {
+        id: item.id,
+        titulo: item.titulo,
+        recent_scrape_id: item.recent_scrape_id,
+        recent_scrapes_data: item.recent_scrapes,
+        mapped_recent_scrape: mapped.recent_scrape,
+        tweets: mapped.recent_scrape?.tweets?.length || 0,
+        tweet_count: mapped.recent_scrape?.tweet_count || 0
+      });
+    }
+    
+    return mapped;
+  });
   
   return mappedData;
 }
