@@ -35,7 +35,7 @@ import {
   ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { getAvailableCodexItems, assignCodexItemToProject } from '../../services/supabase';
+import { getAvailableCodexItems, assignCodexItemToProject, getLinksForParentItem } from '../../services/supabase.ts';
 
 interface CodexItem {
   id: string;
@@ -58,6 +58,10 @@ interface CodexItem {
   group_description?: string;
   part_number?: number;
   total_parts?: number;
+  // Nuevo modelo Codex
+  original_type?: string;
+  is_child_link?: boolean;
+  parent_item_id?: string | null;
 }
 
 interface AddAssetsModalProps {
@@ -89,6 +93,10 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
   const [transcriptionType, setTranscriptionType] = useState<'audio' | 'text'>('audio');
   const [groupedItems, setGroupedItems] = useState<Map<string, CodexItem[]>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Monitoreos (item padre con hijos enlaces)
+  const [expandedMonitors, setExpandedMonitors] = useState<Set<string>>(new Set());
+  const [monitorChildren, setMonitorChildren] = useState<Record<string, any[]>>({});
+  const [loadingChildren, setLoadingChildren] = useState<Record<string, boolean>>({});
 
   // Cargar items disponibles del Codex
   useEffect(() => {
@@ -171,6 +179,31 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
       newExpanded.add(groupId);
     }
     setExpandedGroups(newExpanded);
+  };
+
+  // Cargar hijos de monitoreo bajo demanda
+  const loadMonitorChildren = async (parentId: string) => {
+    if (loadingChildren[parentId] || monitorChildren[parentId]) return;
+    setLoadingChildren(prev => ({ ...prev, [parentId]: true }));
+    try {
+      const rows = await getLinksForParentItem(parentId);
+      setMonitorChildren(prev => ({ ...prev, [parentId]: rows || [] }));
+    } catch (e) {
+      setMonitorChildren(prev => ({ ...prev, [parentId]: [] }));
+    } finally {
+      setLoadingChildren(prev => ({ ...prev, [parentId]: false }));
+    }
+  };
+
+  const toggleMonitorExpansion = (parentId: string) => {
+    const next = new Set(expandedMonitors);
+    if (next.has(parentId)) {
+      next.delete(parentId);
+    } else {
+      next.add(parentId);
+      loadMonitorChildren(parentId);
+    }
+    setExpandedMonitors(next);
   };
 
   // Filtrar items según búsqueda y tipo
@@ -403,7 +436,100 @@ export const AddAssetsModal: React.FC<AddAssetsModalProps> = ({
           </Box>
         ) : (
           <Grid container spacing={2}>
-            {sortedFilteredItems.map((item) => (
+            {/* Monitoreos: mostrar como acordeón con hijos */}
+            {sortedFilteredItems
+              .filter((i: any) => i.tipo === 'item' && i.original_type === 'monitor')
+              .map((item: any) => (
+                <Grid item xs={12} sm={6} md={4} key={`monitor_${item.id}`}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={selectedItems.has(item.id)}
+                              onChange={() => handleItemToggle(item.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          }
+                          label=""
+                          sx={{ m: 0, mr: 1 }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                            <FolderIcon sx={{ mr: 1, color: 'primary.main' }} />
+                            <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+                              {item.titulo}
+                            </Typography>
+                          </Box>
+                          {item.descripcion && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              {item.descripcion}
+                            </Typography>
+                          )}
+                          <Chip
+                            icon={expandedMonitors.has(item.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            label={expandedMonitors.has(item.id) ? 'Colapsar' : 'Expandir'}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 20, cursor: 'pointer' }}
+                            onClick={() => toggleMonitorExpansion(item.id)}
+                          />
+                        </Box>
+                      </Box>
+
+                      {/* Hijos del monitoreo */}
+                      {expandedMonitors.has(item.id) && (
+                        <Box sx={{ mt: 1 }}>
+                          {loadingChildren[item.id] ? (
+                            <CircularProgress size={18} />
+                          ) : (
+                            (monitorChildren[item.id] || []).map((ln: any) => {
+                              const child = ln.child;
+                              return (
+                                <Card key={`child_${ln.id}`} variant="outlined" sx={{ mb: 1, ml: 2 }} onClick={() => handleItemToggle(child.id)}>
+                                  <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 } }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            checked={selectedItems.has(child.id)}
+                                            onChange={() => handleItemToggle(child.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            size="small"
+                                          />
+                                        }
+                                        label=""
+                                        sx={{ m: 0, mr: 1 }}
+                                      />
+                                      <LinkIcon sx={{ mr: 1, color: '#2196f3' }} />
+                                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.3 }}>
+                                          {child.titulo || 'Enlace'}
+                                        </Typography>
+                                        {child.source_url && (
+                                          <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
+                                            {child.source_url}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })
+                          )}
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+
+            {/* Items planos visibles: excluir enlaces hijos */}
+            {sortedFilteredItems
+              .filter((i: any) => !(i.original_type === 'link' && i.is_child_link))
+              .map((item) => (
               <Grid item xs={12} sm={6} md={4} key={item.id}>
                 <Card 
                   variant="outlined"

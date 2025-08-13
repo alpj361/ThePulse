@@ -30,6 +30,8 @@ import { MagicTweetCard } from './MagicTweetCard';
 import { getTrendingTweets, getTweetStatsByCategory } from '../../services/supabase';
 import { TrendingTweet } from '../../types';
 import { LanguageContext } from '../../context/LanguageContext';
+import { useSpreadsheet } from '../../context/SpreadsheetContext';
+import { SpreadsheetTweetData, TWEET_SPREADSHEET_COLUMNS } from '../../utils/spreadsheetHelpers';
 
 const translations = {
   es: {
@@ -83,6 +85,7 @@ const TrendingTweetsSection: React.FC = () => {
   const { language } = useContext(LanguageContext);
   const t = translations[language];
   const theme = useTheme();
+  const { addTweetData } = useSpreadsheet();
 
   const [tweets, setTweets] = useState<TrendingTweet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +99,7 @@ const TrendingTweetsSection: React.FC = () => {
     message: '',
     severity: 'success'
   });
+  const [exporting, setExporting] = useState<boolean>(false);
 
   useEffect(() => {
     loadTweets();
@@ -147,6 +151,129 @@ const TrendingTweetsSection: React.FC = () => {
     await loadCategoryStats();
     setRefreshing(false);
     showSnackbar('Datos actualizados', 'success');
+  };
+
+  const serializeForExport = (items: TrendingTweet[]) => {
+    return items.map((t) => ({
+      tweet_id: t.tweet_id,
+      usuario: t.usuario,
+      texto: (t as any).texto || (t as any).text || '',
+      enlace: t.enlace,
+      likes: t.likes,
+      retweets: t.retweets,
+      replies: t.replies,
+      fecha_tweet: t.fecha_tweet || t.fecha_captura,
+      trend_original: t.trend_original,
+      trend_clean: t.trend_clean,
+      categoria: t.categoria,
+      sentimiento: (t as any).sentimiento,
+      score_sentimiento: (t as any).score_sentimiento,
+      intencion_comunicativa: (t as any).intencion_comunicativa,
+      propagacion_viral: (t as any).propagacion_viral,
+      score_propagacion: (t as any).score_propagacion,
+      entidades_mencionadas: (t as any).entidades_mencionadas,
+      location: (t as any).location
+    }));
+  };
+
+  const toCSV = (rows: any[]) => {
+    if (!rows.length) return '';
+    const headers = Object.keys(rows[0]);
+    const escape = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const str = typeof val === 'string' ? val : JSON.stringify(val);
+      const needsQuotes = /[",\n]/.test(str);
+      const escaped = str.replace(/"/g, '""');
+      return needsQuotes ? `"${escaped}"` : escaped;
+    };
+    const lines = [headers.join(',')];
+    for (const row of rows) {
+      lines.push(headers.map(h => escape((row as any)[h])).join(','));
+    }
+    return lines.join('\n');
+  };
+
+  const downloadBlob = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJSON = () => {
+    try {
+      setExporting(true);
+      const data = serializeForExport(tweets);
+      downloadBlob(JSON.stringify(data, null, 2), 'trending_tweets.json', 'application/json');
+      showSnackbar('Exportación JSON lista', 'success');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Error exportando JSON', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      setExporting(true);
+      const data = serializeForExport(tweets);
+      const csv = toCSV(data);
+      downloadBlob(csv, 'trending_tweets.csv', 'text/csv;charset=utf-8');
+      showSnackbar('Exportación CSV lista', 'success');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Error exportando CSV', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleSendToSpreadsheet = () => {
+    try {
+      setExporting(true);
+      const data: SpreadsheetTweetData[] = tweets.map((tw, index) => {
+        const contenido = (tw as any).texto || (tw as any).text || '';
+        const sentimiento = (tw as any).sentimiento || 'neutral';
+        const likes = Number((tw as any).likes || 0);
+        const retweets = Number((tw as any).retweets || 0);
+        const replies = Number((tw as any).replies || 0);
+        const views = Number((tw as any).views || 0);
+        const engagement_total = likes + retweets + replies;
+        const usuario = (tw as any).usuario || (tw as any).user?.username || 'Usuario desconocido';
+        const fecha = (tw as any).fecha_tweet || (tw as any).fecha_captura || new Date().toISOString();
+        const enlace = (tw as any).enlace || (tw as any).url || (tw as any).link || '';
+        const categoria = (tw as any).categoria || 'General';
+        return {
+          id: (tw as any).tweet_id || String((tw as any).id || `tweet_${index}`),
+          contenido,
+          sentimiento,
+          es_promocional: 'No',
+          likes,
+          retweets,
+          replies,
+          views,
+          engagement_total,
+          usuario,
+          fecha,
+          categoria,
+          enlace
+        };
+      });
+      const title = `Tweets de Tendencias (${tweets.length})`;
+      addTweetData(data, title);
+      showSnackbar('Tweets enviados al spreadsheet', 'success');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Error enviando al spreadsheet', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleCategoryChange = (
@@ -386,6 +513,30 @@ const TrendingTweetsSection: React.FC = () => {
                 </Tooltip>
               </ToggleButton>
             </ToggleButtonGroup>
+          </Box>
+          {/* Export Buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+            <Tooltip title="Exportar JSON">
+              <span>
+                <Button variant="outlined" size="small" onClick={handleExportJSON} disabled={exporting || tweets.length === 0}>
+                  JSON
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Exportar CSV">
+              <span>
+                <Button variant="contained" size="small" onClick={handleExportCSV} disabled={exporting || tweets.length === 0}>
+                  CSV
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Enviar al Spreadsheet">
+              <span>
+                <Button variant="outlined" size="small" onClick={handleSendToSpreadsheet} disabled={exporting || tweets.length === 0}>
+                  Spreadsheet
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </Stack>
       </Stack>

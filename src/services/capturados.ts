@@ -102,3 +102,51 @@ export async function updateCapturadoCard(
 
   return response.json();
 } 
+
+export interface CapturadoCreatePayload {
+  entity?: string;
+  city?: string;
+  department?: string;
+  description?: string;
+  discovery?: string;
+  amount?: number;
+  currency?: string;
+  source?: string;
+  start_date?: string; // ISO date
+  duration_days?: number;
+  counter?: number; // contador de ocurrencias
+  percentage?: number; // porcentaje (0-100)
+  quantity?: number; // cantidad no monetaria
+  // Duración avanzada
+  duration_text?: string;
+  duration_years?: number;
+  duration_months?: number;
+  duration_hours?: number;
+  duration_minutes?: number;
+  // Tiempo/periodo avanzado
+  time_type?: 'day' | 'year_range' | 'decade' | 'custom';
+  time_date?: string;
+  time_start_year?: number;
+  time_end_year?: number;
+  time_decade_start_year?: number;
+  time_lower_date?: string;
+  time_upper_date?: string;
+  time_bounds?: '[]' | '[)' | '()' | '(]';
+}
+
+export async function createCapturadoCard(
+  projectId: string,
+  payload: CapturadoCreatePayload,
+  accessToken: string
+): Promise<{ success: boolean; card: any }> {
+  const res = await fetch(`${EXTRACTORW_API_URL}/capturados`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ project_id: projectId, ...payload })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

@@ -62,10 +62,12 @@ const DocumentGeneratorCard: React.FC<DocumentGeneratorCardProps> = ({ onDocumen
     trends: any[];
     recentTweets: any[];
     library: any[];
+    trendTweets: any[];
   }>({
     trends: [],
     recentTweets: [],
-    library: []
+    library: [],
+    trendTweets: []
   });
   const [selectedContextItems, setSelectedContextItems] = useState<string[]>([]);
   const [loadingContext, setLoadingContext] = useState(false);
@@ -283,6 +285,26 @@ const DocumentGeneratorCard: React.FC<DocumentGeneratorCardProps> = ({ onDocumen
             library: libraryItems.slice(0, 10) // Limitar a 10 items más recientes
           }));
           break;
+        case 'trendTweets':
+          try {
+            const sinceISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { data: tweetsData, error: tweetsError } = await supabase
+              .from('trending_tweets')
+              .select('*')
+              .gte('fecha_captura', sinceISO)
+              .order('fecha_captura', { ascending: false })
+              .limit(50);
+            if (tweetsError) {
+              console.error('Error obteniendo trending_tweets:', tweetsError);
+              setAvailableContext(prev => ({ ...prev, trendTweets: [] }));
+            } else {
+              setAvailableContext(prev => ({ ...prev, trendTweets: tweetsData || [] }));
+            }
+          } catch (e) {
+            console.error('Error cargando trending_tweets:', e);
+            setAvailableContext(prev => ({ ...prev, trendTweets: [] }));
+          }
+          break;
           
         case 'recentTweets':
           // Obtener tweets recientes del usuario
@@ -402,7 +424,14 @@ const DocumentGeneratorCard: React.FC<DocumentGeneratorCardProps> = ({ onDocumen
       );
       contextText += 'Documentos de referencia:\n';
       selectedItems.forEach((item: any) => {
-        contextText += `- ${item.titulo}: ${item.descripcion}\n`;
+        const base = `- ${item.titulo}: ${item.descripcion || ''}`;
+        const transcript = item.content || item.transcripcion || item.transcription || '';
+        if (transcript && typeof transcript === 'string') {
+          const snippet = transcript.length > 400 ? transcript.slice(0, 400) + '…' : transcript;
+          contextText += `${base}\n  • Transcripción: ${snippet}\n`;
+        } else {
+          contextText += `${base}\n`;
+        }
       });
     }
     
@@ -460,6 +489,15 @@ const DocumentGeneratorCard: React.FC<DocumentGeneratorCardProps> = ({ onDocumen
         }
         
         contextText += '\n'; // Espacio entre tendencias
+      });
+    }
+    
+    if (contextSource === 'trendTweets' && selectedContextItems.length > 0) {
+      const selected = availableContext.trendTweets.filter((t: any) => selectedContextItems.includes(String(t.id)));
+      contextText += 'Tweets de tendencias (selección):\n';
+      selected.forEach((t: any) => {
+        const enlace = t.enlace || (t.tweet_id ? `https://x.com/i/status/${t.tweet_id}` : '');
+        contextText += `- @${t.usuario}: ${String(t.texto || '').slice(0, 140)} ${enlace}\n`;
       });
     }
     
@@ -575,6 +613,7 @@ Responde SOLO con el HTML generado, sin explicaciones adicionales.`;
                 <MenuItem value="trends">Tendencias actuales</MenuItem>
                 <MenuItem value="recentTweets">Análisis de tweets recientes</MenuItem>
                 <MenuItem value="library">Mi librería (Codex)</MenuItem>
+                <MenuItem value="trendTweets">Tweets de tendencias (últimos 50)</MenuItem>
               </Select>
             </FormControl>
 
@@ -657,6 +696,22 @@ Responde SOLO con el HTML generado, sin explicaciones adicionales.`;
                         />
                       );
                     })}
+                  </Box>
+                )}
+
+                {contextSource === 'trendTweets' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 220, overflowY: 'auto' }}>
+                    {availableContext.trendTweets.map((tweet: any) => (
+                      <Chip
+                        key={tweet.id}
+                        label={`@${tweet.usuario}: ${String(tweet.texto || '').slice(0, 40)}...`}
+                        variant={selectedContextItems.includes(String(tweet.id)) ? "filled" : "outlined"}
+                        color={selectedContextItems.includes(String(tweet.id)) ? "primary" : "default"}
+                        size="small"
+                        onClick={() => handleContextItemToggle(String(tweet.id))}
+                        sx={{ cursor: 'pointer' }}
+                      />
+                    ))}
                   </Box>
                 )}
 

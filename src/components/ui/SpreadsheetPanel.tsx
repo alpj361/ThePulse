@@ -40,6 +40,7 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
   const [showColumnEditor, setShowColumnEditor] = useState(false);
   const [showFormulaHelper, setShowFormulaHelper] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [columnAggregations, setColumnAggregations] = useState<Record<string, 'none' | 'sum' | 'avg' | 'median'>>({});
 
   // Cargar datos cuando se abre el panel (UNA SOLA VEZ)
   useEffect(() => {
@@ -56,6 +57,12 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
           console.log(`✅ Panel: Cargados ${currentContextData.length} tweets`);
           setLocalData([...currentContextData]);
           setLocalColumnConfigs([...currentContextColumns]);
+          // Inicializar agregaciones por defecto
+          const initAgg: Record<string, 'none' | 'sum' | 'avg' | 'median'> = {};
+          currentContextColumns.forEach((c) => {
+            initAgg[c.id] = ['integer','number','float'].includes((c as any).type) ? 'sum' : 'none';
+          });
+          setColumnAggregations(initAgg);
         } else {
           console.log('📝 Panel: Inicializando spreadsheet en blanco');
           // Crear múltiples filas vacías para simular Google Sheets
@@ -102,6 +109,9 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
             { id: 'col_i', title: 'Columna I', type: 'integer', minWidth: 100 },
             { id: 'col_j', title: 'Columna J', type: 'text', minWidth: 120 }
           ]);
+          setColumnAggregations({
+            col_a: 'none', col_b: 'none', col_c: 'sum', col_d: 'sum', col_e: 'sum', col_f: 'none', col_g: 'none', col_h: 'none', col_i: 'sum', col_j: 'none'
+          });
         }
         setIsLoading(false);
       }, 50);
@@ -403,6 +413,99 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
     }
   }, [localData.length]);
 
+  // Agregados: filas de cálculo (Total, Promedio, Mediana)
+  const getNumericColumnIds = useCallback(() => {
+    return localColumnConfigs
+      .filter(c => ['integer','number','float'].includes(c.type))
+      .map(c => c.id);
+  }, [localColumnConfigs]);
+
+  const computeMedian = (values: number[]): number => {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a,b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+
+  const addSummaryRow = useCallback((mode: 'TOTAL'|'PROMEDIO'|'MEDIANA') => {
+    const numericCols = getNumericColumnIds();
+    if (numericCols.length === 0) {
+      alert('No hay columnas numéricas para calcular');
+      return;
+    }
+    const newRow: Record<string, any> = { id: genId() };
+    // Poner etiqueta en la primera columna de texto disponible
+    const firstTextCol = localColumnConfigs.find(c => c.type === 'text');
+    if (firstTextCol) newRow[firstTextCol.id] = mode === 'TOTAL' ? 'Total' : mode === 'PROMEDIO' ? 'Promedio' : 'Mediana';
+    // Calcular por columna
+    numericCols.forEach(colId => {
+      const values = localData
+        .map(r => Number(r[colId]))
+        .filter(v => Number.isFinite(v));
+      let val = 0;
+      if (mode === 'TOTAL') val = values.reduce((s,n) => s + n, 0);
+      if (mode === 'PROMEDIO') val = values.length ? values.reduce((s,n) => s + n, 0) / values.length : 0;
+      if (mode === 'MEDIANA') val = computeMedian(values);
+      newRow[colId] = Number.isFinite(val) ? Number(val.toFixed(2)) : 0;
+    });
+    setLocalData(prev => [...prev, newRow]);
+  }, [getNumericColumnIds, localColumnConfigs, localData, genId]);
+
+  // Cálculo dinámico por columna según selección (fila fija al fondo)
+  const computeAggregationValue = useCallback((colId: string): number | string => {
+    const agg = columnAggregations[colId] || 'none';
+    if (agg === 'none') return '';
+    const values = localData
+      .map(r => Number(r[colId]))
+      .filter(v => Number.isFinite(v));
+    if (values.length === 0) return '';
+    if (agg === 'sum') return values.reduce((s,n) => s + n, 0);
+    if (agg === 'avg') return Number((values.reduce((s,n) => s + n, 0) / values.length).toFixed(2));
+    if (agg === 'median') return Number(computeMedian(values).toFixed(2));
+    return '';
+  }, [columnAggregations, localData]);
+
+  // Eliminar fila por índice (1..N)
+  const deleteRowByIndex = useCallback(() => {
+    if (localData.length === 0) return;
+    const idxStr = prompt(`Ingrese el número de fila a eliminar (1..${localData.length})`);
+    if (!idxStr) return;
+    const idx = parseInt(idxStr, 10);
+    if (Number.isNaN(idx) || idx < 1 || idx > localData.length) {
+      alert('Índice inválido');
+      return;
+    }
+    setLocalData(prev => prev.filter((_, i) => i !== (idx - 1)));
+  }, [localData.length]);
+
+  // Exportar CSV
+  const handleExportCSV = useCallback(() => {
+    if (localData.length === 0 || localColumnConfigs.length === 0) {
+      alert('No hay datos para exportar');
+      return;
+    }
+    const headers = localColumnConfigs.map(c => c.id);
+    const escape = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = typeof val === 'string' ? val : JSON.stringify(val);
+      const needsQuotes = /[",\n]/.test(s);
+      const escaped = s.replace(/"/g, '""');
+      return needsQuotes ? `"${escaped}"` : escaped;
+    };
+    const lines = [headers.join(',')];
+    for (const row of localData) {
+      lines.push(headers.map(h => escape((row as any)[h])).join(','));
+    }
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'spreadsheet-data.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [localData, localColumnConfigs]);
+
   // Función para procesar cambios en el spreadsheet y evaluar fórmulas
   const handleSpreadsheetChange = useCallback((newData: Record<string, any>[]) => {
     // Procesar fórmulas en los datos
@@ -479,6 +582,32 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
              >
                <FaPlus size={20} />
              </button>
+
+              {/* Filas de cálculo: Total / Promedio / Mediana */}
+              <button
+                onClick={() => addSummaryRow('TOTAL')}
+                disabled={isLoading}
+                className={`px-2 py-1 rounded-md text-xs font-medium border ${isLoading ? 'text-gray-400 border-gray-200' : 'text-gray-700 hover:bg-gray-100 border-gray-300'}`}
+                title="Añadir fila Total"
+              >
+                Σ Total
+              </button>
+              <button
+                onClick={() => addSummaryRow('PROMEDIO')}
+                disabled={isLoading}
+                className={`px-2 py-1 rounded-md text-xs font-medium border ${isLoading ? 'text-gray-400 border-gray-200' : 'text-gray-700 hover:bg-gray-100 border-gray-300'}`}
+                title="Añadir fila Promedio"
+              >
+                AVG
+              </button>
+              <button
+                onClick={() => addSummaryRow('MEDIANA')}
+                disabled={isLoading}
+                className={`px-2 py-1 rounded-md text-xs font-medium border ${isLoading ? 'text-gray-400 border-gray-200' : 'text-gray-700 hover:bg-gray-100 border-gray-300'}`}
+                title="Añadir fila Mediana"
+              >
+                MED
+              </button>
              
              <button
                onClick={removeLastRow}
@@ -492,6 +621,15 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
              >
                <FaTrash size={20} />
              </button>
+
+              <button
+                onClick={deleteRowByIndex}
+                disabled={isLoading || localData.length === 0}
+                className={`px-2 py-1 rounded-md text-xs font-medium border ${isLoading ? 'text-gray-400 border-gray-200' : 'text-red-600 hover:bg-red-50 border-red-200'}`}
+                title="Eliminar fila por número"
+              >
+                Eliminar fila #
+              </button>
              
              <div className="border-l border-gray-300 mx-2 h-6"></div>
              
@@ -518,6 +656,13 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
              >
                <FaDownload size={20} />
              </button>
+              <button
+                onClick={handleExportCSV}
+                className="px-2 py-1 text-orange-700 hover:text-orange-900 hover:bg-orange-50 rounded-md transition-colors border border-orange-200 text-xs font-medium"
+                title="Exportar CSV"
+              >
+                CSV
+              </button>
              
              <label className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-md transition-colors cursor-pointer" title="Importar datos">
                <FaUpload size={20} />
@@ -670,6 +815,32 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
                         autoAddRow={true}
                         addRowsComponent={false}
                       />
+                        {/* Fila de agregados fija al fondo */}
+                        <div className="w-full border-t border-gray-200 bg-gray-50 sticky bottom-0">
+                          <div className="grid" style={{ gridTemplateColumns: `repeat(${localColumnConfigs.length}, minmax(120px, 1fr))` }}>
+                            {localColumnConfigs.map((col) => (
+                              <div key={`agg_${col.id}`} className="flex items-center justify-between px-2 py-1 text-xs">
+                                {['integer','number','float'].includes(col.type) ? (
+                                  <select
+                                    value={columnAggregations[col.id] || 'none'}
+                                    onChange={(e) => setColumnAggregations(prev => ({ ...prev, [col.id]: e.target.value as any }))}
+                                    className="border border-gray-300 rounded px-1 py-0.5 text-gray-700"
+                                  >
+                                    <option value="none">—</option>
+                                    <option value="sum">Σ</option>
+                                    <option value="avg">AVG</option>
+                                    <option value="median">MED</option>
+                                  </select>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
+                                <span className="ml-2 font-medium text-gray-800 truncate">
+                                  {computeAggregationValue(col.id)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                      </div>
                    ) : (
                      <div className="flex items-center justify-center h-full text-gray-500">

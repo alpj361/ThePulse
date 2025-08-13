@@ -195,32 +195,93 @@ export async function getLatestTrendData(): Promise<any | null> {
  */
 
 export async function saveCodexItem(item: any) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-  const { error } = await supabase.from('codex_items').insert([
-    {
-      user_id: item.user_id,
-      tipo: item.tipo,
-      titulo: item.titulo,
-      descripcion: item.descripcion,
-      etiquetas: item.etiquetas,
-      proyecto: item.proyecto,
-      project_id: item.project_id || null,
-      storage_path: item.storagePath,
-      url: item.url,
-      nombre_archivo: item.nombreArchivo,
-      tamano: item.tamano,
-      fecha: item.fecha,
-      is_drive: item.isDrive || false,
-      drive_file_id: item.driveFileId || null
-    }
-  ]);
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const payload: any = {
+    user_id: item.user_id,
+    tipo: item.tipo,
+    titulo: item.titulo,
+    descripcion: item.descripcion,
+    etiquetas: item.etiquetas,
+    proyecto: item.proyecto,
+    project_id: item.project_id || null,
+    storage_path: item.storagePath,
+    url: item.url,
+    nombre_archivo: item.nombreArchivo,
+    tamano: item.tamano,
+    fecha: item.fecha,
+    is_drive: item.isDrive || false,
+    drive_file_id: item.driveFileId || null,
+    source_url: item.source_url || null,
+    content: item.content || null,
+    analyzed: item.analyzed ?? false,
+    original_type: item.original_type || null,
+    recent_scrape_id: item.recent_scrape_id || null,
+    // grouping
+    group_id: item.group_id || null,
+    is_group_parent: item.is_group_parent ?? false,
+    group_name: item.group_name || null,
+    group_description: item.group_description || null,
+    part_number: item.part_number || null,
+    total_parts: item.total_parts || null
+  };
+  const { data, error } = await supabase
+    .from('codex_items')
+    .insert([payload])
+    .select('*')
+    .single();
   if (error) throw error;
+  return data;
+}
+
+export async function saveCodexItemsBatch(items: any[]) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  const mapped = items.map((item) => ({
+    user_id: item.user_id,
+    tipo: item.tipo,
+    titulo: item.titulo,
+    descripcion: item.descripcion,
+    etiquetas: item.etiquetas,
+    proyecto: item.proyecto,
+    project_id: item.project_id || null,
+    storage_path: item.storagePath,
+    url: item.url,
+    nombre_archivo: item.nombreArchivo,
+    tamano: item.tamano,
+    fecha: item.fecha,
+    is_drive: item.isDrive || false,
+    drive_file_id: item.driveFileId || null,
+    source_url: item.source_url || null,
+    content: item.content || null,
+    analyzed: item.analyzed ?? false,
+    original_type: item.original_type || null,
+    recent_scrape_id: item.recent_scrape_id || null,
+    group_id: item.group_id || null,
+    is_group_parent: item.is_group_parent ?? false,
+    group_name: item.group_name || null,
+    group_description: item.group_description || null,
+    part_number: item.part_number || null,
+    total_parts: item.total_parts || null
+  }));
+  const { data, error } = await supabase
+    .from('codex_items')
+    .insert(mapped)
+    .select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function saveLinkRelations(relations: { item_id: string; user_id: string; notes?: string, parent_item_id?: string }[]) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  const { data, error } = await supabase
+    .from('links')
+    .insert(relations)
+    .select('*');
+  if (error) throw error;
+  return data || [];
 }
 
 export async function getCodexItemsByUser(user_id: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
-  console.log('📊 getCodexItemsByUser - Iniciando consulta para user:', user_id);
   
   // Consulta expandida para incluir datos de recent_scrapes cuando applicable
   const { data, error } = await supabase
@@ -233,47 +294,55 @@ export async function getCodexItemsByUser(user_id: string) {
         query_clean,
         herramienta,
         categoria,
-        tweet_count,
-        tweets,
-        total_engagement,
-        avg_engagement,
+        tweet_id,
+        usuario,
+        fecha_tweet,
+        texto,
+        enlace,
+        likes,
+        retweets,
+        replies,
+        verified,
+        sentimiento,
         location,
         created_at
-      )
+      ),
+      links_as_child:links!links_item_id_fkey ( parent_item_id )
     `)
     .eq('user_id', user_id)
     .order('created_at', { ascending: false });
     
-  if (error) {
-    console.error('❌ Error en getCodexItemsByUser:', error);
-    throw error;
-  }
-  
-  console.log('📊 getCodexItemsByUser - Datos obtenidos:', data?.length || 0, 'items');
-  
-  // Mapear los datos para incluir recent_scrape en el nivel superior
-  const mappedData = (data || []).map(item => {
-    const mapped = {
-      ...item,
-      recent_scrape: item.recent_scrapes || null
-    };
-    
-    // Debug: Log solo para monitoreos con recent_scrape_id
-    if (item.tipo === 'monitoreos' && item.recent_scrape_id) {
-      console.log('🔍 Codex Monitoreo DEBUG:', {
-        id: item.id,
-        titulo: item.titulo,
-        recent_scrape_id: item.recent_scrape_id,
-        recent_scrapes_data: item.recent_scrapes,
-        mapped_recent_scrape: mapped.recent_scrape,
-        tweets: mapped.recent_scrape?.tweets?.length || 0,
-        tweet_count: mapped.recent_scrape?.tweet_count || 0
-      });
+  if (error) throw error;
+
+  // Fallback robusto: consultar la tabla links aparte por si el FK alias no coincide
+  const itemIds = (data || []).map((it: any) => it.id);
+  let linksMap: Record<string, string> = {};
+  if (itemIds.length > 0) {
+    const { data: linksRows, error: linksErr } = await supabase
+      .from('links')
+      .select('item_id,parent_item_id')
+      .in('item_id', itemIds);
+    if (!linksErr && Array.isArray(linksRows)) {
+      for (const row of linksRows) {
+        if (row && row.item_id) linksMap[row.item_id] = row.parent_item_id || null;
+      }
     }
-    
-    return mapped;
+  }
+
+  // Mapear los datos para incluir recent_scrape y flag is_child_link (preferir mapa externo si existe)
+  const mappedData = (data || []).map((item: any) => {
+    const joinedParent = Array.isArray(item.links_as_child) && item.links_as_child[0]?.parent_item_id ? item.links_as_child[0]?.parent_item_id : null;
+    const mappedParent = linksMap[item.id] !== undefined ? linksMap[item.id] : null;
+    const parent_item_id = mappedParent || joinedParent || null;
+    const is_child_link = Boolean(parent_item_id);
+    return {
+      ...item,
+      recent_scrape: item.recent_scrapes || null,
+      is_child_link,
+      parent_item_id
+    };
   });
-  
+
   return mappedData;
 }
 
@@ -307,13 +376,43 @@ export async function getAvailableCodexItems(userId: string) {
   try {
     const { data, error } = await supabase
       .from('codex_items')
-      .select('*')
+      .select(`
+        *,
+        links_as_child:links!links_item_id_fkey ( parent_item_id )
+      `)
       .eq('user_id', userId)
-      .is('project_id', null) // Solo items no asignados a proyectos
+      .is('project_id', null)
       .order('created_at', { ascending: false });
-    
     if (error) throw error;
-    return data || [];
+
+    // Fallback para marcar hijos mediante consulta directa a links
+    const itemIds = (data || []).map((it: any) => it.id);
+    let linksMap: Record<string, string> = {};
+    if (itemIds.length > 0) {
+      const { data: linksRows } = await supabase
+        .from('links')
+        .select('item_id,parent_item_id')
+        .in('item_id', itemIds);
+      if (Array.isArray(linksRows)) {
+        for (const row of linksRows) {
+          if (row && row.item_id) linksMap[row.item_id] = row.parent_item_id || null;
+        }
+      }
+    }
+
+    const mapped = (data || []).map((item: any) => {
+      const joinedParent = Array.isArray(item.links_as_child) && item.links_as_child[0]?.parent_item_id ? item.links_as_child[0]?.parent_item_id : null;
+      const mappedParent = linksMap[item.id] !== undefined ? linksMap[item.id] : null;
+      const parent_item_id = mappedParent || joinedParent || null;
+      const is_child_link = Boolean(parent_item_id);
+      return {
+        ...item,
+        is_child_link,
+        parent_item_id
+      };
+    });
+
+    return mapped;
   } catch (error) {
     console.error('Error fetching available codex items:', error);
     return [];
@@ -1574,4 +1673,23 @@ export async function promoteDecisionToRoot(decisionId: string): Promise<Project
     console.error('Error promoting decision to root:', error);
     throw error;
   }
+}
+
+export async function getLinksForParentItem(parentItemId: string) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  // Get links rows with child item and basic fields from child item
+  const { data, error } = await supabase
+    .from('links')
+    .select(`
+      id,
+      notes,
+      item_id,
+      parent_item_id,
+      child:codex_items!links_item_id_fkey (
+        id, titulo, descripcion, source_url, created_at, original_type, tipo, audio_transcription, transcripcion
+      )
+    `)
+    .eq('parent_item_id', parentItemId);
+  if (error) throw error;
+  return data || [];
 }

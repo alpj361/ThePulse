@@ -3,7 +3,7 @@ import {
   Box,
   Typography,
   Checkbox,
-  FormControlLabel,
+  // FormControlLabel,
   Card,
   CardContent,
   Chip,
@@ -12,7 +12,7 @@ import {
   TextField,
   InputAdornment,
   Button,
-  IconButton,
+  // IconButton,
   Accordion,
   AccordionSummary,
   AccordionDetails
@@ -31,7 +31,7 @@ import {
   Mic as MicIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { getCodexItemsByUser } from '../../services/supabase';
+import { getCodexItemsByUser, getLinksForParentItem } from '../../services/supabase.ts';
 
 interface CodexItem {
   id: string;
@@ -55,6 +55,10 @@ interface CodexItem {
   group_description?: string;
   part_number?: number;
   total_parts?: number;
+  // Nuevo: campos del nuevo modelo
+  original_type?: string;
+  is_child_link?: boolean;
+  parent_item_id?: string | null;
 }
 
 interface CodexSelectorProps {
@@ -75,6 +79,10 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [groupedItems, setGroupedItems] = useState<Map<string, CodexItem[]>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Estado para monitores y sus enlaces hijos
+  const [expandedMonitors, setExpandedMonitors] = useState<Set<string>>(new Set());
+  const [monitorChildren, setMonitorChildren] = useState<Record<string, any[]>>({});
+  const [loadingChildren, setLoadingChildren] = useState<Record<string, boolean>>({});
 
   // Cargar items del codex disponibles
   useEffect(() => {
@@ -118,6 +126,33 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
     setGroupedItems(grouped);
   }, [searchTerm, typeFilter, codexItems]);
 
+  // Cargar hijos (enlaces) de un monitor on-demand
+  const loadMonitorChildren = async (parentId: string) => {
+    if (loadingChildren[parentId] || monitorChildren[parentId]) return;
+    setLoadingChildren(prev => ({ ...prev, [parentId]: true }));
+    try {
+      const rows = await getLinksForParentItem(parentId);
+      setMonitorChildren(prev => ({ ...prev, [parentId]: rows || [] }));
+    } catch (e) {
+      console.error('Error cargando enlaces del monitoreo', e);
+      setMonitorChildren(prev => ({ ...prev, [parentId]: [] }));
+    } finally {
+      setLoadingChildren(prev => ({ ...prev, [parentId]: false }));
+    }
+  };
+
+  const toggleMonitorExpansion = (parentId: string) => {
+    const next = new Set(expandedMonitors);
+    if (next.has(parentId)) {
+      next.delete(parentId);
+    } else {
+      next.add(parentId);
+      // Lazy load children
+      loadMonitorChildren(parentId);
+    }
+    setExpandedMonitors(next);
+  };
+
   const loadCodexItems = async () => {
     setLoading(true);
     setError(null);
@@ -145,8 +180,11 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
     onCodexChange(newSelection);
   };
 
+  // Helper: ítems planos realmente visibles (excluye enlaces hijos)
+  const getDisplayFlatItems = () => filteredItems.filter((it: any) => !(it.original_type === 'link' && it.is_child_link));
+
   const handleSelectAll = () => {
-    const allIds = filteredItems.map(item => `codex_${item.id}`);
+    const allIds = getDisplayFlatItems().map(item => `codex_${item.id}`);
     onCodexChange(allIds);
   };
 
@@ -249,6 +287,10 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
 
   // Separar items normales y agrupados
   const normalItems = filteredItems.filter(item => !item.group_id);
+  // Monitoreos visibles (tipo item con original_type monitor)
+  const monitorItems = normalItems.filter((it: any) => it.tipo === 'item' && (it.original_type === 'monitor'));
+  // Excluir enlaces hijos del listado plano
+  const flatItems = normalItems.filter((it: any) => !(it.original_type === 'link' && it.is_child_link));
   const groupedItemsArray = Array.from(groupedItems.entries());
 
   return (
@@ -325,12 +367,90 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
 
       {/* Lista de items */}
       <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
-        {filteredItems.length === 0 ? (
+        {flatItems.length === 0 && monitorItems.length === 0 ? (
           <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
             {searchTerm || typeFilter !== 'all' ? 'No se encontraron documentos' : 'No hay documentos en tu codex'}
           </Typography>
         ) : (
           <Box>
+            {/* Sección de Monitoreos */}
+            {monitorItems.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Monitoreos</Typography>
+                {monitorItems.map((item) => {
+                  const parentId = item.id;
+                  const itemKey = `codex_${parentId}`;
+                  const isSelected = selectedCodex.includes(itemKey);
+                  const isExpanded = expandedMonitors.has(parentId);
+                  const children = monitorChildren[parentId] || [];
+                  return (
+                    <Accordion key={parentId} expanded={isExpanded} onChange={() => toggleMonitorExpansion(parentId)} sx={{ mb: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}> 
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}>
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => handleToggleItem(itemKey)}
+                            onClick={(e) => e.stopPropagation()}
+                            size="small"
+                            sx={{ mt: -0.5 }}
+                          />
+                          <FolderIcon sx={{ color: 'primary.main' }} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>{item.titulo}</Typography>
+                            {item.descripcion && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{item.descripcion}</Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        {loadingChildren[parentId] ? (
+                          <Box sx={{ py: 1, pl: 1 }}><CircularProgress size={16} /></Box>
+                        ) : (
+                          <Box sx={{ pl: 1 }}>
+                            {children.length === 0 ? (
+                              <Typography variant="caption" color="text.secondary">Sin enlaces</Typography>
+                            ) : (
+                              children.map((ln: any) => {
+                                const child = ln.child;
+                                const childKey = `codex_${child.id}`;
+                                const childSelected = selectedCodex.includes(childKey);
+                                return (
+                                  <Card key={ln.id} sx={{ mb: 1, cursor: 'pointer' }} onClick={() => handleToggleItem(childKey)}>
+                                    <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 } }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                        <Checkbox
+                                          checked={childSelected}
+                                          onChange={() => handleToggleItem(childKey)}
+                                          size="small"
+                                          sx={{ mt: -0.5 }}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <LinkIcon sx={{ color: '#2196f3' }} />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                          <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.3 }}>
+                                            {child.titulo || 'Enlace'}
+                                          </Typography>
+                                          {child.source_url && (
+                                            <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
+                                              {child.source_url}
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })
+                            )}
+                          </Box>
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  );
+                })}
+              </Box>
+            )}
             {/* Items agrupados */}
             {groupedItemsArray.map(([groupId, groupItems]) => {
               const parentItem = groupItems.find(item => item.is_group_parent);
@@ -489,7 +609,7 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
             })}
 
             {/* Items normales (no agrupados) */}
-            {normalItems.map((item) => {
+            {flatItems.map((item) => {
               const itemId = `codex_${item.id}`;
               const isSelected = selectedCodex.includes(itemId);
               

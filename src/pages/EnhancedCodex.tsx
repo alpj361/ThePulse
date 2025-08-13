@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import "../types/google.d.ts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,11 +64,12 @@ import {
   deleteGroup,
   updateGroupInfo,
   getUserGroups,
+  getLinksForParentItem,
 } from "../services/supabase.ts"
 // URL dinámico del backend ExtractorW
 import { EXTRACTORW_API_URL } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
-import MonitoreoCard from "../components/ui/MonitoreoCard";
+// import MonitoreoCard from "../components/ui/MonitoreoCard";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
@@ -100,7 +101,97 @@ interface CodexItem {
   group_description?: string
   part_number?: number
   total_parts?: number
+  // Unificado Item/Link
+  original_type?: string
+  is_child_link?: boolean
+  parent_item_id?: string | null
+  source_url?: string
+  transcripcion?: string
 }
+
+// Componente interno para monitores con hijos anidados
+const MonitorAccordionCard: React.FC<{
+  item: CodexItem;
+  selectedIds: string[];
+  toggleSelectItem: (id: string) => void;
+  expandedMonitorId?: string | null;
+  setExpandedMonitorId?: (id: string | null) => void;
+}> = ({ item, selectedIds, toggleSelectItem, expandedMonitorId, setExpandedMonitorId }) => {
+  const expanded = expandedMonitorId === item.id;
+  const [children, setChildren] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [maxHeight, setMaxHeight] = useState<number>(0);
+
+  const loadChildren = async () => {
+    if (loading || children.length > 0) return;
+    setLoading(true);
+    try {
+      const rows = await getLinksForParentItem(item.id);
+      setChildren(rows || []);
+    } catch (e) {
+      setChildren([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    // Medir altura del contenido para una transición suave
+    const scrollH = el.scrollHeight;
+    setMaxHeight(expanded ? scrollH : 0);
+  }, [expanded, children]);
+
+  return (
+    <Card className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
+      <CardHeader className="p-4 border-b border-slate-200 cursor-pointer" onClick={() => { const n = !expanded; setExpandedMonitorId && setExpandedMonitorId(n ? item.id : null); if (n) loadChildren(); }}>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
+            {item.titulo}
+          </CardTitle>
+          <Button variant="ghost" size="sm">
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
+      <div ref={contentRef} style={{ maxHeight: maxHeight, transition: 'max-height 300ms ease-in-out, opacity 200ms ease-in-out', opacity: expanded ? 1 : 0 }} className="overflow-hidden"> 
+        <CardContent className="p-3">
+          {loading ? (
+            <div className="flex items-center gap-2 text-slate-500"><RefreshCw className="h-4 w-4 animate-spin" /> Cargando enlaces…</div>
+          ) : (
+            <div className="space-y-2">
+              {children.map((ln: any) => {
+                const child = ln.child;
+                return (
+                  <div key={`child_${ln.id}`} className="flex items-start gap-2 p-2 border rounded-md hover:bg-slate-50 cursor-pointer" onClick={() => toggleSelectItem(child.id)}>
+                    <input type="checkbox" checked={selectedIds.includes(child.id)} onChange={() => toggleSelectItem(child.id)} className="mt-1" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-800 truncate">{child.titulo || 'Enlace'}</div>
+                      {child.source_url && (
+                        <a href={child.source_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 truncate inline-block">
+                          {child.source_url}
+                        </a>
+                      )}
+                      <div className="flex gap-2 mt-1">
+                        {child.audio_transcription && <Badge variant="outline" className="text-xs">Audio</Badge>}
+                        {child.transcripcion && <Badge variant="outline" className="text-xs">Texto</Badge>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {children.length === 0 && (
+                <div className="text-sm text-slate-500">No hay enlaces asociados</div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </div>
+    </Card>
+  );
+};
 
 interface CodexStats {
   documentos: number
@@ -450,6 +541,8 @@ export default function EnhancedCodex() {
   const [shouldGenerateDescription, setShouldGenerateDescription] = useState(false);
 
   const [selectionMode, setSelectionMode] = useState(false);
+  // Acordeón global: asegurarnos que solo un monitoreo esté expandido a la vez
+  const [expandedMonitorId, setExpandedMonitorId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Handler to toggle selection of an item
@@ -877,7 +970,11 @@ export default function EnhancedCodex() {
         return queryMatch && typeMatch
       })
 
-    const topLevel = filtered.filter(item => item.is_group_parent || !item.group_id)
+    // Ocultar enlaces hijos en la grilla principal
+    const hideChildLinks = filtered.filter((it: any) => !(it.original_type === 'link' && it.is_child_link))
+
+    // Top-level: grupos y archivos no agrupados (y no enlaces hijos)
+    const topLevel = hideChildLinks.filter(item => item.is_group_parent || !item.group_id)
     
     topLevel.sort((a, b) => {
       if (a.is_group_parent && !b.is_group_parent) return -1
@@ -3231,27 +3328,16 @@ export default function EnhancedCodex() {
                       toggleSelectItem={toggleSelectItem}
                     />
                   } else {
-                    // Renderizado condicional: MonitoreoCard para tipo "monitoreos", Card normal para otros tipos
-                    if (item.tipo === 'monitoreos') {
+                    // Monitores (tipo item con original_type=monitor) render como acordeón con hijos
+                    if (item.tipo === 'item' && (item as any).original_type === 'monitor') {
                       return (
-                        <MonitoreoCard
-                          key={item.id}
-                          monitoreo={{
-                            id: item.id,
-                            titulo: item.titulo,
-                            descripcion: item.descripcion || '',
-                            tipo: 'monitoreos',
-                            recent_scrape_id: item.recent_scrape_id || '',
-                            recent_scrape: item.recent_scrape,
-                            etiquetas: item.etiquetas,
-                            proyecto: item.proyecto,
-                            created_at: item.created_at
-                          }}
-                          layout="expanded"
-                          showActions={true}
-                          onEdit={handleEditItem}
-                          onDelete={(id: string) => handleDeleteItemConfirm(item)}
-                          onAddToProject={() => {/* TODO: Implementar */}}
+                        <MonitorAccordionCard
+                          key={`monitor_${item.id}`}
+                          item={item}
+                          selectedIds={selectedIds}
+                          toggleSelectItem={toggleSelectItem}
+                          expandedMonitorId={expandedMonitorId}
+                          setExpandedMonitorId={setExpandedMonitorId}
                         />
                       )
                     } else {

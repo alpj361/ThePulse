@@ -10,32 +10,20 @@ import {
   useTheme,
   Collapse,
   Button,
-  List,
-  ListItem,
-  ListItemText,
-  Avatar,
   Divider,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogContentText,
   CircularProgress,
   Checkbox,
   FormControlLabel
 } from '@mui/material';
 import {
-  Search,
-  SmartToy,
-  TrendingUp,
   ExpandMore,
   ExpandLess,
-  AccessTime,
-  DataUsage,
-  Speed,
   LocationOn,
   Delete,
-  Warning,
   Analytics,
   FolderOpen
 } from '@mui/icons-material';
@@ -44,8 +32,8 @@ import { RecentScrape } from '../../services/recentScrapes';
 import { MagicTweetCard } from './MagicTweetCard';
 import { useSpreadsheet } from '../../context/SpreadsheetContext';
 import { useAuth } from '../../context/AuthContext';
-import { saveCodexItem } from '../../services/supabase';
-import { processScrapeForSpreadsheet, generarResumenProcesamiento } from '../../utils/spreadsheetHelpers';
+import { saveCodexItem, saveCodexItemsBatch, saveLinkRelations, supabase } from '../../services/supabase.ts';
+import { processScrapeForSpreadsheet } from '../../utils/spreadsheetHelpers';
 import { FaTable } from 'react-icons/fa';
 
 interface RecentScrapeCardProps {
@@ -72,9 +60,26 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
 
   const [spreadsheetSent, setSpreadsheetSent] = useState(false);
   const [savingToCodex, setSavingToCodex] = useState(false);
+  const [selectTweetsOpen, setSelectTweetsOpen] = useState(false);
+  const [selectedTweets, setSelectedTweets] = useState<{ idx: number; text: string; url?: string; selected: boolean }[]>([]);
+  const [analyzeMedia, setAnalyzeMedia] = useState<boolean>(true);
   
   // Contexto del spreadsheet
   const { addTweetData } = useSpreadsheet();
+
+  // Helper: extract URL from a tweet
+  const extractUrlFromTweet = (tweet: any): string | undefined => {
+    if (tweet?.enlace && typeof tweet.enlace === 'string') return tweet.enlace;
+    if (Array.isArray(tweet?.urls) && tweet.urls.length > 0) {
+      const first = tweet.urls.find((u: any) => typeof u === 'string');
+      if (first) return first;
+    }
+    const text = tweet?.texto || tweet?.contenido || '';
+    const urlRegex = /(https?:\/\/[\w\-\.\/?#&=;%+:,~@!$'*\(\)\[\]]+)/g;
+    const found = (typeof text === 'string' ? text.match(urlRegex) : null) || [];
+    if (found.length > 0) return found[0];
+    return undefined;
+  };
 
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -155,18 +160,6 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
     return names[grupo as keyof typeof names] || grupo;
   };
 
-  // Icono por herramienta
-  const getToolIcon = (herramienta: string) => {
-    const icons = {
-      'nitter_context': <SmartToy />,
-      'nitter_profile': <Avatar style={{ fontSize: 20 }} />,
-      'twitter_search': <Search />,
-      'news_search': <DataUsage />,
-      'web_search': <TrendingUp />
-    };
-    return icons[herramienta as keyof typeof icons] || <Search />;
-  };
-
   const toggleExpanded = () => {
     setExpanded(!expanded);
   };
@@ -199,17 +192,31 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
       console.error('Usuario no autenticado');
       return;
     }
+    // Build selection list from tweets
+    const tweets = Array.isArray((scrape as any).tweets) ? (scrape as any).tweets : [];
+    const opts = tweets.map((t: any, idx: number) => ({
+      idx,
+      text: t?.texto || t?.contenido || '',
+      url: extractUrlFromTweet(t),
+      selected: true
+    }));
+    setSelectedTweets(opts);
+    setAnalyzeMedia(true);
+    setSelectTweetsOpen(true);
+  };
 
+  const handleConfirmSaveToCodex = async () => {
+    if (!user?.id) return;
     setSavingToCodex(true);
-
     try {
-      // Crear el item del codex de tipo monitoreo
-      const codexItem = {
+      // 1) Parent item (monitor)
+      const parentItem = await saveCodexItem({
         user_id: user.id,
-        tipo: 'monitoreos',
+        tipo: 'item',
+        original_type: 'monitor',
         titulo: `Monitoreo: ${scrape.query_clean || scrape.query_original || 'Sin título'}`,
         descripcion: (() => {
-          const tweetCount = scrape.tweets?.length || 0;
+          const tweetCount = (scrape.tweets?.length || 0);
           const herramienta = scrape.herramienta || 'twitter';
           const query = scrape.query_clean || scrape.query_original || 'consulta';
           return `Análisis de ${tweetCount} tweets sobre "${query}" usando ${herramienta}`;
@@ -222,14 +229,56 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
         ].filter(Boolean),
         proyecto: 'Sin proyecto',
         recent_scrape_id: scrape.id,
-        fecha: new Date().toISOString()
-      };
+        fecha: new Date().toISOString(),
+        source_url: null,
+        content: null,
+        analyzed: false
+      });
 
-      await saveCodexItem(codexItem);
-      console.log('✅ Monitoreo guardado en Codex exitosamente');
+      if (!parentItem?.id) throw new Error('No se pudo crear el item de monitoreo');
 
+      // 2) Child items for selected tweets having URL (multimedia links)
+      const selected = selectedTweets.filter((s) => s.selected && s.url);
+      let childItems: any[] = [];
+      if (selected.length > 0) {
+        const now = new Date().toISOString();
+        const items = selected.map((s, idx) => ({
+          user_id: user.id,
+          tipo: 'item',
+          original_type: 'link',
+          titulo: `Enlace ${idx + 1}`,
+          descripcion: s.text,
+          etiquetas: ['link'],
+          proyecto: 'Sin proyecto',
+          fecha: now,
+          source_url: s.url,
+          url: s.url,
+          analyzed: false
+        }));
+        childItems = await saveCodexItemsBatch(items);
+        if (childItems.length > 0) {
+          const relations = childItems.map((ci: any) => ({ item_id: ci.id, user_id: user.id, parent_item_id: parentItem.id }));
+          try { await saveLinkRelations(relations); } catch {}
+        }
+      }
+
+      // 3) Trigger multimedia analysis if requested
+      if (analyzeMedia && childItems.length > 0) {
+        try {
+          const { analyzePendingLinks } = await import('../../services/pendingAnalysis');
+          const itemIds = childItems.map((ci: any) => ci.id);
+          const sessionRes = await supabase.auth.getSession();
+          const authToken = sessionRes.data.session?.access_token || undefined;
+          await analyzePendingLinks({ itemIds, processAll: false, dryRun: false }, authToken);
+        } catch (e) {
+          console.warn('Análisis de enlaces no disparado:', e);
+        }
+      }
+
+      setSelectTweetsOpen(false);
+      console.log('✅ Monitoreo y enlaces seleccionados guardados en Codex');
     } catch (err) {
-      console.error('❌ Error guardando monitoreo en Codex:', err);
+      console.error('❌ Error guardando en Codex desde selección:', err);
     } finally {
       setSavingToCodex(false);
     }
@@ -537,13 +586,13 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
         aria-describedby="delete-dialog-description"
       >
         <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Warning color="warning" />
+          {/* <Warning color="warning" /> */}
           Confirmar Eliminación
         </DialogTitle>
         <DialogContent>
-          <DialogContentText id="delete-dialog-description">
+          <Typography id="delete-dialog-description" variant="body2">
             ¿Estás seguro de que quieres eliminar esta extracción de tweets?
-          </DialogContentText>
+          </Typography>
           <Box sx={{ mt: 2, p: 2, backgroundColor: alpha(theme.palette.grey[500], 0.1), borderRadius: 1 }}>
             <Typography variant="body2" fontWeight="medium">
               {scrape.generated_title || scrape.query_original}
@@ -567,6 +616,67 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
             startIcon={<Delete />}
           >
             Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal seleccionar tweets a incluir */}
+      <Dialog open={selectTweetsOpen} onClose={() => setSelectTweetsOpen(false)}>
+        <DialogTitle>Selecciona tweets a incluir en el Codex</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Se creará un item de monitoreo y subitems para los enlaces seleccionados.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+            <Button
+              size="small"
+              onClick={() =>
+                setSelectedTweets((prev) => prev.map((s) => ({ ...s, selected: true })))
+              }
+            >
+              Seleccionar todo
+            </Button>
+            <Button
+              size="small"
+              onClick={() =>
+                setSelectedTweets((prev) => prev.map((s) => ({ ...s, selected: false })))
+              }
+            >
+              Deseleccionar todo
+            </Button>
+          </Box>
+          <Box sx={{ maxHeight: 360, overflow: 'auto', pr: 1 }}>
+            {selectedTweets.map((s, i) => (
+              <Box key={s.idx} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <Checkbox
+                  checked={s.selected}
+                  onChange={(e) => {
+                    const copy = [...selectedTweets]
+                    copy[i] = { ...s, selected: e.target.checked }
+                    setSelectedTweets(copy)
+                  }}
+                />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{s.text || '(sin texto)'}</Typography>
+                  {s.url && (
+                    <Typography variant="caption" color="primary">
+                      {s.url}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+          <FormControlLabel
+            sx={{ mt: 2 }}
+            control={<Checkbox checked={analyzeMedia} onChange={(e) => setAnalyzeMedia(e.target.checked)} />}
+            label="Analizar multimedia (enlaces seleccionados)"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectTweetsOpen(false)} disabled={savingToCodex}>Cancelar</Button>
+          <Button onClick={handleConfirmSaveToCodex} variant="contained" disabled={savingToCodex}>
+            {savingToCodex ? <CircularProgress size={18} /> : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>
