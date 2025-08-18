@@ -30,6 +30,7 @@ import Projects from './pages/Projects';
 import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
 import SidebarDemoPage from './pages/SidebarDemo';
 import DesignSettingsDemo from './pages/DesignSettingsDemo';
+import Knowledge from './pages/Knowledge';
 
 // Componente para configurar LogRocket automáticamente
 const LogRocketConfig = () => {
@@ -191,6 +192,13 @@ function App() {
             <VerifiedRoute>
               <Layout>
                 <AdminPanel />
+              </Layout>
+            </VerifiedRoute>
+          } />
+          <Route path="/knowledge" element={
+            <VerifiedRoute>
+              <Layout>
+                <Knowledge />
               </Layout>
             </VerifiedRoute>
           } />

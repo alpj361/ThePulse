@@ -200,6 +200,24 @@ export function SessionNavBar() {
     }
   ];
 
+  // Build final sections; append admin-only section with Knowledge
+  const sections: NavSection[] = (() => {
+    const base = [...navSections];
+    if (isAdmin) {
+      base.push({
+        title: 'Admin',
+        items: [
+          {
+            icon: <Database className="h-4 w-4" />,
+            label: 'Knowledge',
+            path: '/knowledge'
+          }
+        ]
+      });
+    }
+    return base;
+  })();
+
   // ☕ Buy Me A Coffee button setup
   const buyMeRef = useRef<HTMLDivElement>(null);
 
@@ -229,7 +247,7 @@ export function SessionNavBar() {
       initial={isCollapsed ? "closed" : "open"}
       animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
-      transition={transitionProps}
+      transition={{ duration: 0.2 }}
       onMouseEnter={() => setIsCollapsed(false)}
       onMouseLeave={() => setIsCollapsed(true)}
     >
@@ -252,7 +270,6 @@ export function SessionNavBar() {
                         <AvatarFallback>P</AvatarFallback>
                       </Avatar>
                       <motion.li
-                        variants={variants}
                         className="flex w-fit items-center gap-2"
                       >
                         {!isCollapsed && (
@@ -287,18 +304,16 @@ export function SessionNavBar() {
               <div className="flex grow flex-col gap-4">
                 <ScrollArea className="h-16 grow p-2">
                   <div className={cn("flex w-full flex-col gap-1")}>
-                    {navSections.map((section, sectionIndex) => (
+                    {sections.map((section, sectionIndex) => (
                       <div key={section.title} className="mb-4">
-                        {!isCollapsed && (
-                          <motion.div
-                            variants={variants}
-                            className="px-2 py-1 mb-2"
-                          >
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              {section.title}
-                            </p>
-                          </motion.div>
-                        )}
+                        <motion.div
+                          variants={variants}
+                          className="px-2 py-1 mb-2"
+                        >
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            {section.title}
+                          </p>
+                        </motion.div>
                         
                         {section.items.map((item) => (
                           <div key={item.path}>
@@ -312,7 +327,7 @@ export function SessionNavBar() {
                                 )}
                               >
                                 {item.icon}
-                                <motion.li variants={variants}>
+                                   <motion.li>
                                   {!isCollapsed && (
                                     <div className="flex items-center gap-2">
                                       <p className="ml-2 text-sm font-medium">{item.label}</p>
@@ -350,7 +365,7 @@ export function SessionNavBar() {
                                 )}
                               >
                                 {item.icon}
-                                <motion.li variants={variants}>
+                                 <motion.li>
                                   {!isCollapsed && (
                                     <p className="ml-2 text-sm font-medium">{item.label}</p>
                                   )}
@@ -360,8 +375,8 @@ export function SessionNavBar() {
                           </div>
                         ))}
                         
-                        {sectionIndex < navSections.length - 1 && (
-                          <motion.div variants={variants} className="my-3">
+                        {sectionIndex < sections.length - 1 && (
+                          <motion.div className="my-3">
                             {!isCollapsed && <Separator className="w-full" />}
                           </motion.div>
                         )}

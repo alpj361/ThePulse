@@ -134,6 +134,11 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
       icon: <AdminPanelSettings />,
       label: t.adminPanel,
       path: '/admin'
+    },
+    {
+      icon: <Database size={20} />,
+      label: 'Knowledge',
+      path: '/knowledge'
     }
   ];
 

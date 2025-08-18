@@ -70,6 +70,7 @@ import {
 import { EXTRACTORW_API_URL } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
 // import MonitoreoCard from "../components/ui/MonitoreoCard";
+import MiniModal, { MiniModalLink } from "@/components/ui/MiniModal";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
@@ -116,7 +117,8 @@ const MonitorAccordionCard: React.FC<{
   toggleSelectItem: (id: string) => void;
   expandedMonitorId?: string | null;
   setExpandedMonitorId?: (id: string | null) => void;
-}> = ({ item, selectedIds, toggleSelectItem, expandedMonitorId, setExpandedMonitorId }) => {
+  onOpenMini?: (monitorItem: CodexItem, childLinks: any[]) => void;
+}> = ({ item, selectedIds, toggleSelectItem, expandedMonitorId, setExpandedMonitorId, onOpenMini }) => {
   const expanded = expandedMonitorId === item.id;
   const [children, setChildren] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -151,9 +153,32 @@ const MonitorAccordionCard: React.FC<{
           <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
             {item.titulo}
           </CardTitle>
-          <Button variant="ghost" size="sm">
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async (e) => {
+                e.stopPropagation();
+                let rows = children;
+                if (rows.length === 0) {
+                  setLoading(true);
+                  try {
+                    const fetched = await getLinksForParentItem(item.id);
+                    rows = fetched || [];
+                    setChildren(rows);
+                  } catch (err) {
+                    rows = [];
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+                onOpenMini && onOpenMini(item, rows);
+              }}
+              title="Abrir enlaces en modal"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <div ref={contentRef} style={{ maxHeight: maxHeight, transition: 'max-height 300ms ease-in-out, opacity 200ms ease-in-out', opacity: expanded ? 1 : 0 }} className="overflow-hidden"> 
@@ -517,6 +542,27 @@ export default function EnhancedCodex() {
   const { user, session } = useAuth()
   const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(null)
   const [pickerReady, setPickerReady] = useState(false)
+
+  // Mini modal state for monitoring links
+  const [monitorModalOpen, setMonitorModalOpen] = useState(false)
+  const [monitorModalTitle, setMonitorModalTitle] = useState("")
+  const [monitorLinks, setMonitorLinks] = useState<MiniModalLink[]>([])
+
+  const openMonitorMiniModal = (monitorItem: CodexItem, childLinks: any[]) => {
+    const links: MiniModalLink[] = (childLinks || []).map((ln: any, idx: number) => ({
+      id: ln.child?.id || ln.id || String(idx),
+      label: ln.child?.titulo || ln.child?.source_url || 'Enlace',
+      url: ln.child?.source_url,
+      checked: false,
+    }))
+    setMonitorLinks(links)
+    setMonitorModalTitle(monitorItem.titulo || 'Monitoreo')
+    setMonitorModalOpen(true)
+  }
+
+  const toggleMonitorLink = (id: string) => {
+    setMonitorLinks((prev) => prev.map(l => l.id === id ? { ...l, checked: !l.checked } : l))
+  }
   
   // Import del hook useGoogleDrive para mejorar UX
   const { 
@@ -3328,17 +3374,86 @@ export default function EnhancedCodex() {
                       toggleSelectItem={toggleSelectItem}
                     />
                   } else {
-                    // Monitores (tipo item con original_type=monitor) render como acordeón con hijos
+                    // Monitores: mostrar igual que otros tipos (tamaño, layout) y un botón para abrir el mini modal de enlaces
                     if (item.tipo === 'item' && (item as any).original_type === 'monitor') {
+                      const IconComponent = getTypeIcon('enlace');
                       return (
-                        <MonitorAccordionCard
-                          key={`monitor_${item.id}`}
-                          item={item}
-                          selectedIds={selectedIds}
-                          toggleSelectItem={toggleSelectItem}
-                          expandedMonitorId={expandedMonitorId}
-                          setExpandedMonitorId={setExpandedMonitorId}
-                        />
+                        <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
+                          {selectionMode && (
+                            <Checkbox
+                              checked={selectedIds.includes(item.id)}
+                              onChange={() => toggleSelectItem(item.id)}
+                              className="absolute top-2 left-2 z-20 bg-white rounded"
+                            />
+                          )}
+                          <CardHeader className="p-4 border-b border-slate-200">
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
+                                {item.titulo}
+                              </CardTitle>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  let rows: any[] = []
+                                  try {
+                                    rows = await getLinksForParentItem(item.id) || []
+                                  } catch (e) {
+                                    rows = []
+                                  }
+                                  openMonitorMiniModal(item, rows)
+                                }}
+                                title="Abrir enlaces en modal"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
+                                <IconComponent className="h-5 w-5 text-slate-600" />
+                              </div>
+                              <CardDescription className="text-sm text-slate-500">
+                                {formatFileSize(item.tamano)}
+                              </CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-3 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
+                                Monitoreos
+                              </Badge>
+                            </div>
+                            {item.proyecto && (
+                              <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Folder className="h-4 w-4" />
+                                <span className="truncate">{item.proyecto}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                              <Calendar className="h-4 w-4" />
+                              <span>{formatDate(item.fecha)}</span>
+                            </div>
+                            {item.etiquetas && item.etiquetas.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {item.etiquetas.slice(0, 2).map((tag, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {item.etiquetas.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                    +{item.etiquetas.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                            {item.descripcion && (
+                              <p className="text-sm text-slate-600 line-clamp-2">
+                                {item.descripcion}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
                       )
                     } else {
                       // Card normal para otros tipos (audio, video, documento, enlace, nota)
@@ -3423,7 +3538,7 @@ export default function EnhancedCodex() {
                                     Compartir
                                   </DropdownMenuItem>
                                   {selectionMode && (
-                                    <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={() => toggleSelectItem(item.id)} className="mr-2" />
+                                    <Checkbox checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} className="mr-2" />
                                   )}
                                   <DropdownMenuItem 
                                     className="text-red-600"
@@ -3585,6 +3700,15 @@ export default function EnhancedCodex() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mini modal para enlaces de monitoreo */}
+      <MiniModal
+        open={monitorModalOpen}
+        title={monitorModalTitle}
+        links={monitorLinks}
+        onClose={() => setMonitorModalOpen(false)}
+        onToggle={toggleMonitorLink}
+      />
 
       {/* Modal de Edición */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

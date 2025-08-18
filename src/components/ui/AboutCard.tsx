@@ -139,7 +139,7 @@ const AboutCard: React.FC<AboutCardProps> = ({ keyword, aboutInfo, index }) => {
 
   const relevanceIndicator = getRelevanceIndicator(aboutInfo.relevancia);
   const categoryColor = getCategoryColor(aboutInfo.categoria);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const toggleExpanded = () => setExpanded(prev=>!prev);
 
   return (
@@ -156,7 +156,7 @@ const AboutCard: React.FC<AboutCardProps> = ({ keyword, aboutInfo, index }) => {
         border: '1px solid',
         borderColor: 'divider',
         borderRadius: 3,
-        overflow: 'hidden',
+        overflow: expanded ? 'visible' : 'hidden',
         position: 'relative'
       }}
     >
@@ -215,10 +215,15 @@ const AboutCard: React.FC<AboutCardProps> = ({ keyword, aboutInfo, index }) => {
                 color: 'text.primary',
                 fontSize: '0.85rem',
                 pl: 3,
-                display: expanded ? 'block' : '-webkit-box',
-                WebkitLineClamp: expanded ? 'initial' : 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
+                display: 'block',
+                overflow: expanded ? 'visible' : 'hidden',
+                ...(expanded
+                  ? {}
+                  : {
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
+                    })
               }}
             >
               {aboutInfo.razon_tendencia}
