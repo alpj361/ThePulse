@@ -134,8 +134,6 @@ const ViztaChatUI = () => {
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
-  const [isReasoning, setIsReasoning] = React.useState(false);
-  const [showReasoning, setShowReasoning] = React.useState(false);
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
@@ -159,7 +157,6 @@ const ViztaChatUI = () => {
     setIsLoading(true);
 
     try {
-      setIsReasoning(true);
       // Importar dinámicamente el servicio
       const { sendViztaChatQuery } = await import('../../services/viztaChat');
       
@@ -221,7 +218,6 @@ const ViztaChatUI = () => {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      setIsReasoning(false);
     }
   };
 
@@ -253,22 +249,6 @@ const ViztaChatUI = () => {
       <ViztaChatTrigger />
       <ViztaChatContent>
         <div className="flex flex-col space-y-4">
-          {isLoading && (
-            <div className="px-4">
-              <button
-                onClick={() => setShowReasoning((v) => !v)}
-                className="text-[11px] text-gray-500 hover:underline"
-              >
-                {showReasoning ? 'Ocultar' : 'Mostrando'} razonamiento…
-              </button>
-              {showReasoning && (
-                <div className="mt-2 rounded-md border bg-gray-50 text-gray-700 text-xs p-3">
-                  Vizta está razonando con memoria política (PulsePolitics) y evaluando qué herramientas invocar
-                  (memoria → web search → social) o datos del usuario (proyectos, hallazgos, coberturas, codex, tendencias).
-                </div>
-              )}
-            </div>
-          )}
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none">
               {/* Logo y bienvenida */}
@@ -426,21 +406,6 @@ const ViztaChatUI = () => {
                   >
                     Conectando con fuentes de datos
                   </TextShimmer>
-                </div>
-                {/* Razonamiento toggle embebido en el bloque de carga para que SIEMPRE sea visible */}
-                <div className="pt-1">
-                  <button
-                    onClick={() => setShowReasoning((v) => !v)}
-                    className="text-[11px] text-gray-500 hover:underline"
-                  >
-                    {showReasoning ? 'Ocultar' : 'Mostrando'} razonamiento…
-                  </button>
-                  {showReasoning && (
-                    <div className="mt-2 rounded-md border bg-gray-50 text-gray-700 text-xs p-3">
-                      Vizta está razonando con memoria política (PulsePolitics) y evaluando qué herramientas invocar
-                      (memoria → web search → social) o datos del usuario (proyectos, hallazgos, coberturas, codex, tendencias).
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

@@ -984,6 +984,33 @@ export async function createCodexBucket() {
   }
 }
 
+// Public Knowledge: documentos públicos (pk_documents)
+export interface PublicKnowledgeDocument {
+  id: string;
+  title: string;
+  source_url?: string | null;
+  file_sha256: string;
+  mimetype?: string | null;
+  language?: string | null;
+  pages?: number | null;
+  version?: number | null;
+  tags?: string[] | null;
+  status?: 'queued' | 'processed' | 'failed' | string | null;
+  notes?: string | null;
+  created_at?: string | null;
+}
+
+export async function getPublicKnowledgeDocuments(limit = 24): Promise<PublicKnowledgeDocument[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  const { data, error } = await supabase
+    .from('pk_documents')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as PublicKnowledgeDocument[];
+}
+
 /**
  * Obtener las últimas 10 noticias de la tabla news
  */

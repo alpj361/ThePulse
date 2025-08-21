@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -30,6 +30,9 @@ import {
 import { alpha } from '@mui/material/styles';
 import { RecentScrape } from '../../services/recentScrapes';
 import { MagicTweetCard } from './MagicTweetCard';
+import { EXTRACTORW_API_URL } from '../../services/api';
+import CommentIcon from '@mui/icons-material/Comment';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSpreadsheet } from '../../context/SpreadsheetContext';
 import { useAuth } from '../../context/AuthContext';
 import { saveCodexItem, saveCodexItemsBatch, saveLinkRelations, supabase } from '../../services/supabase.ts';
@@ -163,6 +166,78 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
   const toggleExpanded = () => {
     setExpanded(!expanded);
   };
+  // Comentarios por tweet (map por tweet_id)
+  const [tweetComments, setTweetComments] = useState<Record<string, any[]>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [errorComments, setErrorComments] = useState<Record<string, string>>({});
+  const [commentsExpanded, setCommentsExpanded] = useState<Record<string, boolean>>({});
+
+  const loadCommentsForTweet = async (tweet: any) => {
+    try {
+      setLoadingComments(prev => ({ ...prev, [tweet.tweet_id]: true }));
+      setErrorComments(prev => ({ ...prev, [tweet.tweet_id]: '' }));
+
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('No hay sesión activa');
+
+      // Usamos tweet_id numérico, el backend resolverá el scrape y el vínculo
+      const resp = await fetch(`${EXTRACTORW_API_URL}/tweet-comments/${tweet.tweet_id}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Error obteniendo comentarios');
+      setTweetComments(prev => ({ ...prev, [tweet.tweet_id]: data.comments || [] }));
+    } catch (e: any) {
+      setErrorComments(prev => ({ ...prev, [tweet.tweet_id]: e.message || 'Error' }));
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [tweet.tweet_id]: false }));
+    }
+  };
+
+  const extractCommentsForTweet = async (tweet: any) => {
+    try {
+      setLoadingComments(prev => ({ ...prev, [tweet.tweet_id]: true }));
+      setErrorComments(prev => ({ ...prev, [tweet.tweet_id]: '' }));
+
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('No hay sesión activa');
+
+      const url = extractUrlFromTweet(tweet) || `https://x.com/${(tweet.usuario || '').replace('@','')}/status/${tweet.tweet_id}`;
+      const resp = await fetch(`${EXTRACTORW_API_URL}/nitter-comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ urls: [url], reply_limit: 20 })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.error || 'Error extrayendo comentarios');
+
+      // Tras extraer, cargar y mostrar
+      await loadCommentsForTweet(tweet);
+    } catch (e: any) {
+      setErrorComments(prev => ({ ...prev, [tweet.tweet_id]: e.message || 'Error' }));
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [tweet.tweet_id]: false }));
+    }
+  };
+
+  // Autocargar comentarios guardados al expandir la sección de tweets
+  useEffect(() => {
+    if (expanded && Array.isArray((scrape as any).tweets)) {
+      (scrape as any).tweets.forEach((t: any) => {
+        const key = t?.tweet_id;
+        if (!key) return;
+        const already = Array.isArray(tweetComments[key]) && tweetComments[key].length > 0;
+        const loading = !!loadingComments[key];
+        if (!already && !loading) {
+          loadCommentsForTweet(t);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
 
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
@@ -566,7 +641,61 @@ const RecentScrapeCard: React.FC<RecentScrapeCardProps> = ({
             <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
               {scrape.tweets && scrape.tweets.length > 0 ? (
                 scrape.tweets.map((tweet: any) => (
-                  <MagicTweetCard key={tweet.tweet_id || tweet.id} tweet={tweet} layout="expanded" />
+                  <Box key={tweet.tweet_id || tweet.id}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+                      <Tooltip title="Extraer comentarios">
+                        <span>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<CommentIcon />}
+                            disabled={!!loadingComments[tweet.tweet_id]}
+                            onClick={() => extractCommentsForTweet(tweet)}
+                          >
+                            {loadingComments[tweet.tweet_id] ? 'Extrayendo...' : 'Comentarios'}
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Actualizar comentarios">
+                        <span>
+                          <IconButton size="small" disabled={!!loadingComments[tweet.tweet_id]} onClick={() => loadCommentsForTweet(tweet)}>
+                            <RefreshIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+
+                    <MagicTweetCard tweet={tweet} layout="expanded" />
+
+                    {/* Hilo de comentarios */}
+                    {errorComments[tweet.tweet_id] && (
+                      <Typography variant="caption" color="error">{errorComments[tweet.tweet_id]}</Typography>
+                    )}
+                    {Array.isArray(tweetComments[tweet.tweet_id]) && tweetComments[tweet.tweet_id].length > 0 && (
+                      <Box sx={{ mt: 1, pl: 2, borderLeft: `2px solid ${alpha(theme.palette.divider, 0.6)}` }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Comentarios ({tweetComments[tweet.tweet_id].length})
+                          </Typography>
+                          <IconButton size="small" onClick={() => setCommentsExpanded(prev => ({ ...prev, [tweet.tweet_id]: !prev[tweet.tweet_id] }))}>
+                            {commentsExpanded[tweet.tweet_id] ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                          </IconButton>
+                        </Box>
+                        <Collapse in={!!commentsExpanded[tweet.tweet_id]} timeout="auto" unmountOnExit>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {tweetComments[tweet.tweet_id].map((c: any, idx: number) => (
+                              <Box key={idx} sx={{ bgcolor: alpha(theme.palette.background.default, 0.6), p: 1, borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  @{c.comment_user} {c.comment_likes > 0 ? `· ${c.comment_likes} ❤` : ''}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">{c.comment_text}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Collapse>
+                      </Box>
+                    )}
+                  </Box>
                 ))
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 2 }}>
