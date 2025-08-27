@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
-import { getPublicKnowledgeDocuments, PublicKnowledgeDocument } from '../services/supabase.ts';
+import { getPublicKnowledgeDocuments, PublicKnowledgeDocument, uploadPublicKnowledgeDocument } from '../services/supabase.ts';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card as UICard } from '@/components/ui/card';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import Folder from 'lucide-react/dist/esm/icons/folder';
@@ -18,6 +20,18 @@ export default function Knowledge() {
   const { user } = useAuth();
   const [docs, setDocs] = useState<PublicKnowledgeDocument[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fileList, setFileList] = useState<FileList | null>(null);
+  const [title, setTitle] = useState('');
+  const [project, setProject] = useState('');
+  const [tags, setTags] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Explorer state
+  const [targetUrl, setTargetUrl] = useState('');
+  const [goal, setGoal] = useState('Explorar la página y describir navegación principal');
+  const [exploring, setExploring] = useState(false);
+  const [summary, setSummary] = useState<string>('');
 
   useEffect(() => {
     const run = async () => {
@@ -67,18 +81,35 @@ export default function Knowledge() {
                     <CardDescription>PDFs, documentos e información pública que Vizta podrá referenciar.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Input type="file" multiple className="cursor-pointer" />
-                    <Input placeholder="Título" />
-                    <Input placeholder="Proyecto (opcional)" />
-                    <Input placeholder="Etiquetas separadas por coma" />
-                    <Textarea placeholder="Descripción breve" />
+                    <Input type="file" multiple className="cursor-pointer" onChange={(e) => setFileList(e.target.files)} />
+                    <Input placeholder="Título" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <Input placeholder="Proyecto (opcional)" value={project} onChange={(e) => setProject(e.target.value)} />
+                    <Input placeholder="Etiquetas separadas por coma" value={tags} onChange={(e) => setTags(e.target.value)} />
+                    <Textarea placeholder="Descripción breve" value={description} onChange={(e) => setDescription(e.target.value)} />
                     <div className="flex gap-2">
-                      <Button className="bg-blue-600 text-white" disabled>
-                        Subir (próximamente)
+                      <Button className="bg-blue-600 text-white" disabled={uploading || !fileList || !fileList[0] || !title}
+                        onClick={async () => {
+                          if (!fileList || !fileList[0]) return;
+                          setUploading(true);
+                          try {
+                            const tagsArr = tags.split(',').map(t => t.trim()).filter(Boolean);
+                            const doc = await uploadPublicKnowledgeDocument({
+                              file: fileList[0],
+                              title,
+                              tags: tagsArr,
+                              notes: description,
+                              source_url: ''
+                            });
+                            if (doc) setDocs((prev) => [doc, ...prev]);
+                            setTitle(''); setProject(''); setTags(''); setDescription(''); setFileList(null);
+                          } catch (e) {
+                            console.error('Upload failed', e);
+                          } finally {
+                            setUploading(false);
+                          }
+                        }}>
+                        {uploading ? 'Subiendo…' : 'Subir'}
                       </Button>
-                      <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                        UI lista, funcionalidad pendiente
-                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -147,20 +178,46 @@ export default function Knowledge() {
               </div>
             </TabsContent>
 
-            {/* Monitoreos Universales: solo botón inhabilitado */}
+            {/* Monitoreos Universales: Explorer WebAgent */}
             <TabsContent value="monitoreos" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Programación de monitoreos</h3>
-                  <p className="text-slate-600">Define crons globales de extracción de tweets.</p>
-                </div>
-                <Button variant="outline" className="text-slate-500" disabled>
-                  Agregar (próximamente)
-                </Button>
-              </div>
-              <Card className="border-dashed">
-                <CardContent className="py-10 text-center text-slate-500">
-                  No hay monitoreos universales configurados todavía.
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg">Explorer</CardTitle>
+                  <CardDescription>Explora una URL con IA y muestra navegación y subcategorías.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <Input placeholder="https://ejemplo.com" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} />
+                    <Input placeholder='Objetivo (p. ej. Necesito buscar "iniciativas")' value={goal} onChange={(e) => setGoal(e.target.value)} />
+                    <Button className="bg-blue-600 text-white" disabled={exploring || !targetUrl}
+                      onClick={async () => {
+                        setExploring(true);
+                        setSummary('');
+                        try {
+                          const res = await fetch('http://127.0.0.1:8787/explore/summarize', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: targetUrl, goal, maxSteps: 4, screenshot: false })
+                          });
+                          const json = await res.json();
+                          if (json?.summary) setSummary(json.summary);
+                          else if (json?.error) setSummary(`### Error\n- **Tipo**: ${json.error}\n- **Mensaje**: ${json.message || 'Sin detalle'}`);
+                        } catch (e: any) {
+                          setSummary(`### Error de red\n- ${e?.message || String(e)}`);
+                        } finally {
+                          setExploring(false);
+                        }
+                      }}>
+                      {exploring ? 'Explorando…' : 'Explorar'}
+                    </Button>
+                  </div>
+                  <div className="prose prose-slate max-w-none border rounded-md p-4 bg-white">
+                    {summary ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
+                    ) : (
+                      <p className="text-slate-500">Sin resultados todavía.</p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

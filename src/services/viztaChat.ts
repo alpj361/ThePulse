@@ -82,8 +82,9 @@ async function getAuthToken(): Promise<string | null> {
  * Envía una consulta al chat de Vizta
  */
 export async function sendViztaChatQuery(
-  message: string, 
-  sessionId?: string
+  message: string,
+  sessionId?: string,
+  mode: 'chat' | 'agentic' = 'chat'
 ): Promise<ViztaChatResponse> {
   try {
     const token = await getAuthToken();
@@ -102,7 +103,8 @@ export async function sendViztaChatQuery(
       },
       body: JSON.stringify({
         message: message,
-        sessionId: sessionId
+        sessionId: sessionId,
+        mode
       })
     });
 

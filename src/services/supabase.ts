@@ -1012,6 +1012,56 @@ export async function getPublicKnowledgeDocuments(limit = 24): Promise<PublicKno
 }
 
 /**
+ * Subir documento público a storage y registrar en pk_documents
+ */
+export async function uploadPublicKnowledgeDocument(params: {
+  file: File;
+  title: string;
+  tags?: string[];
+  notes?: string;
+  source_url?: string;
+}): Promise<PublicKnowledgeDocument | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  // 1) Calcular hash (sha256) del archivo para evitar duplicados
+  const buffer = await params.file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const file_sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const ext = params.file.name.split('.').pop() || 'bin';
+  const path = `pk/${file_sha256}.${ext}`;
+
+  // 2) Subir a storage (bucket: digitalstorage)
+  const { error: upErr } = await supabase.storage
+    .from('digitalstorage')
+    .upload(path, new Blob([buffer], { type: params.file.type }), { upsert: true });
+  if (upErr && upErr.message && !/The resource already exists/i.test(upErr.message)) throw upErr;
+
+  // 3) Insertar/actualizar fila en pk_documents
+  const payload = {
+    title: params.title,
+    source_url: params.source_url || null,
+    file_sha256,
+    mimetype: params.file.type || null,
+    language: null,
+    pages: null,
+    version: 1,
+    tags: params.tags || [],
+    status: 'queued',
+    notes: params.notes || null
+  };
+
+  const { data, error } = await supabase
+    .from('pk_documents')
+    .upsert(payload, { onConflict: 'file_sha256' })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as PublicKnowledgeDocument;
+}
+
+/**
  * Obtener las últimas 10 noticias de la tabla news
  */
 export async function getLatestNews() {

@@ -134,6 +134,7 @@ const ViztaChatUI = () => {
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
+  const [mode, setMode] = React.useState<'chat' | 'agentic'>('chat');
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
@@ -161,7 +162,7 @@ const ViztaChatUI = () => {
       const { sendViztaChatQuery } = await import('../../services/viztaChat');
       
       // Enviar consulta al backend
-      const response = await sendViztaChatQuery(currentInput, sessionId);
+      const response = await sendViztaChatQuery(currentInput, sessionId, mode);
       console.log("🔍 Respuesta recibida del servidor:", JSON.stringify(response, null, 2));
 
       // Manejar diferentes estructuras de respuesta del backend
@@ -249,6 +250,30 @@ const ViztaChatUI = () => {
       <ViztaChatTrigger />
       <ViztaChatContent>
         <div className="flex flex-col space-y-4">
+          {/* Mode toggle */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-muted-foreground">Modo</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMode('chat')}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs border',
+                  mode === 'chat' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                )}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setMode('agentic')}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs border',
+                  mode === 'agentic' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'
+                )}
+              >
+                Agéntico
+              </button>
+            </div>
+          </div>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none">
               {/* Logo y bienvenida */}
