@@ -194,14 +194,26 @@ export default function Knowledge() {
                         setExploring(true);
                         setSummary('');
                         try {
-                          const res = await fetch('http://127.0.0.1:8787/explore/summarize', {
+                          // Configuración inteligente de URL según entorno
+                          const baseUrl = import.meta.env.DEV 
+                            ? 'http://127.0.0.1:8080'  // Desarrollo: ExtractorW local
+                            : window.location.origin;  // Producción: mismo dominio
+                          
+                          const res = await fetch(`${baseUrl}/api/webagent/explore`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ url: targetUrl, goal, maxSteps: 4, screenshot: false })
                           });
                           const json = await res.json();
-                          if (json?.summary) setSummary(json.summary);
-                          else if (json?.error) setSummary(`### Error\n- **Tipo**: ${json.error}\n- **Mensaje**: ${json.message || 'Sin detalle'}`);
+                          
+                          // Manejar respuesta del nuevo formato del endpoint
+                          if (json?.success && json?.data?.summary) {
+                            setSummary(json.data.summary);
+                          } else if (json?.error) {
+                            setSummary(`### Error\n- **Tipo**: ${json.error}\n- **Mensaje**: ${json.message || 'Sin detalle'}`);
+                          } else {
+                            setSummary(`### Error\n- **Respuesta inesperada del servidor**`);
+                          }
                         } catch (e: any) {
                           setSummary(`### Error de red\n- ${e?.message || String(e)}`);
                         } finally {
