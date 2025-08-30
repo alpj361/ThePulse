@@ -195,9 +195,11 @@ export default function Knowledge() {
                         setSummary('');
                         try {
                           // Configuración inteligente de URL según entorno
-                          const baseUrl = import.meta.env.DEV 
-                            ? 'http://127.0.0.1:8080'  // Desarrollo: ExtractorW local
-                            : window.location.origin;  // Producción: mismo dominio
+                          // En producción usa VITE_EXTRACTORW_API_URL si está definida (p. ej. https://server.standatpd.com)
+                          // En desarrollo permite override con VITE_EXTRACTORW_API_URL o usa 127.0.0.1:8080 por defecto
+                          const baseUrl = import.meta.env.DEV
+                            ? (import.meta.env.VITE_EXTRACTORW_API_URL || 'http://127.0.0.1:8080')
+                            : (import.meta.env.VITE_EXTRACTORW_API_URL || window.location.origin);
                           
                           const res = await fetch(`${baseUrl}/api/webagent/explore`, {
                             method: 'POST',
