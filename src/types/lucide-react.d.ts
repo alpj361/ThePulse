@@ -1,3 +1,6 @@
+declare module 'lucide-react/dist/esm/icons/calendar';
+declare module 'lucide-react/dist/esm/icons/folder';
+
 declare module 'lucide-react' {
   import * as React from 'react';
   type Icon = React.FC<React.SVGProps<SVGSVGElement>>;

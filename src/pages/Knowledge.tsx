@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAdmin } from '../hooks/useAdmin';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,11 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
 import { getPublicKnowledgeDocuments, PublicKnowledgeDocument, uploadPublicKnowledgeDocument } from '../services/supabase.ts';
+import { EXTRACTORW_API_URL } from '../services/api.ts';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card as UICard } from '@/components/ui/card';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
-import Folder from 'lucide-react/dist/esm/icons/folder';
+import { Calendar } from 'lucide-react';
 
 export default function Knowledge() {
   const { isAdmin, loading } = useAdmin();
@@ -194,14 +194,8 @@ export default function Knowledge() {
                         setExploring(true);
                         setSummary('');
                         try {
-                          // Configuración inteligente de URL según entorno
-                          // En producción usa VITE_EXTRACTORW_API_URL si está definida (p. ej. https://server.standatpd.com)
-                          // En desarrollo permite override con VITE_EXTRACTORW_API_URL o usa 127.0.0.1:8080 por defecto
-                          const baseUrl = import.meta.env.DEV
-                            ? (import.meta.env.VITE_EXTRACTORW_API_URL || 'http://127.0.0.1:8080')
-                            : (import.meta.env.VITE_EXTRACTORW_API_URL || window.location.origin);
-                          
-                          const res = await fetch(`${baseUrl}/api/webagent/explore`, {
+                          // Usar URL normalizada del backend (incluye /api)
+                          const res = await fetch(`${EXTRACTORW_API_URL}/webagent/explore`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ url: targetUrl, goal, maxSteps: 4, screenshot: false })
