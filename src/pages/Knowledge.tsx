@@ -8,7 +8,29 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
-import { getPublicKnowledgeDocuments, PublicKnowledgeDocument, uploadPublicKnowledgeDocument } from '../services/supabase.ts';
+import ExtractionViewer from '../components/ui/ExtractionViewer';
+import AgentEditor from '../components/ui/AgentEditor';
+import { 
+  getPublicKnowledgeDocuments, 
+  PublicKnowledgeDocument, 
+  uploadPublicKnowledgeDocument,
+  // Site Maps & Agents
+  SiteMap,
+  SiteAgent,
+  AgentExtraction,
+  saveSiteMap,
+  getUserSiteMaps,
+  getUserAgents,
+  createSiteAgent,
+  updateSiteAgent,
+  executeAgentExtraction,
+  getAgentExtractions,
+  deleteSiteMap,
+  deleteSiteAgent,
+  saveToAgentDynamicTable,
+  checkAgentDynamicTable,
+
+} from '../services/supabase.ts';
 import { EXTRACTORW_API_URL } from '../services/api.ts';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -32,6 +54,29 @@ export default function Knowledge() {
   const [goal, setGoal] = useState('Explorar la página y describir navegación principal');
   const [exploring, setExploring] = useState(false);
   const [summary, setSummary] = useState<string>('');
+  
+  // Site Maps & Agents state
+  const [siteMaps, setSiteMaps] = useState<SiteMap[]>([]);
+  const [agents, setAgents] = useState<SiteAgent[]>([]);
+  const [loadingMaps, setLoadingMaps] = useState(false);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [showSaveMapButton, setShowSaveMapButton] = useState(false);
+  const [exploredSiteName, setExploredSiteName] = useState('');
+  
+  // Agent creation modal state
+  const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [showEditAgent, setShowEditAgent] = useState(false);
+  const [selectedMapForAgent, setSelectedMapForAgent] = useState<SiteMap | null>(null);
+  const [selectedAgentForEdit, setSelectedAgentForEdit] = useState<SiteAgent | null>(null);
+  
+  // Estados para vista de extracciones
+  const [viewingExtractions, setViewingExtractions] = useState<string | null>(null);
+  const [currentExtractions, setCurrentExtractions] = useState<AgentExtraction[]>([]);
+  const [loadingExtractions, setLoadingExtractions] = useState(false);
+  
+  // Extraction state
+  const [executingAgents, setExecutingAgents] = useState<Set<string>>(new Set());
+  const [agentExtractions, setAgentExtractions] = useState<Record<string, AgentExtraction[]>>({});
 
   useEffect(() => {
     const run = async () => {
@@ -48,6 +93,248 @@ export default function Knowledge() {
     };
     run();
   }, [user?.id]);
+
+  // Load site maps and agents
+  useEffect(() => {
+    const loadMapsAndAgents = async () => {
+      if (!user?.id) return;
+      
+      setLoadingMaps(true);
+      setLoadingAgents(true);
+      
+      try {
+        const [mapsData, agentsData] = await Promise.all([
+          getUserSiteMaps(),
+          getUserAgents()
+        ]);
+        
+        setSiteMaps(mapsData);
+        setAgents(agentsData);
+      } catch (error) {
+        console.error('Error loading maps and agents:', error);
+      } finally {
+        setLoadingMaps(false);
+        setLoadingAgents(false);
+      }
+    };
+    
+    loadMapsAndAgents();
+  }, [user?.id]);
+
+  // Helper functions
+  const extractSiteName = (url: string): string => {
+    try {
+      const domain = new URL(url).hostname.replace('www.', '');
+      return domain.charAt(0).toUpperCase() + domain.slice(1);
+    } catch {
+      return 'Sitio Web';
+    }
+  };
+
+  const handleExploration = async () => {
+    setExploring(true);
+    setSummary('');
+    setShowSaveMapButton(false);
+    
+    try {
+      const res = await fetch(`${EXTRACTORW_API_URL}/webagent/explore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          url: targetUrl, 
+          goal, 
+          maxSteps: 6, 
+          screenshot: true 
+        })
+      });
+      
+      const json = await res.json();
+      
+      if (json?.success && json?.data?.summary) {
+        setSummary(json.data.summary);
+        setExploredSiteName(extractSiteName(targetUrl));
+        setShowSaveMapButton(true);
+      } else if (json?.error) {
+        setSummary(`### Error\n- **Tipo**: ${json.error}\n- **Mensaje**: ${json.message || 'Sin detalle'}`);
+      } else {
+        setSummary(`### Error\n- **Respuesta inesperada del servidor**`);
+      }
+    } catch (e: any) {
+      setSummary(`### Error de red\n- ${e?.message || String(e)}`);
+    } finally {
+      setExploring(false);
+    }
+  };
+
+  const handleSaveMap = async () => {
+    if (!summary || !targetUrl) return;
+    
+    try {
+      const mapData = {
+        site_name: exploredSiteName,
+        base_url: targetUrl,
+        exploration_goal: goal,
+        site_structure: { summary }, // Simple structure for now
+        navigation_summary: summary
+      };
+      
+      const savedMap = await saveSiteMap(mapData);
+      setSiteMaps(prev => [savedMap, ...prev]);
+      setShowSaveMapButton(false);
+      
+      // Clear exploration data
+      setTargetUrl('');
+      setGoal('Explorar la página y describir navegación principal');
+      setSummary('');
+    } catch (error) {
+      console.error('Error saving site map:', error);
+    }
+  };
+
+  const handleCreateAgent = async (agentData: any) => {
+    if (!selectedMapForAgent) return;
+    
+    try {
+      const newAgent = await createSiteAgent(agentData);
+      setAgents(prev => [newAgent, ...prev]);
+      
+      // Reset form
+      setShowCreateAgent(false);
+      setSelectedMapForAgent(null);
+    } catch (error) {
+      console.error('Error creating agent:', error);
+    }
+  };
+
+  const handleEditAgent = async (agentData: any) => {
+    if (!selectedAgentForEdit) return;
+    
+    try {
+      const updatedAgent = await updateSiteAgent(selectedAgentForEdit.id, {
+        agent_name: agentData.agent_name,
+        extraction_target: agentData.extraction_target,
+        extraction_config: agentData.extraction_config
+      });
+      
+      setAgents(prev => prev.map(agent => 
+        agent.id === selectedAgentForEdit.id ? updatedAgent : agent
+      ));
+      
+      // Reset form
+      setShowEditAgent(false);
+      setSelectedAgentForEdit(null);
+    } catch (error) {
+      console.error('Error updating agent:', error);
+    }
+  };
+
+  const handleExecuteAgent = async (agent: SiteAgent) => {
+    const agentId = agent.id;
+    setExecutingAgents(prev => new Set([...prev, agentId]));
+    
+    try {
+      const extraction = await executeAgentExtraction(agentId);
+      
+      // Guardar en tabla dinámica si el agente tiene una
+      if (extraction.success && extraction.extracted_data) {
+        try {
+          const tableCheck = await checkAgentDynamicTable(agentId);
+          if (tableCheck.hasTable) {
+            await saveToAgentDynamicTable(
+              agentId,
+              extraction.id,
+              extraction.extracted_data,
+              extraction.extracted_data, // raw_data
+              {
+                extraction_summary: extraction.extraction_summary,
+                success: extraction.success,
+                executed_at: extraction.executed_at
+              }
+            );
+            console.log(`✅ Datos guardados en tabla dinámica: ${tableCheck.tableName}`);
+          }
+        } catch (dynamicError) {
+          console.warn('Error guardando en tabla dinámica:', dynamicError);
+          // No fallar la ejecución por esto
+        }
+      }
+      
+      // Update agent list with new last_execution
+      setAgents(prev => prev.map(a => 
+        a.id === agentId 
+          ? { ...a, last_execution: new Date().toISOString() }
+          : a
+      ));
+      
+      // Store extraction result
+      setAgentExtractions(prev => ({
+        ...prev,
+        [agentId]: [extraction, ...(prev[agentId] || [])]
+      }));
+      
+    } catch (error) {
+      console.error('Error executing agent:', error);
+    } finally {
+      setExecutingAgents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(agentId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeleteMap = async (mapId: string) => {
+    try {
+      await deleteSiteMap(mapId);
+      setSiteMaps(prev => prev.filter(m => m.id !== mapId));
+      
+      // Also remove any agents using this map
+      setAgents(prev => prev.filter(a => a.site_map_id !== mapId));
+    } catch (error) {
+      console.error('Error deleting site map:', error);
+    }
+  };
+
+  const handleDeleteAgent = async (agentId: string) => {
+    try {
+      await deleteSiteAgent(agentId);
+      setAgents(prev => prev.filter(a => a.id !== agentId));
+      
+      // Remove extractions from local state
+      setAgentExtractions(prev => {
+        const newExtractions = { ...prev };
+        delete newExtractions[agentId];
+        return newExtractions;
+      });
+    } catch (error) {
+      console.error('Error deleting agent:', error);
+    }
+  };
+
+  const handleViewExtractions = async (agentId: string) => {
+    setLoadingExtractions(true);
+    setViewingExtractions(agentId);
+    
+    try {
+      const extractions = await getAgentExtractions(agentId);
+      setCurrentExtractions(extractions);
+    } catch (error) {
+      console.error('Error loading extractions:', error);
+      setCurrentExtractions([]);
+    } finally {
+      setLoadingExtractions(false);
+    }
+  };
+
+  const handleReExplore = async (siteMap: SiteMap) => {
+    setTargetUrl(siteMap.base_url);
+    setGoal(siteMap.exploration_goal || 'Re-explorar la página y actualizar navegación');
+    
+    // Trigger exploration
+    setTimeout(() => {
+      handleExploration();
+    }, 100);
+  };
 
   if (!loading && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -178,47 +465,37 @@ export default function Knowledge() {
               </div>
             </TabsContent>
 
-            {/* Monitoreos Universales: Explorer WebAgent */}
-            <TabsContent value="monitoreos" className="space-y-4">
+            {/* Monitoreos Universales: Explorer + Mapas + Agentes */}
+            <TabsContent value="monitoreos" className="space-y-6">
+              {/* 1. EXPLORER - Exploración Inicial */}
               <Card className="border-slate-200">
                 <CardHeader>
-                  <CardTitle className="text-lg">Explorer</CardTitle>
-                  <CardDescription>Explora una URL con IA y muestra navegación y subcategorías.</CardDescription>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    🗺️ Explorer - Exploración Inicial
+                  </CardTitle>
+                  <CardDescription>Explora una URL con IA, mapea su estructura y guarda el mapa para futuros agentes.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                    <Input placeholder="https://ejemplo.com" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} />
-                    <Input placeholder='Objetivo (p. ej. Necesito buscar "iniciativas")' value={goal} onChange={(e) => setGoal(e.target.value)} />
-                    <Button className="bg-blue-600 text-white" disabled={exploring || !targetUrl}
-                      onClick={async () => {
-                        setExploring(true);
-                        setSummary('');
-                        try {
-                          // Usar URL normalizada del backend (incluye /api)
-                          const res = await fetch(`${EXTRACTORW_API_URL}/webagent/explore`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: targetUrl, goal, maxSteps: 4, screenshot: false })
-                          });
-                          const json = await res.json();
-                          
-                          // Manejar respuesta del nuevo formato del endpoint
-                          if (json?.success && json?.data?.summary) {
-                            setSummary(json.data.summary);
-                          } else if (json?.error) {
-                            setSummary(`### Error\n- **Tipo**: ${json.error}\n- **Mensaje**: ${json.message || 'Sin detalle'}`);
-                          } else {
-                            setSummary(`### Error\n- **Respuesta inesperada del servidor**`);
-                          }
-                        } catch (e: any) {
-                          setSummary(`### Error de red\n- ${e?.message || String(e)}`);
-                        } finally {
-                          setExploring(false);
-                        }
-                      }}>
+                    <Input 
+                      placeholder="https://ejemplo.com" 
+                      value={targetUrl} 
+                      onChange={(e) => setTargetUrl(e.target.value)} 
+                    />
+                    <Input 
+                      placeholder='Objetivo (p. ej. Necesito buscar "iniciativas")' 
+                      value={goal} 
+                      onChange={(e) => setGoal(e.target.value)} 
+                    />
+                    <Button 
+                      className="bg-blue-600 text-white" 
+                      disabled={exploring || !targetUrl}
+                      onClick={handleExploration}
+                    >
                       {exploring ? 'Explorando…' : 'Explorar'}
                     </Button>
                   </div>
+                  
                   <div className="prose prose-slate max-w-none border rounded-md p-4 bg-white">
                     {summary ? (
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
@@ -226,12 +503,279 @@ export default function Knowledge() {
                       <p className="text-slate-500">Sin resultados todavía.</p>
                     )}
                   </div>
+
+                  {/* Botón para guardar mapa (solo aparece después de exploración exitosa) */}
+                  {showSaveMapButton && (
+                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-md">
+                      <div>
+                        <h4 className="font-medium text-green-900">¡Exploración exitosa!</h4>
+                        <p className="text-sm text-green-700">¿Quieres guardar este mapa del sitio para crear agentes después?</p>
+                      </div>
+                      <Button 
+                        onClick={handleSaveMap}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                      >
+                        Guardar Mapa del Sitio
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+              {/* 2. MAPAS DE SITIOS GUARDADOS */}
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    📁 Mapas de Sitios Guardados
+                  </CardTitle>
+                  <CardDescription>Sitios web ya explorados y mapeados, listos para crear agentes de extracción.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingMaps ? (
+                    <p className="text-slate-500">Cargando mapas...</p>
+                  ) : siteMaps.length === 0 ? (
+                    <p className="text-slate-500">No hay mapas guardados aún. Explora un sitio web primero.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {siteMaps.map((siteMap) => (
+                        <UICard key={siteMap.id} className="p-4 border-slate-200">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <h4 className="font-medium truncate" title={siteMap.site_name}>
+                              {siteMap.site_name}
+                            </h4>
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-600">
+                              {siteMap.status}
+                            </Badge>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-slate-600">
+                            <p className="truncate" title={siteMap.base_url}>
+                              🌐 {siteMap.base_url}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(siteMap.exploration_date).toLocaleDateString()}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2 mt-3">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedMapForAgent(siteMap);
+                                setShowCreateAgent(true);
+                              }}
+                            >
+                              🤖 Crear Agente
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleReExplore(siteMap)}
+                            >
+                              👁️ Re-explorar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDeleteMap(siteMap.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              🗑️
+                            </Button>
+                          </div>
+                        </UICard>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 3. AGENTES DE EXTRACCIÓN */}
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    🤖 Agentes de Extracción
+                  </CardTitle>
+                  <CardDescription>Agentes configurados para extraer información específica de los sitios mapeados.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingAgents ? (
+                    <p className="text-slate-500">Cargando agentes...</p>
+                  ) : agents.length === 0 ? (
+                    <p className="text-slate-500">No hay agentes creados aún. Crea uno desde un mapa de sitio guardado.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {agents.map((agent) => (
+                        <UICard key={agent.id} className="p-4 border-slate-200">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <h4 className="font-medium truncate" title={agent.agent_name}>
+                              {agent.agent_name}
+                            </h4>
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${
+                                agent.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {agent.status}
+                            </Badge>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-slate-600 mb-3">
+                            <p className="font-medium">
+                              🌐 {agent.site_map?.site_name || 'Sitio desconocido'}
+                            </p>
+                            <p className="italic">
+                              📋 "{agent.extraction_target.substring(0, 60)}..."
+                            </p>
+                            {agent.last_execution && (
+                              <p className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Última ejecución: {new Date(agent.last_execution).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 flex-wrap">
+                            <Button 
+                              size="sm"
+                              onClick={() => handleExecuteAgent(agent)}
+                              disabled={executingAgents.has(agent.id)}
+                              className="bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              {executingAgents.has(agent.id) ? (
+                                'Ejecutando...'
+                              ) : (
+                                <>
+                                  ▶️ Ejecutar
+                                </>
+                              )}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleViewExtractions(agent.id)}
+                              disabled={loadingExtractions && viewingExtractions === agent.id}
+                            >
+                              {loadingExtractions && viewingExtractions === agent.id ? (
+                                'Cargando...'
+                              ) : (
+                                '👁️ Ver Extracciones'
+                              )}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedAgentForEdit(agent);
+                                setShowEditAgent(true);
+                              }}
+                            >
+                              ✏️ Editar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              🗑️
+                            </Button>
+                          </div>
+
+                          {/* Mostrar extracciones si están cargadas */}
+                          {agentExtractions[agent.id] && agentExtractions[agent.id].length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-200">
+                              <h5 className="text-sm font-medium mb-2">Últimas extracciones:</h5>
+                              <div className="space-y-2 max-h-32 overflow-y-auto">
+                                {agentExtractions[agent.id].slice(0, 3).map((extraction) => (
+                                  <div 
+                                    key={extraction.id} 
+                                    className={`text-xs p-2 rounded ${
+                                      extraction.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                    }`}
+                                  >
+                                    <p className="font-medium">
+                                      {new Date(extraction.executed_at).toLocaleString()}
+                                    </p>
+                                    <p className="truncate">
+                                      {extraction.success ? extraction.extraction_summary : extraction.error_message}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </UICard>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Modal para crear agente */}
+              {showCreateAgent && selectedMapForAgent && (
+                <AgentEditor
+                  siteMap={selectedMapForAgent}
+                  onSave={handleCreateAgent}
+                  onCancel={() => {
+                    setShowCreateAgent(false);
+                    setSelectedMapForAgent(null);
+                  }}
+                  isCreating={true}
+                />
+              )}
+
+              {/* Modal para editar agente */}
+              {showEditAgent && selectedAgentForEdit && (
+                <AgentEditor
+                  agent={selectedAgentForEdit}
+                  siteMap={selectedAgentForEdit.site_map!}
+                  onSave={handleEditAgent}
+                  onCancel={() => {
+                    setShowEditAgent(false);
+                    setSelectedAgentForEdit(null);
+                  }}
+                  isCreating={false}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Modal para Ver Extracciones */}
+      {viewingExtractions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold">
+                  Extracciones del Agente
+                </h3>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setViewingExtractions(null);
+                    setCurrentExtractions([]);
+                  }}
+                >
+                  ✕ Cerrar
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <ExtractionViewer 
+                extractions={currentExtractions}
+                isLoading={loadingExtractions}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

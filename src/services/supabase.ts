@@ -13,6 +13,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { EXTRACTORW_API_URL } from './api';
 import { wordCloudData as mockWordCloudData, topKeywords as mockTopKeywords, categoryData as mockCategoryData } from '../data/mockData';
 
 // Use environment variables for Supabase configuration
@@ -1769,4 +1770,868 @@ export async function getLinksForParentItem(parentItemId: string) {
     .eq('parent_item_id', parentItemId);
   if (error) throw error;
   return data || [];
+}
+
+// ===================================================================
+// SISTEMA DE MAPAS DE SITIOS Y AGENTES DE EXTRACCIÓN
+// ===================================================================
+
+/**
+ * Tipos para el sistema de mapas y agentes
+ */
+export interface SiteMap {
+  id: string;
+  user_id: string;
+  site_name: string;
+  base_url: string;
+  exploration_goal?: string;
+  site_structure: any; // JSONB con la estructura del sitio
+  navigation_summary: string; // Resumen en markdown
+  exploration_date: string;
+  last_updated: string;
+  status: 'active' | 'outdated' | 'archived';
+}
+
+export interface SiteAgent {
+  id: string;
+  user_id: string;
+  site_map_id: string;
+  agent_name: string;
+  extraction_target: string; // "extrae esto"
+  extraction_config: any; // JSONB con configuración específica
+  status: 'active' | 'paused' | 'archived';
+  created_at: string;
+  last_execution?: string;
+  site_map?: SiteMap; // Relación para queries expandidas
+}
+
+export interface AgentExtraction {
+  id: string;
+  agent_id: string;
+  extracted_data: any; // JSONB con datos extraídos
+  extraction_summary: string;
+  success: boolean;
+  error_message?: string;
+  executed_at: string;
+  execution_duration_ms?: number;
+  data_size_bytes?: number;
+}
+
+// ===================================================================
+// CRUD DE MAPAS DE SITIOS
+// ===================================================================
+
+/**
+ * Guardar un nuevo mapa de sitio después de exploración exitosa
+ */
+export async function saveSiteMap(mapData: {
+  site_name: string;
+  base_url: string;
+  exploration_goal?: string;
+  site_structure: any;
+  navigation_summary: string;
+}): Promise<SiteMap> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const mapToCreate = {
+      user_id: user.id,
+      site_name: mapData.site_name,
+      base_url: mapData.base_url,
+      exploration_goal: mapData.exploration_goal || null,
+      site_structure: mapData.site_structure,
+      navigation_summary: mapData.navigation_summary,
+      status: 'active'
+    };
+
+    const { data, error } = await supabase
+      .from('site_maps')
+      .insert(mapToCreate)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error saving site map:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener mapas de sitios del usuario autenticado
+ */
+export async function getUserSiteMaps(): Promise<SiteMap[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('site_maps')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('exploration_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user site maps:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener un mapa de sitio específico por ID
+ */
+export async function getSiteMapById(mapId: string): Promise<SiteMap | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('site_maps')
+      .select('*')
+      .eq('id', mapId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows found
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching site map:', error);
+    return null;
+  }
+}
+
+/**
+ * Actualizar un mapa de sitio (por ejemplo, después de re-explorar)
+ */
+export async function updateSiteMap(mapId: string, updates: {
+  site_structure?: any;
+  navigation_summary?: string;
+  exploration_goal?: string;
+  status?: SiteMap['status'];
+}): Promise<SiteMap> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const updateData = {
+      ...updates,
+      last_updated: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('site_maps')
+      .update(updateData)
+      .eq('id', mapId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating site map:', error);
+    throw error;
+  }
+}
+
+/**
+ * Eliminar un mapa de sitio
+ */
+export async function deleteSiteMap(mapId: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('site_maps')
+      .delete()
+      .eq('id', mapId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting site map:', error);
+    throw error;
+  }
+}
+
+// ===================================================================
+// CRUD DE AGENTES DE EXTRACCIÓN
+// ===================================================================
+
+/**
+ * Crear un nuevo agente de extracción desde un mapa de sitio
+ */
+export async function createSiteAgent(agentData: {
+  site_map_id: string;
+  agent_name: string;
+  extraction_target: string;
+  extraction_config?: any;
+  dynamic_table_name?: string;
+  data_description?: string;
+}): Promise<SiteAgent> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Limpiar nombre de tabla dinámica si se proporciona
+    let cleanTableName = null;
+    if (agentData.dynamic_table_name && agentData.dynamic_table_name.trim()) {
+      cleanTableName = agentData.dynamic_table_name
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/^[^a-z]/, 'table_')
+        .substring(0, 63);
+    }
+
+    const agentToCreate = {
+      user_id: user.id,
+      site_map_id: agentData.site_map_id,
+      agent_name: agentData.agent_name,
+      extraction_target: agentData.extraction_target,
+      extraction_config: agentData.extraction_config || {},
+      dynamic_table_name: cleanTableName,
+      data_description: agentData.data_description || null,
+      status: 'active'
+    };
+
+    const { data, error } = await supabase
+      .from('site_agents')
+      .insert(agentToCreate)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating site agent:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener agentes del usuario con información del mapa asociado
+ */
+export async function getUserAgents(): Promise<SiteAgent[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('site_agents')
+      .select(`
+        *,
+        site_map:site_maps (
+          id,
+          site_name,
+          base_url,
+          site_structure,
+          navigation_summary
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user agents:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener un agente específico por ID
+ */
+export async function getAgentById(agentId: string): Promise<SiteAgent | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('site_agents')
+      .select(`
+        *,
+        site_map:site_maps (
+          id,
+          site_name,
+          base_url,
+          site_structure,
+          navigation_summary
+        )
+      `)
+      .eq('id', agentId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows found
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching agent:', error);
+    return null;
+  }
+}
+
+/**
+ * Actualizar un agente de extracción
+ */
+export async function updateSiteAgent(agentId: string, updates: Partial<SiteAgent>): Promise<SiteAgent> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('site_agents')
+      .update(updates)
+      .eq('id', agentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating site agent:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generar código de extracción usando IA (GPT-5)
+ */
+export async function generateAgentCode(params: {
+  instructions: string;
+  siteMap: {
+    site_name: string;
+    base_url: string;
+    structure: any;
+    navigation_summary: string;
+  };
+  existingAgent?: {
+    name: string;
+    target: string;
+    config: any;
+  } | null;
+}): Promise<{
+  success: boolean;
+  data?: {
+    extractionLogic: string;
+    selectors: string[];
+    workflow: string[];
+    confidence: number;
+    reasoning: string;
+    suggestedName?: string;
+    suggestedTarget?: string;
+    suggestedDescription?: string;
+  };
+  error?: string;
+}> {
+  try {
+    const response = await fetch(`${EXTRACTORW_API_URL}/agents/generate-agent-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error generating agent code:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al generar código'
+    };
+  }
+}
+
+/**
+ * Eliminar un agente de extracción
+ */
+export async function deleteSiteAgent(agentId: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('site_agents')
+      .delete()
+      .eq('id', agentId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting site agent:', error);
+    throw error;
+  }
+}
+
+// ===================================================================
+// EJECUCIÓN Y GESTIÓN DE EXTRACCIONES
+// ===================================================================
+
+/**
+ * Ejecutar extracción de un agente específico
+ */
+export async function executeAgentExtraction(agentId: string): Promise<AgentExtraction> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  const startTime = Date.now();
+  let usageData = {
+    operation_type: 'agent_extraction',
+    operation_details: { agent_id: agentId } as any,
+    start_time: new Date().toISOString(),
+    tokens_input: 0,
+    tokens_output: 0,
+    cost_usd: 0,
+    ai_model_used: null as string | null,
+    success: false,
+    error_message: null as string | null
+  };
+
+  try {
+    // Obtener agente con información del mapa
+    const agent = await getAgentById(agentId);
+    if (!agent || !agent.site_map) {
+      throw new Error('Agent or site map not found');
+    }
+
+    usageData.operation_details = {
+      agent_id: agentId,
+      agent_name: agent.agent_name,
+      site_url: agent.site_map.base_url,
+      extraction_target: agent.extraction_target
+    };
+
+    // Decidir estrategia de ejecución según configuración generada
+    let response: Response;
+    const hasGeneratedPlan = Boolean(
+      agent.extraction_config && (agent as any).extraction_config.generated &&
+      Array.isArray((agent as any).extraction_config.selectors)
+    );
+
+    if (hasGeneratedPlan) {
+      // Ejecutar usando motor de agentes basado en selectores
+      response = await fetch(`${EXTRACTORW_API_URL}/agents/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: agent.site_map.base_url,
+          config: agent.extraction_config,
+          site_structure: agent.site_map.site_structure,
+          maxItems: 30
+        })
+      });
+    } else {
+      // Fallback: usar WebAgent heurístico
+      response = await fetch(`${EXTRACTORW_API_URL}/webagent/extract`.replace('/api/webagent', '/api/webagent'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: agent.site_map.base_url,
+          extraction_target: agent.extraction_target,
+          site_structure: agent.site_map.site_structure,
+          extraction_config: agent.extraction_config,
+          maxSteps: 8
+        })
+      });
+    }
+
+    // Manejo robusto de errores (evitar parsear HTML de error)
+    const rawText = await response.text();
+    let extractionResult: any = {};
+    try {
+      extractionResult = rawText ? JSON.parse(rawText) : {};
+    } catch (e) {
+      const errorMsg = `ExtractorW respondió ${response.status}: ${rawText.slice(0, 200)}`;
+      usageData.error_message = errorMsg;
+      throw new Error(errorMsg);
+    }
+
+    // Extraer métricas de uso de AI si están disponibles
+    if (extractionResult.usage) {
+      usageData.tokens_input = extractionResult.usage.tokens_input || 0;
+      usageData.tokens_output = extractionResult.usage.tokens_output || 0;
+      usageData.cost_usd = extractionResult.usage.cost_usd || 0;
+      usageData.ai_model_used = extractionResult.usage.model || null;
+    }
+
+    usageData.success = extractionResult.success || response.ok;
+
+    // Guardar resultado de la extracción
+    const extractionData = {
+      agent_id: agentId,
+      extracted_data: extractionResult.data || {},
+      extraction_summary: extractionResult.summary || 'Extracción completada',
+      success: extractionResult.success || response.ok,
+      error_message: extractionResult.error || (!response.ok ? 'Error en la extracción' : null),
+      execution_duration_ms: Date.now() - startTime,
+      data_size_bytes: JSON.stringify(extractionResult.data || {}).length
+    };
+
+    const { data, error } = await supabase
+      .from('agent_extractions')
+      .insert(extractionData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Actualizar fecha de última ejecución del agente
+    await updateSiteAgent(agentId, { 
+      last_execution: new Date().toISOString() 
+    });
+
+    // Registrar usage log exitoso
+    usageData.success = true;
+    await logUsage({
+      ...usageData,
+      end_time: new Date().toISOString(),
+      duration_ms: Date.now() - startTime
+    });
+
+    return data;
+  } catch (error) {
+    console.error('Error executing agent extraction:', error);
+    
+    // Registrar usage log con error
+    usageData.success = false;
+    usageData.error_message = error instanceof Error ? error.message : 'Error desconocido';
+    await logUsage({
+      ...usageData,
+      end_time: new Date().toISOString(),
+      duration_ms: Date.now() - startTime
+    }).catch(logError => {
+      console.error('Error logging usage:', logError);
+    });
+    
+    // Guardar error en la base de datos también
+    const errorData = {
+      agent_id: agentId,
+      extracted_data: {},
+      extraction_summary: 'Error durante la extracción',
+      success: false,
+      error_message: error instanceof Error ? error.message : 'Error desconocido',
+      execution_duration_ms: Date.now() - startTime,
+      data_size_bytes: 0
+    };
+
+    const { data } = await supabase
+      .from('agent_extractions')
+      .insert(errorData)
+      .select()
+      .single();
+
+    return data || {
+      ...errorData,
+      id: '',
+      executed_at: new Date().toISOString()
+    } as AgentExtraction;
+  }
+}
+
+/**
+ * Obtener historial de extracciones de un agente
+ */
+export async function getAgentExtractions(agentId: string): Promise<AgentExtraction[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('agent_extractions')
+      .select('*')
+      .eq('agent_id', agentId)
+      .order('executed_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching agent extractions:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener todas las extracciones recientes del usuario
+ */
+export async function getUserRecentExtractions(limit: number = 20): Promise<AgentExtraction[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('agent_extractions')
+      .select(`
+        *,
+        agent:site_agents (
+          agent_name,
+          site_map:site_maps (
+            site_name
+          )
+        )
+      `)
+      .eq('agent.user_id', user.id)
+      .order('executed_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user recent extractions:', error);
+    return [];
+  }
+}
+
+// ===================================================================
+// GESTIÓN DE TABLAS DINÁMICAS POR AGENTE
+// ===================================================================
+
+/**
+ * Obtener datos de la tabla dinámica de un agente específico
+ */
+export async function getAgentDynamicData(
+  agentId: string, 
+  limit: number = 50, 
+  offset: number = 0
+): Promise<{ data: any[], total: number }> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { data: [], total: 0 };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('advancebasedata.get_agent_data', {
+      p_agent_id: agentId,
+      p_limit: limit,
+      p_offset: offset
+    });
+
+    if (error) throw error;
+    
+    return {
+      data: data?.data || [],
+      total: data?.total || 0
+    };
+  } catch (error) {
+    console.error('Error fetching agent dynamic data:', error);
+    return { data: [], total: 0 };
+  }
+}
+
+/**
+ * Guardar datos de extracción en la tabla dinámica del agente
+ */
+export async function saveToAgentDynamicTable(
+  agentId: string,
+  extractionId: string,
+  extractedData: any,
+  rawData: any = {},
+  metadata: any = {}
+): Promise<string | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('advancebasedata.insert_agent_data', {
+      p_agent_id: agentId,
+      p_extraction_id: extractionId,
+      p_data: extractedData,
+      p_raw_data: rawData,
+      p_metadata: metadata
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error saving to agent dynamic table:', error);
+    return null;
+  }
+}
+
+/**
+ * Verificar si un agente tiene tabla dinámica creada
+ */
+export async function checkAgentDynamicTable(agentId: string): Promise<{
+  hasTable: boolean;
+  tableName?: string;
+  totalRecords?: number;
+  lastInsertion?: string;
+}> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { hasTable: false };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('advancebasedata.dynamic_tables_registry')
+      .select('table_name, total_records, last_insertion')
+      .eq('agent_id', agentId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { hasTable: false };
+      }
+      throw error;
+    }
+
+    return {
+      hasTable: true,
+      tableName: data.table_name,
+      totalRecords: data.total_records,
+      lastInsertion: data.last_insertion
+    };
+  } catch (error) {
+    console.error('Error checking agent dynamic table:', error);
+    return { hasTable: false };
+  }
+}
+
+/**
+ * Obtener lista de tablas dinámicas del usuario
+ */
+export async function getUserDynamicTables(): Promise<Array<{
+  id: string;
+  agentId: string;
+  tableName: string;
+  description: string;
+  totalRecords: number;
+  lastInsertion: string;
+  agentName?: string;
+}>> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('advancebasedata.dynamic_tables_registry')
+      .select(`
+        id,
+        agent_id,
+        table_name,
+        description,
+        total_records,
+        last_insertion,
+        agent:site_agents (
+          agent_name
+        )
+      `)
+      .eq('agent.user_id', user.id);
+
+    if (error) throw error;
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      agentId: item.agent_id,
+      tableName: item.table_name,
+      description: item.description || '',
+      totalRecords: item.total_records || 0,
+      lastInsertion: item.last_insertion,
+      agentName: item.agent?.agent_name || 'Agente desconocido'
+    }));
+  } catch (error) {
+    console.error('Error fetching user dynamic tables:', error);
+    return [];
+  }
+}
+
+// ===================================================================
+// USAGE LOGGING SYSTEM
+// ===================================================================
+
+interface UsageLogData {
+  operation_type: string;
+  operation_details: any;
+  start_time: string;
+  end_time: string;
+  duration_ms: number;
+  tokens_input?: number;
+  tokens_output?: number;
+  cost_usd?: number;
+  ai_model_used?: string | null;
+  success: boolean;
+  error_message?: string | null;
+}
+
+/**
+ * Registrar uso del sistema para métricas y costos
+ */
+export async function logUsage(usageData: UsageLogData): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase not configured, skipping usage log');
+    return;
+  }
+
+  try {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('usage_logs')
+      .insert({
+        user_id: currentUser?.id,
+        user_email: currentUser?.email || 'unknown@example.com',
+        operation: usageData.operation_type,
+        credits_consumed: 0, // No usamos créditos para agentes
+        tokens_consumed: (usageData.tokens_input || 0) + (usageData.tokens_output || 0),
+        dollars_consumed: usageData.cost_usd || 0,
+        response_time: usageData.duration_ms,
+        processing_details: {
+          operation_type: usageData.operation_type,
+          operation_details: usageData.operation_details,
+          start_time: usageData.start_time,
+          end_time: usageData.end_time,
+          tokens_input: usageData.tokens_input || 0,
+          tokens_output: usageData.tokens_output || 0,
+          ai_model_used: usageData.ai_model_used,
+          success: usageData.success,
+          error_message: usageData.error_message
+        },
+        response_metrics: {
+          success: usageData.success,
+          duration_ms: usageData.duration_ms,
+          tokens_total: (usageData.tokens_input || 0) + (usageData.tokens_output || 0),
+          cost_breakdown: {
+            tokens_input: usageData.tokens_input || 0,
+            tokens_output: usageData.tokens_output || 0,
+            cost_usd: usageData.cost_usd || 0
+          }
+        }
+      });
+
+    if (error) {
+      console.error('Error saving usage log:', error);
+    }
+  } catch (error) {
+    console.error('Error in logUsage:', error);
+  }
 }
