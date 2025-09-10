@@ -66,8 +66,8 @@ import {
   getUserGroups,
   getLinksForParentItem,
 } from "../services/supabase.ts"
-// URL dinámico del backend ExtractorW
-import { EXTRACTORW_API_URL } from "../services/api";
+// URL dinámico del backend ExtractorW y ExtractorT
+import { EXTRACTORW_API_URL, EXTRACTORT_API_URL } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
 // import MonitoreoCard from "../components/ui/MonitoreoCard";
 import MiniModal, { MiniModalLink } from "@/components/ui/MiniModal";
@@ -108,6 +108,13 @@ interface CodexItem {
   parent_item_id?: string | null
   source_url?: string
   transcripcion?: string
+  // NUEVO: Campos para engagement de redes sociales
+  likes?: number
+  comments?: number
+  shares?: number
+  views?: number
+  content?: string
+  analyzed?: boolean
 }
 
 // Componente interno para monitores con hijos anidados
@@ -1237,6 +1244,14 @@ export default function EnhancedCodex() {
       return item.tipo === 'audio' || item.tipo === 'video'
     }
     
+    // NUEVO: Verificar si es un enlace de Instagram con contenido de video
+    if ((item.tipo === 'enlace' || item.tipo === 'instagram') && item.url && (
+      item.original_type === 'instagram' || 
+      item.url.includes('instagram.com')
+    )) {
+      return true // Permitir transcripción para Instagram items
+    }
+    
     // Fallback: verificar por tipo
     return item.tipo === 'audio' || item.tipo === 'video'
   }
@@ -1252,6 +1267,156 @@ export default function EnhancedCodex() {
     setError(null)
 
     try {
+      // NUEVO: Manejar Instagram items usando Enhanced Media Downloader
+      if ((item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && item.url) {
+        setTranscriptionProgress(10)
+        
+        // Obtener token de autenticación
+        let accessToken = session?.access_token || localStorage.getItem('token') || ''
+        if (!accessToken) {
+          throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.')
+        }
+        
+        setTranscriptionProgress(20)
+        
+        // Paso 1: Usar Enhanced Media Downloader para descargar y procesar Instagram
+        console.log('🔗 Calling ExtractorT URL:', `${EXTRACTORT_API_URL}/enhanced-media/instagram/process`);
+        const downloadResponse = await fetch(`${EXTRACTORT_API_URL}/enhanced-media/instagram/process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            url: item.url,
+            transcribe: true,        // Transcribir el contenido
+            save_to_codex: false,    // No guardar de nuevo, ya está en Codex
+            user_id: user.id,
+            auth_token: accessToken
+          })
+        })
+        
+        setTranscriptionProgress(40)
+        
+        if (!downloadResponse.ok) {
+          const errorData = await downloadResponse.text()
+          console.error('❌ Error response from ExtractorT:', errorData)
+          let errorMessage = `Error descargando media de Instagram: ${downloadResponse.status}`
+          try {
+            const errorJson = JSON.parse(errorData)
+            if (errorJson.detail) {
+              errorMessage += ` - ${errorJson.detail}`
+            } else if (errorJson.message) {
+              errorMessage += ` - ${errorJson.message}`
+            } else if (errorJson.errors && errorJson.errors.length > 0) {
+              errorMessage += ` - ${errorJson.errors.join(', ')}`
+            }
+          } catch (e) {
+            errorMessage += ` - ${errorData}`
+          }
+          throw new Error(errorMessage)
+        }
+        
+        const downloadResult = await downloadResponse.json()
+        console.log('📊 ExtractorT Response:', downloadResult)
+        
+        setTranscriptionProgress(60)
+        
+        // Paso 2: Verificar si se obtuvo transcripción
+        if (downloadResult.success && downloadResult.transcription) {
+          
+          // Paso 3: Actualizar el item de Codex con la transcripción
+          const transcriptionData = {
+            text: downloadResult.transcription.text || downloadResult.transcription,
+            language: downloadResult.transcription.language || 'es',
+            confidence: downloadResult.transcription.confidence || 0.9,
+            source: 'enhanced_media_downloader',
+            processed_at: new Date().toISOString(),
+            media_info: {
+              platform: 'instagram',
+              url: item.url,
+              media_type: downloadResult.media_type || 'video',
+              duration: downloadResult.duration || null
+            }
+          }
+          
+          setTranscriptionProgress(80)
+          
+          // Actualizar directamente en Supabase (RLS policy ya incluye 'instagram' type)
+          const { data, error } = await supabase
+            .from('codex_items')
+            .update({ 
+              audio_transcription: JSON.stringify(transcriptionData),
+              analyzed: true,
+              // Actualizar también los campos de engagement si están disponibles
+              likes: downloadResult.content?.engagement?.likes || item.likes || 0,
+              comments: downloadResult.content?.engagement?.comments || item.comments || 0,
+              shares: downloadResult.content?.engagement?.shares || item.shares || 0,
+              views: downloadResult.content?.engagement?.views || item.views || 0
+            })
+            .eq('id', item.id)
+            .select()
+            .single()
+          
+          if (error) {
+            console.error('❌ Supabase update error:', error)
+            throw new Error(`Error guardando transcripción en la base de datos: ${error.message}`)
+          }
+          
+          // Actualizar el estado local
+          setCodexItems(prev => prev.map(i => 
+            i.id === item.id 
+              ? { 
+                  ...i, 
+                  audio_transcription: JSON.stringify(transcriptionData), 
+                  analyzed: true,
+                  likes: downloadResult.content?.engagement?.likes || i.likes || 0,
+                  comments: downloadResult.content?.engagement?.comments || i.comments || 0,
+                  shares: downloadResult.content?.engagement?.shares || i.shares || 0,
+                  views: downloadResult.content?.engagement?.views || i.views || 0
+                }
+              : i
+          ))
+          
+          setTranscriptionProgress(100)
+          
+        } else if (downloadResult.success && downloadResult.media_files && downloadResult.media_files.length > 0) {
+          // Si se descargó el media pero no se pudo transcribir
+          throw new Error('Media descargado pero no se pudo transcribir. El contenido podría no tener audio.')
+        } else if (downloadResult.success) {
+          // Si el procesamiento fue exitoso pero no hay transcripción ni media
+          const mediaCount = downloadResult.media_files ? downloadResult.media_files.length : 0
+          const hasContent = downloadResult.content ? 'Sí' : 'No'
+          const platform = downloadResult.platform || 'desconocida'
+          
+          let errorMessage = `Contenido procesado exitosamente pero no se encontró media para transcribir.\n`
+          errorMessage += `- Plataforma: ${platform}\n`
+          errorMessage += `- Contenido extraído: ${hasContent}\n`
+          errorMessage += `- Archivos de media encontrados: ${mediaCount}\n`
+          
+          if (downloadResult.content) {
+            const postType = downloadResult.content.post_type || 'desconocido'
+            const hasMedia = downloadResult.content.media_urls ? downloadResult.content.media_urls.length : 0
+            errorMessage += `- Tipo de post: ${postType}\n`
+            errorMessage += `- URLs de media: ${hasMedia}\n`
+          }
+          
+          if (downloadResult.media_files && downloadResult.media_files.length > 0) {
+            errorMessage += `- Archivos descargados: ${downloadResult.media_files.map(f => f.filename || f.type).join(', ')}\n`
+          }
+          
+          throw new Error(errorMessage)
+        } else {
+          // Mostrar errores específicos si están disponibles
+          const errorMessage = downloadResult.errors && downloadResult.errors.length > 0 
+            ? downloadResult.errors.join(', ')
+            : 'No se pudo descargar o procesar el contenido de Instagram'
+          throw new Error(errorMessage)
+        }
+        
+        return
+      }
+      
       // Validar datos necesarios para Drive files
       if (item.is_drive && (!item.drive_file_id || !item.url)) {
         throw new Error('Archivo de Google Drive incompleto: falta ID o URL del archivo')
@@ -3207,7 +3372,11 @@ export default function EnhancedCodex() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Mic className="h-5 w-5 text-blue-500 animate-pulse" />
-                      <p className="text-blue-600 font-medium">Transcribiendo archivo con Gemini AI...</p>
+                      <p className="text-blue-600 font-medium">
+                        {transcriptionProgress < 40 ? 'Descargando media de Instagram...' :
+                         transcriptionProgress < 80 ? 'Transcribiendo contenido...' :
+                         'Guardando transcripción...'}
+                      </p>
                     </div>
                     <div className="w-full bg-blue-200 rounded-full h-2">
                       <div 
@@ -3494,15 +3663,6 @@ export default function EnhancedCodex() {
                                       Descargar
                                     </DropdownMenuItem>
                                   )}
-                                  {canTranscribe(item) && !item.audio_transcription && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleTranscribeItem(item)}
-                                      disabled={isTranscribing}
-                                    >
-                                      <Mic className="h-4 w-4 mr-2" />
-                                      {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
-                                    </DropdownMenuItem>
-                                  )}
                                   {item.audio_transcription && (
                                     <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
                                       <Mic className="h-4 w-4 mr-2" />
@@ -3513,6 +3673,15 @@ export default function EnhancedCodex() {
                                     <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
                                       <FileText className="h-4 w-4 mr-2" />
                                       Transcripción Texto
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canTranscribe(item) && !item.audio_transcription && !(item as any).transcripcion && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleTranscribeItem(item)}
+                                      disabled={isTranscribing}
+                                    >
+                                      <Mic className="h-4 w-4 mr-2" />
+                                      {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
                                     </DropdownMenuItem>
                                   )}
                                   {canBeGrouped(item) && !item.group_id && (
@@ -3590,7 +3759,38 @@ export default function EnhancedCodex() {
                                   📝 Texto
                                 </Badge>
                               )}
+                              {(item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && (
+                                <Badge variant="secondary" className="text-xs bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200">
+                                  📱 Instagram
+                                </Badge>
+                              )}
                             </div>
+
+                            {/* NUEVO: Mostrar métricas de engagement para Instagram items */}
+                            {(item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && (
+                              <div className="flex items-center gap-4 text-sm text-slate-600 bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-red-500">❤️</span>
+                                  <span className="font-medium">{item.likes || 0}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-blue-600">💬</span>
+                                  <span className="font-medium">{item.comments || 0}</span>
+                                </div>
+                                {item.views && item.views > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-cyan-600">👁️</span>
+                                    <span className="font-medium">{item.views}</span>
+                                  </div>
+                                )}
+                                {item.shares && item.shares > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-indigo-600">🔄</span>
+                                    <span className="font-medium">{item.shares}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             {item.proyecto && (
                               <div className="flex items-center gap-2 text-sm text-slate-500">

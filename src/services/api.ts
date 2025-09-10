@@ -77,8 +77,33 @@ function resolveExtractorWUrl(): string {
 
 export const EXTRACTORW_API_URL = resolveExtractorWUrl();
 
+// Resolver URL para ExtractorT (FastAPI)
+function resolveExtractorTUrl(): string {
+  // 1. Desarrollo local
+  if (
+    import.meta.env.DEV ||
+    ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname)
+  ) {
+    return 'http://localhost:8000';
+  }
+
+  // 2. Variable de entorno explícita para ExtractorT
+  const envUrl = import.meta.env.VITE_EXTRACTORT_URL as string | undefined;
+  if (envUrl && envUrl.trim() !== '') {
+    const cleaned = envUrl.trim().replace(/\/$/, '');
+    return cleaned;
+  }
+
+  // 3. Fallback producción - asumiendo que ExtractorT está en el mismo servidor pero puerto 8000
+  const baseUrl = EXTRACTORW_API_URL.replace('/api', '').replace(':8080', ':8000');
+  return baseUrl;
+}
+
+export const EXTRACTORT_API_URL = resolveExtractorTUrl();
+
 console.log('🔧 Configuración de APIs:');
 console.log(`   ExtractorW: ${EXTRACTORW_API_URL}`);
+console.log(`   ExtractorT: ${EXTRACTORT_API_URL}`);
 console.log(`   VPS: ${VPS_API_URL || 'No configurado'}`);
 console.log(`   Entorno: ${import.meta.env.DEV ? 'Desarrollo' : 'Producción'}`);
 
