@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
-import ExtractionViewer from '../components/ui/ExtractionViewer';
-import AgentEditor from '../components/ui/AgentEditor';
+import ExtractionViewer from '@/components/ui/ExtractionViewer';
+import AgentEditor from '@/components/ui/AgentEditor';
 import { 
   getPublicKnowledgeDocuments, 
   PublicKnowledgeDocument, 
