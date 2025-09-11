@@ -87,8 +87,8 @@ function resolveExtractorTUrl(): string {
     return 'http://localhost:8000';
   }
 
-  // 2. Variable de entorno explícita para ExtractorT
-  const envUrl = import.meta.env.VITE_EXTRACTORT_URL as string | undefined;
+  // 2. Variable de entorno explícita para ExtractorT (usar VITE_VPS_API_URL)
+  const envUrl = import.meta.env.VITE_VPS_API_URL as string | undefined;
   if (envUrl && envUrl.trim() !== '') {
     const cleaned = envUrl.trim().replace(/\/$/, '');
     return cleaned;
