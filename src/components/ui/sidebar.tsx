@@ -89,7 +89,7 @@ const translations = {
     sources: 'Sources',
     analytics: 'Analytics',
     settings: 'Configuración',
-    version: 'Jornal V.0.0462',
+    version: 'Jornal V.0.0500',
     maintenance: 'Maintenance',
     securityMaintenance: 'En mantenimiento por razones de seguridad'
   },
@@ -107,7 +107,7 @@ const translations = {
     sources: 'Sources',
     analytics: 'Analytics',
     settings: 'Settings',
-    version: 'Jornal V.0.0462',
+    version: 'Jornal V.0.0500',
     maintenance: 'Maintenance',
     securityMaintenance: 'Under maintenance for security reasons'
   },
@@ -162,7 +162,8 @@ export function SessionNavBar() {
         {
           icon: <BarChart3 className="h-4 w-4" />,
           label: t.sondeos,
-          path: "/sondeos"
+          path: "/sondeos",
+          disabled: true
         }
       ]
     },
@@ -345,11 +346,11 @@ export function SessionNavBar() {
                                       ) : (
                                         <Badge
                                           className={cn(
-                                            "flex h-fit w-fit items-center gap-1.5 rounded border-none px-1.5 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                            "flex h-5 w-fit items-center rounded-full border-none px-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[9px] font-semibold uppercase tracking-wide shadow-sm"
                                           )}
                                           variant="outline"
                                         >
-                                          {t.comingSoon}
+                                          Soon
                                         </Badge>
                                       )}
                                     </div>

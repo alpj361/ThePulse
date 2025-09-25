@@ -2478,6 +2478,25 @@ export default function EnhancedCodex() {
             </p>
           </div>
 
+          {/* Maintenance Warning */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-yellow-200 p-2 rounded-lg">
+                    <AlertCircle className="h-6 w-6 text-yellow-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-yellow-800 mb-1">Mantenimiento</h3>
+                    <p className="text-yellow-700">
+                      Codex está en mantenimiento, volveremos con todas las funcionalidades pronto
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             {statsConfig.map((stat, index) => {
