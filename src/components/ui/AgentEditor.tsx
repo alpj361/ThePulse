@@ -112,7 +112,7 @@ export default function AgentEditor({
       instructions += `Requisitos especiales:\n${specialRequirements}\n\n`;
     }
 
-    instructions += `Sitio web objetivo: ${siteMap.site_name} (${siteMap.base_url})`;
+    instructions += `Sitio web objetivo: ${siteMap?.site_name || 'No especificado'} (${siteMap?.base_url || 'No especificado'})`;
 
     return instructions;
   };
@@ -183,10 +183,10 @@ export default function AgentEditor({
         body: JSON.stringify({
           instructions: naturalInstructions,
           siteMap: {
-            site_name: siteMap.site_name,
-            base_url: siteMap.base_url,
-            structure: siteMap.site_structure,
-            navigation_summary: siteMap.navigation_summary
+            site_name: siteMap?.site_name || 'No especificado',
+            base_url: siteMap?.base_url || 'No especificado',
+            site_structure: siteMap?.site_structure || {},
+            navigation_summary: siteMap?.navigation_summary || 'No disponible'
           },
           existingAgent: agent ? {
             name: agent.agent_name,
@@ -268,7 +268,7 @@ export default function AgentEditor({
     }
 
     const agentData = {
-      site_map_id: siteMap.id,
+      site_map_id: siteMap?.id || null,
       agent_name: agentName,
       extraction_target: extractionTarget,
       dynamic_table_name: dynamicTableName.trim() || undefined,
@@ -301,7 +301,7 @@ export default function AgentEditor({
                 {isCreating ? 'Crear Agente Inteligente' : 'Editar Agente'}
               </h3>
               <p className="text-sm text-slate-600 mt-1">
-                Sitio: <span className="font-medium">{siteMap.site_name}</span> - {siteMap.base_url}
+                Sitio: <span className="font-medium">{siteMap?.site_name || 'No especificado'}</span> - {siteMap?.base_url || 'No especificado'}
               </p>
             </div>
             <Button variant="outline" onClick={onCancel}>
