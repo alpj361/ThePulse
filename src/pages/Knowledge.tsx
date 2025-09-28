@@ -403,6 +403,7 @@ export default function Knowledge() {
           <Tabs defaultValue="base" className="space-y-6">
             <TabsList>
               <TabsTrigger value="base">Base</TabsTrigger>
+              <TabsTrigger value="prompts">Prompts Vizta</TabsTrigger>
               <TabsTrigger value="monitoreos">Monitoreos Universales</TabsTrigger>
             </TabsList>
 
@@ -620,6 +621,257 @@ export default function Knowledge() {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            {/* Prompts Vizta: Mode-specific prompt editing */}
+            <TabsContent value="prompts" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Chat Mode Prompts */}
+                <Card className="border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      💬 Chat Mode Prompts
+                      <Badge variant="outline" className="text-blue-600 border-blue-300">Fast & Light</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Prompts for fast, lightweight responses with read-only tools
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+
+                    {/* Intent Classification Prompt */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Intent Classification</label>
+                      <Textarea
+                        placeholder="Prompt for classifying user intents in Chat Mode..."
+                        className="min-h-[100px] text-xs"
+                        defaultValue={`Analyze this user message and classify the intent for Chat Mode:
+
+Message: "{message}"
+
+Classify as one of:
+- "quick_answer": Direct information lookup (search, user data, trends)
+- "conversation": Casual chat, greetings, thanks
+- "help": Capability questions, how-to requests
+
+Available tools for Chat Mode:
+- perplexity_search: Web search
+- user_projects: User's project data
+- user_codex: User's knowledge base
+- latest_trends: Recent trend data
+
+Respond in JSON: {"intent": "quick_answer", "confidence": 0.95, "suggested_tools": ["tool1"]}`}
+                      />
+                    </div>
+
+                    {/* Response Generation Prompt */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Response Generation</label>
+                      <Textarea
+                        placeholder="Prompt for generating Chat Mode responses..."
+                        className="min-h-[100px] text-xs"
+                        defaultValue={`Generate a concise, helpful response for Chat Mode:
+
+Query: "{query}"
+Context: {context}
+
+Guidelines:
+- Keep responses under 3 sentences
+- Prioritize speed over depth
+- Offer specific next steps
+- Be conversational but informative
+- Focus on actionable information`}
+                      />
+                    </div>
+
+                    <Button variant="outline" size="sm" className="w-full">
+                      Save Chat Mode Prompts
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Agentic Mode Prompts */}
+                <Card className="border-purple-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      🤖 Agentic Mode Prompts
+                      <Badge variant="outline" className="text-purple-600 border-purple-300">Deep Analysis</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Prompts for comprehensive analysis with full tool access
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+
+                    {/* Intent Classification Prompt */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Intent Classification</label>
+                      <Textarea
+                        placeholder="Prompt for classifying user intents in Agentic Mode..."
+                        className="min-h-[100px] text-xs"
+                        defaultValue={`Analyze this user message for comprehensive Agentic Mode processing:
+
+Message: "{message}"
+
+Classify as one of:
+- "research_task": Deep investigation requiring multiple sources
+- "social_analysis": Twitter/social media analysis and data collection
+- "profile_analysis": Specific user/entity investigation
+- "trend_investigation": Complex trend analysis with correlation
+- "conversation": Simple chat that doesn't need tools
+
+Available tools for Agentic Mode:
+- nitter_context: Twitter scraping & analysis
+- nitter_profile: Profile analysis & data storage
+- perplexity_search: Web research
+- user_projects: User's project data
+- user_codex: User's knowledge base
+- latest_trends: Recent trend data
+
+Respond in JSON: {"intent": "research_task", "confidence": 0.95, "suggested_tools": ["tool1", "tool2"], "reasoning": "explanation"}`}
+                      />
+                    </div>
+
+                    {/* Multi-tool Orchestration Prompt */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Multi-tool Orchestration</label>
+                      <Textarea
+                        placeholder="Prompt for coordinating multiple tools..."
+                        className="min-h-[100px] text-xs"
+                        defaultValue={`Coordinate multiple tools for comprehensive analysis:
+
+Query: "{query}"
+Available tools: {tools}
+Previous results: {previous_results}
+
+Planning approach:
+1. Identify information gaps
+2. Select complementary tools
+3. Consider data persistence needs
+4. Plan result synthesis
+
+Execution strategy:
+- Run tools in logical sequence
+- Use results from one tool to enhance parameters for the next
+- Combine insights from multiple sources
+- Provide evidence-based conclusions with source attribution`}
+                      />
+                    </div>
+
+                    {/* Result Synthesis Prompt */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Result Synthesis</label>
+                      <Textarea
+                        placeholder="Prompt for synthesizing multi-tool results..."
+                        className="min-h-[100px] text-xs"
+                        defaultValue={`Synthesize results from multiple tools into a comprehensive analysis:
+
+Original query: "{query}"
+Tool results: {tool_results}
+
+Synthesis guidelines:
+1. Start with executive summary (2-3 sentences)
+2. Present key findings with source attribution
+3. Identify patterns and correlations across sources
+4. Note any contradictions or data quality issues
+5. Provide actionable insights and next steps
+6. Include confidence levels for major claims
+
+Format as structured markdown with clear sections and proper source citations.`}
+                      />
+                    </div>
+
+                    <Button variant="outline" size="sm" className="w-full">
+                      Save Agentic Mode Prompts
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Prompt Testing Section */}
+              <Card className="border-green-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    🧪 Prompt Testing
+                    <Badge variant="outline" className="text-green-600 border-green-300">Live Testing</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Test your prompts with sample inputs to see how they perform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    {/* Test Input */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Test Message</label>
+                      <Textarea
+                        placeholder="Enter a test message to see how it would be processed..."
+                        className="min-h-[80px]"
+                      />
+                    </div>
+
+                    {/* Mode Selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Test Mode</label>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1">
+                          Test Chat Mode
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          Test Agentic Mode
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Test Results */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Test Results</label>
+                    <div className="bg-gray-50 rounded-lg p-4 min-h-[100px] text-sm text-gray-600">
+                      Results will appear here after testing...
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Prompt Performance Metrics */}
+              <Card className="border-orange-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    📊 Prompt Performance
+                    <Badge variant="outline" className="text-orange-600 border-orange-300">Analytics</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Monitor how your prompts are performing in production
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">3.2s</div>
+                      <div className="text-sm text-gray-600">Avg Chat Response</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">12.5s</div>
+                      <div className="text-sm text-gray-600">Avg Agentic Response</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">94%</div>
+                      <div className="text-sm text-gray-600">Success Rate</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">156</div>
+                      <div className="text-sm text-gray-600">Total Queries Today</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Monitoreos Universales: Explorer + Mapas + Agentes */}
