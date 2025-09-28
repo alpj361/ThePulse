@@ -1012,6 +1012,87 @@ export async function getPublicKnowledgeDocuments(limit = 24): Promise<PublicKno
   return (data || []) as PublicKnowledgeDocument[];
 }
 
+// Helpers para Knowledge (Vizta policies & examples)
+export async function getLatestPkDocumentByTag(tag: string): Promise<PublicKnowledgeDocument | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const { data, error } = await supabase
+    .from('pk_documents')
+    .select('*')
+    .contains('tags', [tag] as any)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (data && data[0]) ? (data[0] as PublicKnowledgeDocument) : null;
+}
+
+export async function getStorageSignedUrl(path: string, expiresInSec = 60): Promise<string | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const { data, error } = await supabase.storage
+    .from('digitalstorage')
+    .createSignedUrl(path, expiresInSec);
+  if (error) return null;
+  return data?.signedUrl || null;
+}
+
+export async function downloadViztaPoliciesMd(): Promise<string | null> {
+  try {
+    const doc = await getLatestPkDocumentByTag('vizta_policies');
+    if (!doc) return null;
+    const path = `pk/${doc.file_sha256}.md`;
+    const url = await getStorageSignedUrl(path, 120);
+    if (!url) return null;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+export async function saveViztaPoliciesMd(content: string): Promise<PublicKnowledgeDocument | null> {
+  const file = new File([content], 'vizta_policies.md', { type: 'text/markdown' });
+  return await uploadPublicKnowledgeDocument({
+    file,
+    title: 'Vizta: Prompt y Tool Calling',
+    tags: ['vizta', 'policies', 'vizta_policies'],
+    notes: 'Editor Knowledge: Vizta policies (Markdown)'
+  });
+}
+
+export type ViztaExample = {
+  user: string;
+  assistant: string;
+  tags?: string[];
+  notes?: string;
+};
+
+export async function getViztaExamples(): Promise<ViztaExample[]> {
+  try {
+    const doc = await getLatestPkDocumentByTag('vizta_examples');
+    if (!doc) return [];
+    const path = `pk/${doc.file_sha256}.json`;
+    const url = await getStorageSignedUrl(path, 120);
+    if (!url) return [];
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? (data as ViztaExample[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveViztaExamples(examples: ViztaExample[]): Promise<PublicKnowledgeDocument | null> {
+  const blob = new Blob([JSON.stringify(examples, null, 2)], { type: 'application/json' });
+  const file = new File([blob], 'vizta_examples.json', { type: 'application/json' });
+  return await uploadPublicKnowledgeDocument({
+    file,
+    title: 'Vizta: Examples',
+    tags: ['vizta', 'examples', 'vizta_examples'],
+    notes: 'Editor Knowledge: Vizta examples (JSON)'
+  });
+}
+
 /**
  * Subir documento público a storage y registrar en pk_documents
  */

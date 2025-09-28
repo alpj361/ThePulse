@@ -14,6 +14,12 @@ import {
   getPublicKnowledgeDocuments, 
   PublicKnowledgeDocument, 
   uploadPublicKnowledgeDocument,
+  // Knowledge helpers (Vizta)
+  downloadViztaPoliciesMd,
+  saveViztaPoliciesMd,
+  getViztaExamples,
+  saveViztaExamples,
+  ViztaExample,
   // Site Maps & Agents
   SiteMap,
   SiteAgent,
@@ -48,6 +54,14 @@ export default function Knowledge() {
   const [project, setProject] = useState('');
   const [tags, setTags] = useState('');
   const [description, setDescription] = useState('');
+  // Pinned local knowledge (Vizta policies)
+  const [viztaMd, setViztaMd] = useState<string>('');
+  const [viztaMdSaving, setViztaMdSaving] = useState<boolean>(false);
+  // Vizta Examples
+  const [viztaExamples, setViztaExamples] = useState<ViztaExample[]>([]);
+  const [exUser, setExUser] = useState('');
+  const [exAssistant, setExAssistant] = useState('');
+  const [exSaving, setExSaving] = useState(false);
 
   // Explorer state
   const [targetUrl, setTargetUrl] = useState('');
@@ -93,6 +107,39 @@ export default function Knowledge() {
     };
     run();
   }, [user?.id]);
+
+  // Cargar documento local: Vizta policies (public/knowledge)
+  useEffect(() => {
+    const loadVizta = async () => {
+      try {
+        // 1) Intentar cargar desde Supabase (pk_documents)
+        const md = await downloadViztaPoliciesMd();
+        if (md) {
+          setViztaMd(md);
+          return;
+        }
+        // 2) Fallback a asset local
+        const res = await fetch('/knowledge/vizta_policies.md');
+        if (res.ok) setViztaMd(await res.text());
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadVizta();
+  }, []);
+
+  // Cargar ejemplos de Vizta
+  useEffect(() => {
+    const loadExamples = async () => {
+      try {
+        const rows = await getViztaExamples();
+        setViztaExamples(rows || []);
+      } catch (e) {
+        setViztaExamples([]);
+      }
+    };
+    loadExamples();
+  }, []);
 
   // Load site maps and agents
   useEffect(() => {
@@ -361,6 +408,116 @@ export default function Knowledge() {
 
             {/* Base: mini codex para conocimiento público */}
             <TabsContent value="base" className="space-y-4">
+              {/* Pinned: Vizta policies */}
+              {viztaMd && (
+                <Card className="border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="text-lg">📌 Vizta: Prompt y Tool Calling</CardTitle>
+                    <CardDescription>Documento interno fijo visible en Knowledge.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-slate max-w-none bg-white p-4 rounded border border-slate-200">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{viztaMd}</ReactMarkdown>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-sm font-medium text-slate-700">Editar prompt (Markdown)</h4>
+                      <Textarea
+                        value={viztaMd}
+                        onChange={(e) => setViztaMd(e.target.value)}
+                        rows={12}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          className="bg-blue-600 text-white"
+                          disabled={viztaMdSaving || !viztaMd.trim()}
+                          onClick={async () => {
+                            setViztaMdSaving(true);
+                            try {
+                              const saved = await saveViztaPoliciesMd(viztaMd);
+                              if (saved) {
+                                // noop; keep md in state
+                              }
+                            } catch (e) {
+                              console.error('Error saving Vizta policies:', e);
+                            } finally {
+                              setViztaMdSaving(false);
+                            }
+                          }}
+                        >
+                          {viztaMdSaving ? 'Guardando…' : 'Guardar Prompt'}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Vizta Examples */}
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg">🧪 Vizta: Examples (Few-shot)</CardTitle>
+                  <CardDescription>Agrega ejemplos de interacción (usuario → asistente) para mejorar el comportamiento.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="text-sm text-slate-700">Entrada del usuario</label>
+                      <Textarea value={exUser} onChange={(e) => setExUser(e.target.value)} rows={5} placeholder="Ej: Dame un resumen de mis proyectos activos" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-slate-700">Respuesta esperada</label>
+                      <Textarea value={exAssistant} onChange={(e) => setExAssistant(e.target.value)} rows={5} placeholder="Ej: Un listado conciso, tono Vizta, etc." />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="bg-blue-600 text-white"
+                      disabled={exSaving || !exUser.trim() || !exAssistant.trim()}
+                      onClick={async () => {
+                        setExSaving(true);
+                        try {
+                          const updated: ViztaExample[] = [
+                            ...viztaExamples,
+                            { user: exUser.trim(), assistant: exAssistant.trim(), tags: ['knowledge'], notes: 'Added from Knowledge UI' }
+                          ];
+                          const saved = await saveViztaExamples(updated);
+                          if (saved) {
+                            setViztaExamples(updated);
+                            setExUser('');
+                            setExAssistant('');
+                          }
+                        } catch (e) {
+                          console.error('Error saving Vizta example:', e);
+                        } finally {
+                          setExSaving(false);
+                        }
+                      }}
+                    >
+                      {exSaving ? 'Guardando…' : 'Agregar Ejemplo'}
+                    </Button>
+                  </div>
+
+                  {/* Lista de ejemplos actuales */}
+                  <div className="mt-2">
+                    {viztaExamples.length === 0 ? (
+                      <p className="text-slate-500 text-sm">No hay ejemplos aún.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {viztaExamples.slice(0, 10).map((ex, idx) => (
+                          <div key={idx} className="border border-slate-200 rounded p-3 bg-white">
+                            <div className="text-xs text-slate-500">Ejemplo #{idx + 1}</div>
+                            <div className="mt-1 text-sm"><span className="font-medium">Usuario:</span> {ex.user}</div>
+                            <div className="mt-1 text-sm"><span className="font-medium">Asistente:</span> {ex.assistant}</div>
+                          </div>
+                        ))}
+                        {viztaExamples.length > 10 && (
+                          <div className="text-xs text-slate-500">Mostrando 10 de {viztaExamples.length}…</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="border-slate-200">
                   <CardHeader>
@@ -779,4 +936,3 @@ export default function Knowledge() {
     </div>
   );
 }
-
