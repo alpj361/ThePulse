@@ -58,9 +58,110 @@ export default function AgentEditor({
   const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
-  
+
+  // Guided prompt builder state
+  const [wizardStep, setWizardStep] = useState(1);
+  const [dataType, setDataType] = useState('');
+  const [targetElements, setTargetElements] = useState<string[]>([]);
+  const [outputFormat, setOutputFormat] = useState('');
+  const [extractionFrequency, setExtractionFrequency] = useState('');
+  const [specialRequirements, setSpecialRequirements] = useState('');
+  const [customElement, setCustomElement] = useState('');
+
   // Estado de las pestañas
   const [activeTab, setActiveTab] = useState('basic');
+
+  // Helper functions for guided wizard
+  const addTargetElement = (element: string) => {
+    if (element && !targetElements.includes(element)) {
+      setTargetElements([...targetElements, element]);
+    }
+  };
+
+  const removeTargetElement = (index: number) => {
+    setTargetElements(targetElements.filter((_, i) => i !== index));
+  };
+
+  const addCustomElement = () => {
+    if (customElement.trim()) {
+      addTargetElement(customElement.trim());
+      setCustomElement('');
+    }
+  };
+
+  const buildInstructionsFromWizard = () => {
+    let instructions = `Necesito extraer información de tipo: ${dataType}\n\n`;
+
+    if (targetElements.length > 0) {
+      instructions += `Elementos específicos que quiero extraer:\n`;
+      targetElements.forEach((element, index) => {
+        instructions += `${index + 1}. ${element}\n`;
+      });
+      instructions += '\n';
+    }
+
+    if (outputFormat) {
+      instructions += `Formato de salida deseado: ${outputFormat}\n\n`;
+    }
+
+    if (extractionFrequency) {
+      instructions += `Frecuencia de extracción: ${extractionFrequency}\n\n`;
+    }
+
+    if (specialRequirements) {
+      instructions += `Requisitos especiales:\n${specialRequirements}\n\n`;
+    }
+
+    instructions += `Sitio web objetivo: ${siteMap.site_name} (${siteMap.base_url})`;
+
+    return instructions;
+  };
+
+  const applyWizardInstructions = () => {
+    const instructions = buildInstructionsFromWizard();
+    setNaturalInstructions(instructions);
+    setActiveTab('intelligent');
+  };
+
+  // Helper function to get common elements based on data type
+  const getCommonElementsForType = (type: string): string[] => {
+    const elementMap: Record<string, string[]> = {
+      productos: [
+        'Nombre del producto', 'Precio', 'Descripción', 'Imagen', 'Stock disponible',
+        'Categoría', 'Marca', 'SKU/Código', 'Descuentos', 'Puntuación/Rating'
+      ],
+      noticias: [
+        'Título', 'Fecha de publicación', 'Autor', 'Contenido/Resumen', 'Imagen principal',
+        'Categoría', 'Tags/Etiquetas', 'URL del artículo', 'Número de comentarios', 'Tiempo de lectura'
+      ],
+      contactos: [
+        'Nombre completo', 'Email', 'Teléfono', 'Empresa/Organización', 'Cargo/Posición',
+        'Dirección', 'Redes sociales', 'Foto/Avatar', 'Biografía', 'Sitio web'
+      ],
+      precios: [
+        'Precio base', 'Precio con descuento', 'Moneda', 'Fecha de actualización', 'Tipo de precio',
+        'Periodo (mensual/anual)', 'Impuestos incluidos', 'Precio de envío', 'Ofertas especiales', 'Comparación'
+      ],
+      eventos: [
+        'Título del evento', 'Fecha y hora', 'Ubicación', 'Descripción', 'Organizador',
+        'Precio/Entrada', 'Categoría', 'Estado (confirmado/cancelado)', 'Duración', 'Requisitos'
+      ],
+      reviews: [
+        'Puntuación/Rating', 'Texto de la reseña', 'Autor', 'Fecha', 'Título de la reseña',
+        'Producto/Servicio', 'Pros y contras', 'Recomendación', 'Verificado', 'Respuesta del negocio'
+      ],
+      inmuebles: [
+        'Precio', 'Tipo (casa/apartamento)', 'Metros cuadrados', 'Habitaciones', 'Baños',
+        'Ubicación/Dirección', 'Fotos', 'Descripción', 'Antigüedad', 'Estado de conservación'
+      ],
+      otros: [
+        'Título', 'Descripción', 'Fecha', 'Categoría', 'Precio/Valor',
+        'Imagen', 'URL/Enlace', 'Estado', 'Ubicación', 'Contacto'
+      ]
+    };
+
+    return elementMap[type] || elementMap.otros;
+  };
 
   // Función para generar código usando GPT-5
   const generateExtractionCode = async () => {
@@ -212,10 +313,14 @@ export default function AgentEditor({
         <div className="flex-1 overflow-y-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
             <div className="border-b border-slate-200 px-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
                   Básico
+                </TabsTrigger>
+                <TabsTrigger value="wizard" className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" />
+                  Asistente
                 </TabsTrigger>
                 <TabsTrigger value="intelligent" className="flex items-center gap-2">
                   <Wand2 className="h-4 w-4" />
@@ -302,6 +407,232 @@ export default function AgentEditor({
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Pestaña Asistente Guiado */}
+              <TabsContent value="wizard" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5 text-yellow-600" />
+                      Asistente Guiado para Extracción
+                    </CardTitle>
+                    <p className="text-sm text-slate-600">
+                      Te guiamos paso a paso para crear las instrucciones perfectas para tu agente de extracción.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+
+                    {/* Paso 1: Tipo de datos */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-medium">1</div>
+                        <h4 className="font-medium text-slate-900">¿Qué tipo de información quieres extraer?</h4>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-8">
+                        {[
+                          { id: 'productos', label: 'Productos/Servicios', icon: '🛍️' },
+                          { id: 'noticias', label: 'Noticias/Artículos', icon: '📰' },
+                          { id: 'contactos', label: 'Contactos/Perfiles', icon: '👥' },
+                          { id: 'precios', label: 'Precios/Tarifas', icon: '💰' },
+                          { id: 'eventos', label: 'Eventos/Fechas', icon: '📅' },
+                          { id: 'reviews', label: 'Reseñas/Comentarios', icon: '⭐' },
+                          { id: 'inmuebles', label: 'Inmuebles/Propiedades', icon: '🏠' },
+                          { id: 'otros', label: 'Otros', icon: '📋' }
+                        ].map((type) => (
+                          <button
+                            key={type.id}
+                            onClick={() => setDataType(type.id)}
+                            className={`p-3 border rounded-lg text-left transition-colors ${
+                              dataType === type.id
+                                ? 'border-blue-500 bg-blue-50 text-blue-900'
+                                : 'border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="text-lg mb-1">{type.icon}</div>
+                            <div className="text-sm font-medium">{type.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Paso 2: Elementos específicos */}
+                    {dataType && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-medium">2</div>
+                          <h4 className="font-medium text-slate-900">¿Qué elementos específicos necesitas?</h4>
+                        </div>
+
+                        <div className="ml-8 space-y-3">
+                          {/* Elementos comunes según el tipo de datos */}
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {getCommonElementsForType(dataType).map((element, index) => (
+                              <button
+                                key={index}
+                                onClick={() => addTargetElement(element)}
+                                className={`p-2 text-sm border rounded transition-colors ${
+                                  targetElements.includes(element)
+                                    ? 'border-green-500 bg-green-50 text-green-900'
+                                    : 'border-slate-200 hover:border-slate-300'
+                                }`}
+                              >
+                                {element}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Elemento personalizado */}
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Agregar elemento personalizado..."
+                              value={customElement}
+                              onChange={(e) => setCustomElement(e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && addCustomElement()}
+                              className="flex-1"
+                            />
+                            <Button onClick={addCustomElement} variant="outline" size="sm">
+                              Agregar
+                            </Button>
+                          </div>
+
+                          {/* Elementos seleccionados */}
+                          {targetElements.length > 0 && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium text-slate-700">Elementos seleccionados:</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {targetElements.map((element, index) => (
+                                  <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                                    {element}
+                                    <button
+                                      onClick={() => removeTargetElement(index)}
+                                      className="text-blue-600 hover:text-blue-800"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Paso 3: Formato de salida */}
+                    {targetElements.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-medium">3</div>
+                          <h4 className="font-medium text-slate-900">¿En qué formato quieres los datos?</h4>
+                        </div>
+
+                        <div className="ml-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {[
+                              { id: 'tabla', label: 'Tabla estructurada (CSV/Excel)', desc: 'Filas y columnas organizadas' },
+                              { id: 'json', label: 'Formato JSON', desc: 'Estructura de datos flexible' },
+                              { id: 'lista', label: 'Lista simple', desc: 'Lista de elementos uno por uno' },
+                              { id: 'detallado', label: 'Informe detallado', desc: 'Descripción completa de cada elemento' }
+                            ].map((format) => (
+                              <button
+                                key={format.id}
+                                onClick={() => setOutputFormat(format.id)}
+                                className={`p-3 border rounded-lg text-left transition-colors ${
+                                  outputFormat === format.id
+                                    ? 'border-blue-500 bg-blue-50 text-blue-900'
+                                    : 'border-slate-200 hover:border-slate-300'
+                                }`}
+                              >
+                                <div className="font-medium text-sm">{format.label}</div>
+                                <div className="text-xs text-slate-600 mt-1">{format.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Paso 4: Frecuencia y requisitos */}
+                    {outputFormat && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-medium">4</div>
+                          <h4 className="font-medium text-slate-900">Configuración adicional</h4>
+                        </div>
+
+                        <div className="ml-8 space-y-4">
+                          {/* Frecuencia */}
+                          <div>
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">¿Con qué frecuencia necesitas esta información?</label>
+                            <select
+                              value={extractionFrequency}
+                              onChange={(e) => setExtractionFrequency(e.target.value)}
+                              className="w-full p-2 border border-slate-200 rounded"
+                            >
+                              <option value="">Seleccionar frecuencia...</option>
+                              <option value="una-vez">Una sola vez</option>
+                              <option value="diaria">Diariamente</option>
+                              <option value="semanal">Semanalmente</option>
+                              <option value="mensual">Mensualmente</option>
+                              <option value="personalizada">Frecuencia personalizada</option>
+                            </select>
+                          </div>
+
+                          {/* Requisitos especiales */}
+                          <div>
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">Requisitos especiales (opcional)</label>
+                            <Textarea
+                              placeholder="Ej: Solo productos en stock, excluir ofertas vencidas, filtrar por precio mínimo, etc."
+                              value={specialRequirements}
+                              onChange={(e) => setSpecialRequirements(e.target.value)}
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botón para aplicar */}
+                    {dataType && targetElements.length > 0 && outputFormat && (
+                      <div className="border-t border-slate-200 pt-4">
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={applyWizardInstructions}
+                            className="bg-green-600 text-white hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Crear Instrucciones
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setDataType('');
+                              setTargetElements([]);
+                              setOutputFormat('');
+                              setExtractionFrequency('');
+                              setSpecialRequirements('');
+                            }}
+                          >
+                            Reiniciar Asistente
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vista previa de instrucciones */}
+                    {dataType && targetElements.length > 0 && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                        <h5 className="font-medium text-slate-900 mb-2">Vista previa de instrucciones:</h5>
+                        <div className="text-sm text-slate-700 whitespace-pre-line">
+                          {buildInstructionsFromWizard()}
+                        </div>
+                      </div>
+                    )}
+
                   </CardContent>
                 </Card>
               </TabsContent>

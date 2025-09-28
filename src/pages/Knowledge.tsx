@@ -182,23 +182,78 @@ export default function Knowledge() {
     setExploring(true);
     setSummary('');
     setShowSaveMapButton(false);
-    
+
     try {
-      const res = await fetch(`${EXTRACTORW_API_URL}/webagent/explore`, {
+      // Use AI-enhanced exploration for better site analysis
+      const res = await fetch(`${EXTRACTORW_API_URL}/webagent/explore-ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url: targetUrl, 
-          goal, 
-          maxSteps: 6, 
-          screenshot: true 
+        body: JSON.stringify({
+          url: targetUrl,
+          goal,
+          maxSteps: 6,
+          screenshot: true
         })
       });
       
       const json = await res.json();
-      
-      if (json?.success && json?.data?.summary) {
-        setSummary(json.data.summary);
+
+      if (json?.success && json?.data) {
+        // Build enhanced summary with AI analysis
+        let enhancedSummary = json.data.summary || json.data.data?.summary || '';
+
+        // Add AI analysis if available
+        if (json.aiAnalysis) {
+          enhancedSummary += `\n\n## 🤖 Análisis de IA\n\n`;
+
+          if (json.aiAnalysis.siteAnalysis) {
+            enhancedSummary += `**Tipo de sitio**: ${json.aiAnalysis.siteAnalysis.type}\n`;
+            enhancedSummary += `**Complejidad**: ${json.aiAnalysis.siteAnalysis.complexity}\n`;
+            enhancedSummary += `**Estructura**: ${json.aiAnalysis.siteAnalysis.structure}\n\n`;
+          }
+
+          if (json.aiAnalysis.extractableElements && json.aiAnalysis.extractableElements.length > 0) {
+            enhancedSummary += `**Elementos extraíbles detectados**:\n`;
+            json.aiAnalysis.extractableElements.forEach((element: any, index: number) => {
+              enhancedSummary += `${index + 1}. **${element.name}** (${element.dataType}) - ${element.description}\n`;
+              if (element.suggestedSelectors && element.suggestedSelectors.length > 0) {
+                enhancedSummary += `   - Selectores sugeridos: \`${element.suggestedSelectors.join('`, `')}\`\n`;
+              }
+            });
+            enhancedSummary += '\n';
+          }
+
+          if (json.aiAnalysis.scrapingStrategies && json.aiAnalysis.scrapingStrategies.length > 0) {
+            enhancedSummary += `**Estrategias de extracción recomendadas**:\n`;
+            json.aiAnalysis.scrapingStrategies.forEach((strategy: any, index: number) => {
+              enhancedSummary += `${index + 1}. **${strategy.strategy}** (${strategy.difficulty})\n`;
+              enhancedSummary += `   - ${strategy.description}\n`;
+              if (strategy.steps && strategy.steps.length > 0) {
+                enhancedSummary += `   - Pasos: ${strategy.steps.join(' → ')}\n`;
+              }
+            });
+            enhancedSummary += '\n';
+          }
+
+          if (json.aiAnalysis.recommendations && json.aiAnalysis.recommendations.length > 0) {
+            enhancedSummary += `**Recomendaciones**:\n`;
+            json.aiAnalysis.recommendations.forEach((rec: string) => {
+              enhancedSummary += `- ${rec}\n`;
+            });
+            enhancedSummary += '\n';
+          }
+
+          if (json.aiAnalysis.insights) {
+            enhancedSummary += `**Insights adicionales**: ${json.aiAnalysis.insights}\n`;
+          }
+
+          enhancedSummary += `\n*Confianza del análisis: ${(json.aiAnalysis.confidence * 100).toFixed(0)}%*`;
+
+          // Store AI analysis for use when saving site map
+          sessionStorage.setItem('lastAiAnalysis', JSON.stringify(json.aiAnalysis));
+        }
+
+        setSummary(enhancedSummary);
         setExploredSiteName(extractSiteName(targetUrl));
         setShowSaveMapButton(true);
       } else if (json?.error) {
@@ -215,13 +270,28 @@ export default function Knowledge() {
 
   const handleSaveMap = async () => {
     if (!summary || !targetUrl) return;
-    
+
     try {
+      // Extract AI analysis from the latest exploration if available
+      let aiAnalysisData = null;
+      try {
+        // We need to store the AI analysis separately for use in agent creation
+        const lastExplorationResult = sessionStorage.getItem('lastAiAnalysis');
+        if (lastExplorationResult) {
+          aiAnalysisData = JSON.parse(lastExplorationResult);
+        }
+      } catch (e) {
+        console.warn('Could not parse stored AI analysis:', e);
+      }
+
       const mapData = {
         site_name: exploredSiteName,
         base_url: targetUrl,
         exploration_goal: goal,
-        site_structure: { summary }, // Simple structure for now
+        site_structure: {
+          summary,
+          aiAnalysis: aiAnalysisData // Include AI analysis for agent creation
+        },
         navigation_summary: summary
       };
       
@@ -881,8 +951,14 @@ Format as structured markdown with clear sections and proper source citations.`}
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     🗺️ Explorer - Exploración Inicial
+                    <Badge variant="outline" className="text-purple-600 border-purple-300">
+                      🤖 IA Mejorada
+                    </Badge>
                   </CardTitle>
-                  <CardDescription>Explora una URL con IA, mapea su estructura y guarda el mapa para futuros agentes.</CardDescription>
+                  <CardDescription>
+                    Explora una URL con análisis inteligente usando Gemini IA. Detecta automáticamente elementos extraíbles,
+                    sugiere selectores CSS y recomienda estrategias de scraping optimizadas.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -968,8 +1044,8 @@ Format as structured markdown with clear sections and proper source citations.`}
                           </div>
 
                           <div className="flex gap-2 mt-3">
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="outline"
                               onClick={() => {
                                 setSelectedMapForAgent(siteMap);
