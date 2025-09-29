@@ -310,38 +310,53 @@ export default function Knowledge() {
 
   const handleCreateAgent = async (agentData: any) => {
     if (!selectedMapForAgent) return;
-    
+
     try {
+      console.log('🆕 Creating new agent with data:', agentData);
       const newAgent = await createSiteAgent(agentData);
+      console.log('✅ Agent created successfully:', newAgent);
+
       setAgents(prev => [newAgent, ...prev]);
-      
+
       // Reset form
       setShowCreateAgent(false);
       setSelectedMapForAgent(null);
     } catch (error) {
-      console.error('Error creating agent:', error);
+      console.error('❌ Error creating agent:', error);
+      // You might want to show this error to the user
+      alert(`Error al crear el agente: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 
   const handleEditAgent = async (agentData: any) => {
     if (!selectedAgentForEdit) return;
-    
+
     try {
+      console.log('✏️ Updating agent with data:', agentData);
+      console.log('🆔 Agent ID:', selectedAgentForEdit.id);
+
+      // Pass all the agent data fields for complete update
       const updatedAgent = await updateSiteAgent(selectedAgentForEdit.id, {
         agent_name: agentData.agent_name,
         extraction_target: agentData.extraction_target,
-        extraction_config: agentData.extraction_config
+        extraction_config: agentData.extraction_config,
+        dynamic_table_name: agentData.dynamic_table_name,
+        data_description: agentData.data_description
       });
-      
-      setAgents(prev => prev.map(agent => 
+
+      console.log('✅ Agent updated successfully:', updatedAgent);
+
+      setAgents(prev => prev.map(agent =>
         agent.id === selectedAgentForEdit.id ? updatedAgent : agent
       ));
-      
+
       // Reset form
       setShowEditAgent(false);
       setSelectedAgentForEdit(null);
     } catch (error) {
-      console.error('Error updating agent:', error);
+      console.error('❌ Error updating agent:', error);
+      // You might want to show this error to the user
+      alert(`Error al actualizar el agente: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 

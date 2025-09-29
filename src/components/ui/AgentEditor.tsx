@@ -50,13 +50,27 @@ export default function AgentEditor({
   // Estado del formulario básico
   const [agentName, setAgentName] = useState(agent?.agent_name || '');
   const [extractionTarget, setExtractionTarget] = useState(agent?.extraction_target || '');
-  const [dynamicTableName, setDynamicTableName] = useState('');
-  const [dataDescription, setDataDescription] = useState('');
+  const [dynamicTableName, setDynamicTableName] = useState(agent?.dynamic_table_name || '');
+  const [dataDescription, setDataDescription] = useState(agent?.data_description || '');
+
+  // Advanced database configuration state
+  const [databaseEnabled, setDatabaseEnabled] = useState(!!agent?.database_config?.enabled || false);
 
   // Estado del editor inteligente
-  const [naturalInstructions, setNaturalInstructions] = useState('');
-  const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(null);
+  const [naturalInstructions, setNaturalInstructions] = useState(
+    agent?.extraction_config?.instructions || ''
+  );
+  const [generatedCode, setGeneratedCode] = useState<GeneratedCode | null>(
+    agent?.extraction_config?.generated ? {
+      extractionLogic: agent.extraction_config.extractionLogic || agent.extraction_target,
+      selectors: agent.extraction_config.selectors || [],
+      workflow: agent.extraction_config.workflow || [],
+      confidence: agent.extraction_config.confidence || 0.8,
+      reasoning: agent.extraction_config.reasoning || ''
+    } : null
+  );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   // Guided prompt builder state
@@ -267,27 +281,65 @@ export default function AgentEditor({
       return;
     }
 
-    const agentData = {
-      site_map_id: siteMap?.id || null,
-      agent_name: agentName,
-      extraction_target: extractionTarget,
-      dynamic_table_name: dynamicTableName.trim() || undefined,
-      data_description: dataDescription.trim() || undefined,
-      extraction_config: {
-        ...agent?.extraction_config,
-        ...(generatedCode ? {
-          generated: true,
-          instructions: naturalInstructions,
-          selectors: generatedCode.selectors,
-          workflow: generatedCode.workflow,
-          confidence: generatedCode.confidence,
-          reasoning: generatedCode.reasoning,
-          generatedAt: new Date().toISOString()
-        } : {})
+    // Validate database configuration if enabled
+    if (databaseEnabled) {
+      if (!dynamicTableName.trim()) {
+        setGenerationError('Nombre de la tabla es requerido para la base de datos pública');
+        return;
       }
-    };
 
-    await onSave(agentData);
+      // Validate table name format (alphanumeric and underscores only)
+      const tableNameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+      if (!tableNameRegex.test(dynamicTableName.trim())) {
+        setGenerationError('El nombre de la tabla debe comenzar con letra y solo contener letras, números y guiones bajos');
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    setGenerationError(null);
+
+    try {
+      const agentData = {
+        site_map_id: siteMap?.id || null,
+        agent_name: agentName,
+        extraction_target: extractionTarget,
+        dynamic_table_name: dynamicTableName.trim() || undefined,
+        data_description: dataDescription.trim() || undefined,
+        database_config: databaseEnabled ? {
+          enabled: true,
+          table_name: dynamicTableName.trim() || agentName.toLowerCase().replace(/\s+/g, '_'),
+          data_description: dataDescription.trim(),
+          use_public_database: true
+        } : { enabled: false },
+        extraction_config: {
+          ...(agent?.extraction_config || {}),
+          ...(generatedCode ? {
+            generated: true,
+            instructions: naturalInstructions,
+            selectors: generatedCode.selectors,
+            workflow: generatedCode.workflow,
+            confidence: generatedCode.confidence,
+            reasoning: generatedCode.reasoning,
+            generatedAt: new Date().toISOString()
+          } : {})
+        }
+      };
+
+      console.log('🔧 Saving agent data:', agentData);
+      console.log('🤖 Generated code included:', !!generatedCode);
+
+      await onSave(agentData);
+
+      console.log('✅ Agent saved successfully');
+
+      // Don't close modal here - let the parent component handle it
+    } catch (error) {
+      console.error('❌ Error saving agent:', error);
+      setGenerationError(`Error al guardar el agente: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -379,33 +431,69 @@ export default function AgentEditor({
                         <MapPin className="h-4 w-4" />
                         Base de Datos Avanzada (Opcional)
                       </h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Nombre de la tabla de datos
-                          </label>
-                          <Input 
-                            placeholder="Ej: noticias_diarias, precios_productos"
-                            value={dynamicTableName}
-                            onChange={(e) => setDynamicTableName(e.target.value)}
+
+                      {/* Database Enable Toggle */}
+                      <div className="mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={databaseEnabled}
+                            onChange={(e) => setDatabaseEnabled(e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <p className="text-xs text-slate-500 mt-1">
-                            Si especificas un nombre, se creará una tabla dedicada para este agente
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Descripción de los datos
-                          </label>
-                          <Textarea 
-                            placeholder="Ej: Información estructurada de noticias con títulos, fechas, categorías y enlaces"
-                            value={dataDescription}
-                            onChange={(e) => setDataDescription(e.target.value)}
-                            rows={2}
-                          />
-                        </div>
+                          <span className="text-sm font-medium text-slate-700">
+                            Guardar datos extraídos en base de datos pública
+                          </span>
+                        </label>
+                        <p className="text-xs text-slate-500 mt-1 ml-6">
+                          Los datos se guardarán en la base de datos de PulseJournal con acceso público
+                        </p>
                       </div>
+
+                      {databaseEnabled && (
+                        <div className="space-y-3 bg-slate-50 p-3 rounded-lg border">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Nombre de la tabla de datos *
+                            </label>
+                            <Input
+                              placeholder="Ej: noticias_diarias, precios_productos, leyes_congreso"
+                              value={dynamicTableName}
+                              onChange={(e) => setDynamicTableName(e.target.value)}
+                            />
+                            <p className="text-xs text-slate-500 mt-1">
+                              Se creará una tabla pública con este nombre en PulseJournal
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Descripción de los datos
+                            </label>
+                            <Textarea
+                              placeholder="Ej: Información estructurada de noticias con títulos, fechas, categorías y enlaces"
+                              value={dataDescription}
+                              onChange={(e) => setDataDescription(e.target.value)}
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="bg-green-50 border border-green-200 rounded p-3">
+                            <div className="flex gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-green-800">
+                                <p className="font-medium mb-1">Base de datos pública:</p>
+                                <ul className="space-y-1">
+                                  <li>• Los datos se guardan en la base de datos de PulseJournal</li>
+                                  <li>• Acceso público para todos los usuarios</li>
+                                  <li>• No requiere configuración de credenciales</li>
+                                  <li>• Gestión automática de tablas y permisos</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -887,13 +975,17 @@ export default function AgentEditor({
             <Button variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleSave}
-              disabled={!agentName.trim() || !extractionTarget.trim()}
+              disabled={!agentName.trim() || !extractionTarget.trim() || isSaving}
               className="bg-blue-600 text-white hover:bg-blue-700"
             >
-              <Save className="h-4 w-4 mr-2" />
-              {isCreating ? 'Crear Agente' : 'Guardar Cambios'}
+              {isSaving ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {isSaving ? 'Guardando...' : (isCreating ? 'Crear Agente' : 'Guardar Cambios')}
             </Button>
           </div>
         </div>

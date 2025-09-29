@@ -2497,11 +2497,11 @@ export async function getUserRecentExtractions(limit: number = 20): Promise<Agen
 // ===================================================================
 
 /**
- * Obtener datos de la tabla dinámica de un agente específico
+ * Obtener datos de la tabla dinámica de un agente específico (Nueva implementación)
  */
 export async function getAgentDynamicData(
-  agentId: string, 
-  limit: number = 50, 
+  agentId: string,
+  limit: number = 50,
   offset: number = 0
 ): Promise<{ data: any[], total: number }> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -2509,17 +2509,44 @@ export async function getAgentDynamicData(
   }
 
   try {
-    const { data, error } = await supabase.rpc('advancebasedata.get_agent_data', {
-      p_agent_id: agentId,
-      p_limit: limit,
-      p_offset: offset
-    });
+    // Get agent info to determine table name
+    const { data: agent, error: agentError } = await supabase
+      .from('site_agents')
+      .select('database_config, dynamic_table_name')
+      .eq('id', agentId)
+      .single();
+
+    if (agentError || !agent || !agent.database_config?.enabled) {
+      return { data: [], total: 0 };
+    }
+
+    const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
+
+    // Get total count
+    const { count, error: countError } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      if (countError.code === 'PGRST116') {
+        // Table doesn't exist
+        return { data: [], total: 0 };
+      }
+      throw countError;
+    }
+
+    // Get paginated data
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order('extraction_timestamp', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
-    
+
     return {
-      data: data?.data || [],
-      total: data?.total || 0
+      data: data || [],
+      total: count || 0
     };
   } catch (error) {
     console.error('Error fetching agent dynamic data:', error);
@@ -2528,7 +2555,7 @@ export async function getAgentDynamicData(
 }
 
 /**
- * Guardar datos de extracción en la tabla dinámica del agente
+ * Guardar datos de extracción en la tabla dinámica del agente (Nueva implementación)
  */
 export async function saveToAgentDynamicTable(
   agentId: string,
@@ -2542,16 +2569,50 @@ export async function saveToAgentDynamicTable(
   }
 
   try {
-    const { data, error } = await supabase.rpc('advancebasedata.insert_agent_data', {
-      p_agent_id: agentId,
-      p_extraction_id: extractionId,
-      p_data: extractedData,
-      p_raw_data: rawData,
-      p_metadata: metadata
-    });
+    // Get agent info to determine table name
+    const { data: agent, error: agentError } = await supabase
+      .from('site_agents')
+      .select('database_config, dynamic_table_name, agent_name')
+      .eq('id', agentId)
+      .single();
+
+    if (agentError || !agent || !agent.database_config?.enabled) {
+      console.warn('Agent does not have database enabled or agent not found');
+      return null;
+    }
+
+    const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
+
+    // Prepare data for insertion into the public database structure
+    const dataToInsert = Array.isArray(extractedData) ? extractedData : [extractedData];
+    const insertRows = dataToInsert.map((item: any, index: number) => ({
+      text: item.text || item.content || JSON.stringify(item),
+      href: item.href || item.url || null,
+      src: item.src || item.image || null,
+      selector: item.selector || 'api_insertion',
+      tag_name: item.tag_name || item.type || 'data',
+      position: index,
+      agent_name: agent.agent_name,
+      user_id: extractionId, // Use extraction ID as user identifier
+      extraction_timestamp: new Date().toISOString(),
+      metadata: {
+        extraction_id: extractionId,
+        raw_data: rawData,
+        metadata: metadata,
+        agent_id: agentId
+      }
+    }));
+
+    // Insert data
+    const { data, error } = await supabase
+      .from(tableName)
+      .insert(insertRows)
+      .select();
 
     if (error) throw error;
-    return data;
+
+    console.log(`Successfully saved ${insertRows.length} items to ${tableName}`);
+    return extractionId;
   } catch (error) {
     console.error('Error saving to agent dynamic table:', error);
     return null;
@@ -2559,7 +2620,7 @@ export async function saveToAgentDynamicTable(
 }
 
 /**
- * Verificar si un agente tiene tabla dinámica creada
+ * Verificar si un agente tiene tabla dinámica creada (Nueva implementación simplificada)
  */
 export async function checkAgentDynamicTable(agentId: string): Promise<{
   hasTable: boolean;
@@ -2572,24 +2633,45 @@ export async function checkAgentDynamicTable(agentId: string): Promise<{
   }
 
   try {
-    const { data, error } = await supabase
-      .from('advancebasedata.dynamic_tables_registry')
-      .select('table_name, total_records, last_insertion')
-      .eq('agent_id', agentId)
+    // Get agent info to determine table name
+    const { data: agent, error: agentError } = await supabase
+      .from('site_agents')
+      .select('database_config, dynamic_table_name')
+      .eq('id', agentId)
       .single();
+
+    if (agentError || !agent || !agent.database_config?.enabled) {
+      return { hasTable: false };
+    }
+
+    const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
+
+    // Check if table exists by trying to query it
+    const { count, error } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
 
     if (error) {
       if (error.code === 'PGRST116') {
+        // Table doesn't exist
         return { hasTable: false };
       }
       throw error;
     }
 
+    // Get last insertion time
+    const { data: lastRecord, error: lastError } = await supabase
+      .from(tableName)
+      .select('extraction_timestamp')
+      .order('extraction_timestamp', { ascending: false })
+      .limit(1)
+      .single();
+
     return {
       hasTable: true,
-      tableName: data.table_name,
-      totalRecords: data.total_records,
-      lastInsertion: data.last_insertion
+      tableName: tableName,
+      totalRecords: count || 0,
+      lastInsertion: lastRecord?.extraction_timestamp || null
     };
   } catch (error) {
     console.error('Error checking agent dynamic table:', error);
@@ -2598,7 +2680,7 @@ export async function checkAgentDynamicTable(agentId: string): Promise<{
 }
 
 /**
- * Obtener lista de tablas dinámicas del usuario
+ * Obtener lista de tablas dinámicas del usuario (Nueva implementación)
  */
 export async function getUserDynamicTables(): Promise<Array<{
   id: string;
@@ -2615,32 +2697,61 @@ export async function getUserDynamicTables(): Promise<Array<{
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('advancebasedata.dynamic_tables_registry')
-      .select(`
-        id,
-        agent_id,
-        table_name,
-        description,
-        total_records,
-        last_insertion,
-        agent:site_agents (
-          agent_name
-        )
-      `)
-      .eq('agent.user_id', user.id);
+    // Get agents with database enabled for the current user
+    const { data: agents, error } = await supabase
+      .from('site_agents')
+      .select('id, agent_name, database_config, dynamic_table_name, data_description')
+      .eq('user_id', user.id)
+      .not('database_config', 'is', null);
 
     if (error) throw error;
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      agentId: item.agent_id,
-      tableName: item.table_name,
-      description: item.description || '',
-      totalRecords: item.total_records || 0,
-      lastInsertion: item.last_insertion,
-      agentName: item.agent?.agent_name || 'Agente desconocido'
-    }));
+    const results = [];
+
+    for (const agent of agents || []) {
+      if (!agent.database_config?.enabled) continue;
+
+      const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
+
+      try {
+        // Get table statistics
+        const { count } = await supabase
+          .from(tableName)
+          .select('*', { count: 'exact', head: true });
+
+        // Get last insertion
+        const { data: lastRecord } = await supabase
+          .from(tableName)
+          .select('extraction_timestamp')
+          .order('extraction_timestamp', { ascending: false })
+          .limit(1)
+          .single();
+
+        results.push({
+          id: agent.id,
+          agentId: agent.id,
+          tableName: tableName,
+          description: agent.database_config.data_description || agent.data_description || '',
+          totalRecords: count || 0,
+          lastInsertion: lastRecord?.extraction_timestamp || '',
+          agentName: agent.agent_name
+        });
+      } catch (tableError) {
+        // Table might not exist yet
+        console.warn(`Table ${tableName} not accessible:`, tableError);
+        results.push({
+          id: agent.id,
+          agentId: agent.id,
+          tableName: tableName,
+          description: agent.database_config.data_description || agent.data_description || '',
+          totalRecords: 0,
+          lastInsertion: '',
+          agentName: agent.agent_name
+        });
+      }
+    }
+
+    return results;
   } catch (error) {
     console.error('Error fetching user dynamic tables:', error);
     return [];
