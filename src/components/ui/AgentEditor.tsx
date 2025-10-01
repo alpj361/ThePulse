@@ -390,11 +390,16 @@ export default function AgentEditor({
   };
 
   // ✅ Aplicar elementos seleccionados
-  const applySelectedElements = () => {
+  const applySelectedElements = async () => {
     if (selectedElements.length === 0) return;
     
     applyMultipleElements(selectedElements);
     setSelectedElements([]); // Limpiar selección
+    
+    // ✅ Generar código automáticamente después de seleccionar
+    setTimeout(async () => {
+      await generateAgentCode();
+    }, 500);
   };
 
   // ✅ Aplicar múltiples elementos a la vez
@@ -445,7 +450,7 @@ export default function AgentEditor({
   };
 
   // ✅ Aplicar estrategia completa
-  const applyStrategy = (strategy: any) => {
+  const applyStrategy = async (strategy: any) => {
     if (!strategy) return;
 
     // Encontrar elementos relacionados con esta estrategia
@@ -458,11 +463,22 @@ export default function AgentEditor({
     // Si encontramos elementos, aplicarlos
     if (strategyElements.length > 0) {
       applyMultipleElements(strategyElements);
+      
+      // ✅ Generar código automáticamente
+      setTimeout(async () => {
+        await generateAgentCode();
+      }, 500);
     } else {
-      // Si no, usar la descripción de la estrategia
-      setNaturalInstructions(`${strategy.strategy}\n\n${strategy.description}\n\nPasos:\n${strategy.steps?.join('\n') || ''}`);
+      // Si no, usar la descripción de la estrategia directamente
+      const strategyInstructions = `${strategy.strategy}\n\n${strategy.description}\n\nPasos:\n${strategy.steps?.join('\n') || ''}`;
+      setNaturalInstructions(strategyInstructions);
       setAgentName(strategy.strategy.substring(0, 50));
       setActiveTab('ia');
+      
+      // ✅ Generar código automáticamente con la estrategia
+      setTimeout(async () => {
+        await generateAgentCode();
+      }, 500);
     }
   };
 
