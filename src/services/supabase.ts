@@ -1883,6 +1883,13 @@ export interface SiteAgent {
   status: 'active' | 'paused' | 'archived';
   created_at: string;
   last_execution?: string;
+  dynamic_table_name?: string; // Dynamic table name for data storage
+  data_description?: string; // Description of the data being extracted
+  database_config?: { // Database configuration for dynamic tables
+    enabled: boolean;
+    table_name?: string;
+    data_description?: string;
+  };
   site_map?: SiteMap; // Relación para queries expandidas
 }
 
@@ -2512,13 +2519,17 @@ export async function getAgentDynamicData(
     // Get agent info to determine table name
     const { data: agent, error: agentError } = await supabase
       .from('site_agents')
-      .select('database_config, dynamic_table_name')
+      .select('id, agent_name') // Only select existing columns for now
       .eq('id', agentId)
       .single();
 
-    if (agentError || !agent || !agent.database_config?.enabled) {
+    if (agentError || !agent) {
       return { data: [], total: 0 };
     }
+
+    // For now, return empty data since database_config feature is not fully implemented
+    console.log('Database config feature not yet implemented for agent:', agent.agent_name);
+    return { data: [], total: 0 };
 
     const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
 
@@ -2572,14 +2583,18 @@ export async function saveToAgentDynamicTable(
     // Get agent info to determine table name
     const { data: agent, error: agentError } = await supabase
       .from('site_agents')
-      .select('database_config, dynamic_table_name, agent_name')
+      .select('id, agent_name') // Only select existing columns for now
       .eq('id', agentId)
       .single();
 
-    if (agentError || !agent || !agent.database_config?.enabled) {
-      console.warn('Agent does not have database enabled or agent not found');
+    if (agentError || !agent) {
+      console.warn('Agent not found');
       return null;
     }
+
+    // For now, return null since database_config feature is not fully implemented
+    console.log('Database config feature not yet implemented for agent:', agent.agent_name);
+    return null;
 
     const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
 
@@ -2636,13 +2651,17 @@ export async function checkAgentDynamicTable(agentId: string): Promise<{
     // Get agent info to determine table name
     const { data: agent, error: agentError } = await supabase
       .from('site_agents')
-      .select('database_config, dynamic_table_name')
+      .select('id, agent_name') // Only select existing columns for now
       .eq('id', agentId)
       .single();
 
-    if (agentError || !agent || !agent.database_config?.enabled) {
+    if (agentError || !agent) {
       return { hasTable: false };
     }
+
+    // For now, return false since database_config feature is not fully implemented
+    console.log('Database config feature not yet implemented for agent:', agent.agent_name);
+    return { hasTable: false };
 
     const tableName = `agent_${agent.database_config.table_name || agent.dynamic_table_name}`;
 
@@ -2697,14 +2716,17 @@ export async function getUserDynamicTables(): Promise<Array<{
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    // Get agents with database enabled for the current user
+    // Get agents for the current user (database feature not yet implemented)
     const { data: agents, error } = await supabase
       .from('site_agents')
-      .select('id, agent_name, database_config, dynamic_table_name, data_description')
-      .eq('user_id', user.id)
-      .not('database_config', 'is', null);
+      .select('id, agent_name') // Only select existing columns for now
+      .eq('user_id', user.id);
 
     if (error) throw error;
+
+    // For now, return empty array since database_config feature is not fully implemented
+    console.log('Database config feature not yet implemented, returning empty results');
+    return [];
 
     const results = [];
 
