@@ -28,7 +28,9 @@ import {
   Wrench,
   Clock,
   Activity,
-  Globe
+  Globe,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { SiteAgent, SiteMap } from '../../services/supabase';
 import { EXTRACTORW_API_URL } from '../../services/api';
@@ -395,16 +397,14 @@ export default function AgentEditor({
     
     applyMultipleElements(selectedElements);
     setSelectedElements([]); // Limpiar selección
-    
-    // ✅ Generar código automáticamente después de seleccionar
-    setTimeout(async () => {
-      await generateAgentCode();
-    }, 500);
+    // ✅ La generación de código ya se maneja en applyMultipleElements
   };
 
   // ✅ Aplicar múltiples elementos a la vez
   const applyMultipleElements = (elements: any[]) => {
     if (elements.length === 0) return;
+
+    console.log('🔧 Aplicando múltiples elementos:', elements);
 
     // Combinar nombres para el agente
     if (!agentName) {
@@ -445,13 +445,185 @@ export default function AgentEditor({
       instructions += '\n';
     });
 
+    console.log('📝 Instrucciones generadas:', instructions);
     setNaturalInstructions(instructions);
     setActiveTab('ia');
+    
+    // ✅ Generar código inmediatamente con las instrucciones directas
+    setTimeout(async () => {
+      console.log('🤖 Generando código después de aplicar elementos múltiples...');
+      console.log('📝 Usando instrucciones generadas:', instructions);
+      await generateAgentCodeWithInstructions(instructions);
+    }, 100);
+  };
+
+  // ✅ Generar código del agente con IA usando instrucciones específicas
+  const generateAgentCodeWithInstructions = async (instructions: string) => {
+    if (!instructions.trim() || !siteMap?.base_url) {
+      console.log('❌ Faltan instrucciones o URL base');
+      console.log('📝 Instrucciones recibidas:', instructions);
+      console.log('🌐 SiteMap:', siteMap);
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      console.log('🤖 Generando código del agente con instrucciones específicas...');
+      console.log('📝 Instrucciones:', instructions);
+      console.log('🌐 SiteMap:', siteMap);
+      console.log('🔍 ExplorerInsights:', explorerInsights);
+      
+      const requestBody = {
+        instructions: instructions,
+        siteMap: siteMap,
+        existingAgent: agent,
+        explorerInsights: explorerInsights
+      };
+      
+      console.log('📤 Request body:', requestBody);
+      
+      const response = await fetch(`${EXTRACTORW_API_URL}/agents/generate-agent-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Código generado:', result);
+
+      if (result.success && result.data) {
+        // ✅ Mapear la respuesta del backend al formato esperado
+        const generatedCode = {
+          extractionLogic: result.data.extractionLogic || result.data.extraction_target,
+          selectors: result.data.selectors || [],
+          workflow: result.data.workflow || [],
+          confidence: result.data.confidence || 0.8,
+          reasoning: result.data.reasoning || '',
+          execution_mode: result.data.execution_mode,
+          requires_browser: result.data.requires_browser
+        };
+        
+        setGeneratedCode(generatedCode);
+        console.log('🎯 Estado generatedCode actualizado:', generatedCode);
+        
+        // ✅ Cambiar automáticamente a la pestaña "Código Generado"
+        setActiveTab('generated');
+        
+        // ✅ Actualizar campos del agente con la información generada
+        if (result.data.suggestedName && !agentName) {
+          setAgentName(result.data.suggestedName);
+        }
+        if (result.data.suggestedTarget && !extractionTarget) {
+          setExtractionTarget(result.data.suggestedTarget);
+        }
+        if (result.data.suggestedDescription && !dataDescription) {
+          setDataDescription(result.data.suggestedDescription);
+        }
+        
+        console.log('✅ Código del agente generado exitosamente');
+      } else {
+        throw new Error(result.error || 'Error generando código');
+      }
+    } catch (error) {
+      console.error('❌ Error generando código:', error);
+      setGenerationError(error instanceof Error ? error.message : 'Error desconocido');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // ✅ Generar código del agente con IA
+  const generateAgentCode = async () => {
+    if (!naturalInstructions.trim() || !siteMap?.base_url) {
+      console.log('❌ Faltan instrucciones o URL base');
+      console.log('📝 Instrucciones:', naturalInstructions);
+      console.log('🌐 SiteMap:', siteMap);
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      console.log('🤖 Generando código del agente...');
+      console.log('📝 Instrucciones:', naturalInstructions);
+      console.log('🌐 SiteMap:', siteMap);
+      console.log('🔍 ExplorerInsights:', explorerInsights);
+      
+      const requestBody = {
+        instructions: naturalInstructions,
+        siteMap: siteMap,
+        existingAgent: agent,
+        explorerInsights: explorerInsights
+      };
+      
+      console.log('📤 Request body:', requestBody);
+      
+      const response = await fetch(`${EXTRACTORW_API_URL}/agents/generate-agent-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Código generado:', result);
+
+      if (result.success && result.data) {
+        // ✅ Mapear la respuesta del backend al formato esperado
+        const generatedCode = {
+          extractionLogic: result.data.extractionLogic || result.data.extraction_target,
+          selectors: result.data.selectors || [],
+          workflow: result.data.workflow || [],
+          confidence: result.data.confidence || 0.8,
+          reasoning: result.data.reasoning || '',
+          execution_mode: result.data.execution_mode,
+          requires_browser: result.data.requires_browser
+        };
+        
+        setGeneratedCode(generatedCode);
+        console.log('🎯 Estado generatedCode actualizado:', generatedCode);
+        
+        // ✅ Cambiar automáticamente a la pestaña "Código Generado"
+        setActiveTab('generated');
+        
+        // ✅ Actualizar campos del agente con la información generada
+        if (result.data.suggestedName && !agentName) {
+          setAgentName(result.data.suggestedName);
+        }
+        if (result.data.suggestedTarget && !extractionTarget) {
+          setExtractionTarget(result.data.suggestedTarget);
+        }
+        if (result.data.suggestedDescription && !dataDescription) {
+          setDataDescription(result.data.suggestedDescription);
+        }
+        
+        console.log('✅ Código del agente generado exitosamente');
+      } else {
+        throw new Error(result.error || 'Error generando código');
+      }
+    } catch (error) {
+      console.error('❌ Error generando código:', error);
+      setGenerationError(error instanceof Error ? error.message : 'Error desconocido');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // ✅ Aplicar estrategia completa
   const applyStrategy = async (strategy: any) => {
     if (!strategy) return;
+
+    console.log('🎯 Aplicando estrategia:', strategy);
 
     // Encontrar elementos relacionados con esta estrategia
     const strategyElements = explorerInsights?.extractableElements?.filter((el: any) => {
@@ -460,25 +632,33 @@ export default function AgentEditor({
       return el.suggestedSelectors?.some((selector: string) => stepsText.includes(selector));
     }) || [];
 
+    console.log('🔍 Elementos encontrados para la estrategia:', strategyElements);
+
     // Si encontramos elementos, aplicarlos
     if (strategyElements.length > 0) {
+      console.log('✅ Aplicando elementos múltiples');
       applyMultipleElements(strategyElements);
       
       // ✅ Generar código automáticamente
       setTimeout(async () => {
+        console.log('🤖 Generando código después de aplicar elementos...');
         await generateAgentCode();
-      }, 500);
+      }, 1000); // Aumentar tiempo para que se establezcan las instrucciones
     } else {
       // Si no, usar la descripción de la estrategia directamente
       const strategyInstructions = `${strategy.strategy}\n\n${strategy.description}\n\nPasos:\n${strategy.steps?.join('\n') || ''}`;
+      console.log('📝 Estableciendo instrucciones de estrategia:', strategyInstructions);
+      
       setNaturalInstructions(strategyInstructions);
       setAgentName(strategy.strategy.substring(0, 50));
       setActiveTab('ia');
       
-      // ✅ Generar código automáticamente con la estrategia
+      // ✅ Generar código automáticamente con la estrategia usando las instrucciones directamente
       setTimeout(async () => {
-        await generateAgentCode();
-      }, 500);
+        console.log('🤖 Generando código después de establecer instrucciones...');
+        console.log('📝 Usando instrucciones directas:', strategyInstructions);
+        await generateAgentCodeWithInstructions(strategyInstructions);
+      }, 1000); // Aumentar tiempo para que se establezcan las instrucciones
     }
   };
 
@@ -2320,6 +2500,36 @@ return items;`;
                         <p className="text-sm text-red-800 mt-1">{generationError}</p>
                       </div>
                     )}
+
+                    {/* ✅ Botón manual para debuggear */}
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                        <span className="text-sm font-medium text-yellow-800">Debug Manual</span>
+                      </div>
+                      <p className="text-xs text-yellow-700 mb-2">
+                        Si el modal se queda en blanco, usa este botón para forzar la generación:
+                      </p>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={generateAgentCode}
+                        disabled={isGenerating}
+                        className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-3 w-3 mr-1" />
+                            Forzar Generación
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
