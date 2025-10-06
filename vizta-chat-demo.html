@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vizta Chat UI Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        /* Animations */
+        @keyframes slideInFromRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        .slide-in {
+            animation: slideInFromRight 0.3s ease-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        .pulse-dot {
+            animation: pulse 1s infinite;
+        }
+        
+        .typing-cursor {
+            animation: typing 0.5s infinite;
+        }
+        
+        /* Skeleton loader */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen flex items-center justify-center p-8">
+    <div class="max-w-7xl w-full">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Vizta Chat UI Enhancement
+            </h1>
+            <p class="text-xl text-gray-600 mb-8">Enhanced with Perplexity-like smooth components and animations</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Feature Showcase -->
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Enhanced Features
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Feature 1 -->
+                    <div class="fade-in" style="animation-delay: 0.1s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">✨</span>
+                            Smooth Animations
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Framer Motion powered animations for floating button hover effects, message entrance/exit, and smooth transitions
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 2 -->
+                    <div class="fade-in" style="animation-delay: 0.2s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">📑</span>
+                            Tabbed Interface
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Answer, Sources, and Steps tabs within each assistant message for organized content display
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 3 -->
+                    <div class="fade-in" style="animation-delay: 0.3s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">⚡</span>
+                            Loading States
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Typing indicators, skeleton loaders, and shimmer effects for smooth content loading experience
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 4 -->
+                    <div class="fade-in" style="animation-delay: 0.4s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">📋</span>
+                            Copy Functionality
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            One-click copy buttons for code blocks and responses with animated feedback
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 5 -->
+                    <div class="fade-in" style="animation-delay: 0.5s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">🎨</span>
+                            Enhanced Markdown
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Beautiful syntax highlighting, custom styled lists, blockquotes, and code blocks
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 6 -->
+                    <div class="fade-in" style="animation-delay: 0.6s">
+                        <h3 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                            <span class="text-2xl">🔄</span>
+                            Auto-scroll
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Smooth automatic scrolling to new messages with proper positioning
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visual Demo -->
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-2xl font-bold mb-6">UI Components Demo</h2>
+                
+                <!-- Typing Indicator -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium mb-2">Typing Indicator:</p>
+                    <div class="flex items-center gap-1">
+                        <div class="h-2 w-2 rounded-full bg-blue-500 pulse-dot"></div>
+                        <div class="h-2 w-2 rounded-full bg-blue-500 pulse-dot" style="animation-delay: 0.15s"></div>
+                        <div class="h-2 w-2 rounded-full bg-blue-500 pulse-dot" style="animation-delay: 0.3s"></div>
+                    </div>
+                </div>
+                
+                <!-- Skeleton Loader -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium mb-3">Skeleton Loader:</p>
+                    <div class="space-y-3">
+                        <div class="h-4 skeleton rounded-md"></div>
+                        <div class="h-4 skeleton rounded-md"></div>
+                        <div class="h-4 skeleton rounded-md w-3/5"></div>
+                    </div>
+                </div>
+                
+                <!-- Message Example -->
+                <div class="mb-6 p-4 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-2xl text-white fade-in">
+                    <div class="flex items-start gap-3">
+                        <div class="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center font-bold">
+                            V
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm mb-2">Sample assistant message with enhanced styling</p>
+                            <div class="flex gap-2">
+                                <span class="text-xs px-2 py-1 bg-white/20 rounded-full">⏱️ 1.2s</span>
+                                <span class="text-xs px-2 py-1 bg-white/20 rounded-full">📊 15 tweets</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab Demo -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium mb-3">Tabbed Interface:</p>
+                    <div class="flex gap-2 mb-3">
+                        <button class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium">Answer</button>
+                        <button class="px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300">Sources</button>
+                        <button class="px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300">Steps</button>
+                    </div>
+                    <div class="text-sm text-gray-600 p-3 bg-white rounded border border-gray-200">
+                        Content for selected tab appears here with smooth transitions
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Implementation Notes -->
+        <div class="mt-12 bg-white rounded-2xl shadow-xl p-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Technical Implementation
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold mb-3">New Components Created:</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <code class="bg-gray-100 px-2 py-0.5 rounded">typing-indicator.tsx</code>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <code class="bg-gray-100 px-2 py-0.5 rounded">skeleton-loader.tsx</code>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <code class="bg-gray-100 px-2 py-0.5 rounded">streaming-text.tsx</code>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <code class="bg-gray-100 px-2 py-0.5 rounded">copy-button.tsx</code>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold mb-3">Libraries Used:</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-center gap-2">
+                            <span class="text-blue-600">📦</span>
+                            <span><strong>Framer Motion:</strong> Smooth animations</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-blue-600">📦</span>
+                            <span><strong>React Markdown:</strong> Rich text rendering</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-blue-600">📦</span>
+                            <span><strong>Radix UI:</strong> Accessible components</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-blue-600">📦</span>
+                            <span><strong>Lucide Icons:</strong> Beautiful icons</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
