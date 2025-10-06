@@ -6,17 +6,15 @@ import {
   X,
   MessageCircle,
   Send,
-  Zap,
   Clock,
   Hash,
   BarChart3,
   TrendingUp,
   FileText,
-  Image as ImageIcon,
   Link as LinkIcon,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Newspaper
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -27,7 +25,6 @@ import { Button } from "./button";
 import { Textarea } from "./textarea";
 import { Avatar, AvatarFallback } from "./avatar";
 import { ScrollArea } from "./scroll-area";
-import { TextShimmer } from "./text-shimmer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { TypingIndicator } from "./typing-indicator";
 import { SkeletonLoader } from "./skeleton-loader";
