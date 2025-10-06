@@ -63,21 +63,18 @@ const ViztaChatTrigger = React.forwardRef<
   >
     <motion.button
       className={cn(
-        "fixed right-6 top-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white shadow-lg focus:outline-none z-50",
+        "fixed right-6 top-6 inline-flex h-14 w-14 items-center justify-center rounded-lg bg-[#1e40af] text-white shadow-lg focus:outline-none z-50 border border-[#1e3a8a]",
         className
       )}
-      whileHover={{ scale: 1.05, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+      whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.2)" }}
       whileTap={{ scale: 0.95 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      transition={{ duration: 0.15 }}
     >
       {children || (
-        <div className="relative">
-          <MessageCircle className="h-6 w-6" />
-          <motion.div 
-            className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+        <div className="relative flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-white rounded flex items-center justify-center font-bold text-sm">
+            V
+          </div>
         </div>
       )}
     </motion.button>
