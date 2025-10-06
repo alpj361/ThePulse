@@ -703,26 +703,23 @@ const ViztaChatUI = () => {
           <AnimatePresence>
             {isLoading && (
               <motion.div 
-                className="flex items-start gap-3 rounded-2xl p-4 bg-white border border-gray-100 shadow-sm"
-                initial={{ opacity: 0, y: 20 }}
+                className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
               >
-                <Avatar className="h-9 w-9 shadow-sm ring-2 ring-blue-100">
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                    <span className="text-sm font-bold">V</span>
+                <Avatar className="h-9 w-9 shadow-sm">
+                  <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
+                    <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
+                      V
+                    </div>
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2">
                     <TypingIndicator />
-                    <TextShimmer 
-                      duration={1.5}
-                      className="text-sm font-medium [--base-color:theme(colors.blue.600)] [--base-gradient-color:theme(colors.blue.300)]"
-                    >
-                      Analizando tu consulta
-                    </TextShimmer>
+                    <span className="text-sm text-gray-600">Analizando...</span>
                   </div>
                   <SkeletonLoader lines={3} />
                 </div>
@@ -734,20 +731,33 @@ const ViztaChatUI = () => {
         </div>
         
         {/* Input area */}
-        <motion.div 
-          className="border-t bg-white/80 backdrop-blur-sm p-4"
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ type: "spring", damping: 20 }}
-        >
+        <div className="border-t bg-white p-4">
           <div className="flex gap-3">
             <div className="flex-1 relative">
-              <motion.div 
-                className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl p-[1px]"
-                animate={{
-                  background: [
-                    "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-                    "linear-gradient(180deg, #8b5cf6, #3b82f6)",
+              <Textarea
+                placeholder="Escribe tu consulta sobre Guatemala..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
+            </div>
+            <Button 
+              size="icon" 
+              onClick={handleSend}
+              disabled={isLoading || !inputValue.trim()}
+              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="h-4 w-4" />
+              <span className="sr-only">Enviar mensaje</span>
+            </Button>
+          </div>
+        </div>
                     "linear-gradient(270deg, #3b82f6, #8b5cf6)",
                     "linear-gradient(360deg, #8b5cf6, #3b82f6)",
                   ]
