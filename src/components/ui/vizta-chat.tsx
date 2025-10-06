@@ -113,35 +113,27 @@ const ViztaChatContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex flex-col gap-0 right-0 inset-y-0 h-full w-full sm:w-[440px] border-l bg-gradient-to-b from-white to-gray-50/50 shadow-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-300",
+        "fixed z-50 flex flex-col gap-0 right-0 inset-y-0 h-full w-full sm:w-[440px] border-l bg-white shadow-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-200",
         className
       )}
       {...props}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-500 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-sm"></div>
-          <div className="flex items-center gap-3 relative z-10">
-            <motion.div 
-              className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            >
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-[#1e40af] text-white">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 border-2 border-white rounded flex items-center justify-center">
               <span className="text-sm font-bold">V</span>
-            </motion.div>
+            </div>
             <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                Vizta Chat
-                <Sparkles className="h-4 w-4 text-yellow-300" />
-              </h2>
-              <p className="text-xs text-white/80">Análisis inteligente de Guatemala</p>
+              <h2 className="text-lg font-semibold">Vizta</h2>
+              <p className="text-xs text-white/80">Análisis de noticias y tendencias</p>
             </div>
           </div>
           <SheetPrimitive.Close asChild>
             <motion.button
-              className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors relative z-10"
-              whileHover={{ scale: 1.1, rotate: 90 }}
+              className="rounded-md h-8 w-8 hover:bg-white/10 flex items-center justify-center transition-colors"
+              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
               <X className="h-4 w-4" />
@@ -151,7 +143,7 @@ const ViztaChatContent = React.forwardRef<
         </div>
         
         {/* Messages area */}
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4 bg-gray-50">
           {children}
         </ScrollArea>
       </div>
