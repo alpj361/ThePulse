@@ -152,11 +152,16 @@ const ViztaChatContent = React.forwardRef<
 ));
 ViztaChatContent.displayName = "ViztaChatContent";
 
-// Message Component with Tabs
+// Message Component with Conditional Tabs
 const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
   const [activeTab, setActiveTab] = React.useState("answer");
   const [isExpanded, setIsExpanded] = React.useState(true);
   const messageRef = React.useRef<HTMLDivElement>(null);
+
+  // Check if we have sources or steps
+  const hasSources = message.sources && message.sources.length > 0;
+  const hasSteps = message.steps && message.steps.length > 0;
+  const showTabs = hasSources || hasSteps;
 
   React.useEffect(() => {
     if (messageRef.current) {
@@ -167,66 +172,188 @@ const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
   return (
     <motion.div
       ref={messageRef}
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="flex items-start gap-3 rounded-2xl p-4 bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-150"
     >
-      <Avatar className="h-9 w-9 shadow-sm ring-2 ring-blue-100">
-        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-          <span className="text-sm font-bold">V</span>
+      <Avatar className="h-9 w-9 shadow-sm">
+        <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
+          <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
+            V
+          </div>
         </AvatarFallback>
       </Avatar>
       
       <div className="flex-1 min-w-0">
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-3 bg-gray-100/80 backdrop-blur-sm">
-            <TabsTrigger value="answer" className="text-xs gap-1.5">
-              <FileText className="h-3 w-3" />
-              Answer
-            </TabsTrigger>
-            {message.sources && message.sources.length > 0 && (
-              <TabsTrigger value="sources" className="text-xs gap-1.5">
-                <LinkIcon className="h-3 w-3" />
-                Sources
+        {/* Tabs - Only show if we have sources or steps */}
+        {showTabs ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-3 bg-gray-100">
+              <TabsTrigger value="answer" className="text-xs gap-1.5">
+                <FileText className="h-3 w-3" />
+                Respuesta
               </TabsTrigger>
-            )}
-            {message.steps && message.steps.length > 0 && (
-              <TabsTrigger value="steps" className="text-xs gap-1.5">
-                <BarChart3 className="h-3 w-3" />
-                Steps
-              </TabsTrigger>
-            )}
-          </TabsList>
+              {hasSources && (
+                <TabsTrigger value="sources" className="text-xs gap-1.5">
+                  <LinkIcon className="h-3 w-3" />
+                  Fuentes
+                </TabsTrigger>
+              )}
+              {hasSteps && (
+                <TabsTrigger value="steps" className="text-xs gap-1.5">
+                  <BarChart3 className="h-3 w-3" />
+                  Pasos
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-          {/* Answer Tab */}
-          <TabsContent value="answer" className="space-y-2">
+            {/* Answer Tab */}
+            <TabsContent value="answer" className="space-y-2">
+              <div className="relative">
+                <div className={cn(
+                  "prose prose-sm max-w-none transition-all duration-200",
+                  !isExpanded && "max-h-48 overflow-hidden"
+                )}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({children}) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
+                      h2: ({children}) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
+                      h3: ({children}) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
+                      p: ({children}) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
+                      ul: ({children}) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
+                      ol: ({children}) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
+                      li: ({children}) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
+                      strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                      em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+                      blockquote: ({children}) => (
+                        <blockquote className="border-l-4 border-[#0891b2] pl-4 py-2 bg-gray-50 rounded-r my-3">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({inline, children}) => 
+                        inline ? (
+                          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-[#1e40af]">
+                            {children}
+                          </code>
+                        ) : (
+                          <div className="relative group">
+                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs my-3">
+                              <code>{children}</code>
+                            </pre>
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <CopyButton text={String(children)} className="bg-gray-800 text-white hover:bg-gray-700" />
+                            </div>
+                          </div>
+                        )
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+                
+                {!isExpanded && (
+                  <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                )}
+              </div>
+              
+              {message.content.length > 500 && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1 mt-2"
+                >
+                  {isExpanded ? (
+                    <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
+                  ) : (
+                    <>Mostrar más <ChevronDown className="h-3 w-3" /></>
+                  )}
+                </button>
+              )}
+            </TabsContent>
+
+            {/* Sources Tab */}
+            {hasSources && (
+              <TabsContent value="sources" className="space-y-2">
+                {message.sources!.map((source, idx) => (
+                  <motion.a
+                    key={idx}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#0891b2] hover:bg-gray-50 transition-all duration-150 group"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0891b2] group-hover:text-white transition-colors">
+                      <LinkIcon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{source.title}</p>
+                      <p className="text-xs text-gray-500 truncate">{source.url}</p>
+                    </div>
+                  </motion.a>
+                ))}
+              </TabsContent>
+            )}
+
+            {/* Steps Tab */}
+            {hasSteps && (
+              <TabsContent value="steps" className="space-y-3">
+                {message.steps!.map((step, idx) => (
+                  <motion.div
+                    key={idx}
+                    className="flex gap-3"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <div className="h-6 w-6 rounded bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center">
+                        {idx + 1}
+                      </div>
+                      {idx < message.steps!.length - 1 && (
+                        <div className="w-0.5 flex-1 bg-gray-300 mt-2" />
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <p className="text-sm font-medium text-gray-900 mb-1">{step.step}</p>
+                      <p className="text-xs text-gray-600">{step.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </TabsContent>
+            )}
+          </Tabs>
+        ) : (
+          /* No tabs - Just show content */
+          <div className="space-y-2">
             <div className="relative">
               <div className={cn(
-                "prose prose-sm max-w-none transition-all duration-300",
+                "prose prose-sm max-w-none transition-all duration-200",
                 !isExpanded && "max-h-48 overflow-hidden"
               )}>
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({children}) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
-                    h2: ({children}) => <h2 className="text-base font-bold mb-2 mt-3 text-gray-800">{children}</h2>,
+                    h2: ({children}) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
                     h3: ({children}) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
                     p: ({children}) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
-                    ul: ({children}) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-blue-500">{children}</ul>,
-                    ol: ({children}) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-blue-500">{children}</ol>,
+                    ul: ({children}) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
+                    ol: ({children}) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
                     li: ({children}) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
                     strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
                     em: ({children}) => <em className="italic text-gray-600">{children}</em>,
                     blockquote: ({children}) => (
-                      <blockquote className="border-l-4 border-blue-400 pl-4 py-2 bg-blue-50/50 rounded-r-lg my-3">
+                      <blockquote className="border-l-4 border-[#0891b2] pl-4 py-2 bg-gray-50 rounded-r my-3">
                         {children}
                       </blockquote>
                     ),
                     code: ({inline, children}) => 
                       inline ? (
-                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600">
+                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-[#1e40af]">
                           {children}
                         </code>
                       ) : (
@@ -253,101 +380,36 @@ const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
             {message.content.length > 500 && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mt-2"
+                className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1 mt-2"
               >
                 {isExpanded ? (
-                  <>Show less <ChevronUp className="h-3 w-3" /></>
+                  <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
                 ) : (
-                  <>Show more <ChevronDown className="h-3 w-3" /></>
+                  <>Mostrar más <ChevronDown className="h-3 w-3" /></>
                 )}
               </button>
             )}
-          </TabsContent>
-
-          {/* Sources Tab */}
-          {message.sources && message.sources.length > 0 && (
-            <TabsContent value="sources" className="space-y-2">
-              {message.sources.map((source, idx) => (
-                <motion.a
-                  key={idx}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200 group"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <LinkIcon className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{source.title}</p>
-                    <p className="text-xs text-gray-500 truncate">{source.url}</p>
-                  </div>
-                </motion.a>
-              ))}
-            </TabsContent>
-          )}
-
-          {/* Steps Tab */}
-          {message.steps && message.steps.length > 0 && (
-            <TabsContent value="steps" className="space-y-3">
-              {message.steps.map((step, idx) => (
-                <motion.div
-                  key={idx}
-                  className="flex gap-3"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs font-bold flex items-center justify-center">
-                      {idx + 1}
-                    </div>
-                    {idx < message.steps.length - 1 && (
-                      <div className="w-0.5 flex-1 bg-gradient-to-b from-blue-300 to-purple-300 mt-2" />
-                    )}
-                  </div>
-                  <div className="flex-1 pb-4">
-                    <p className="text-sm font-medium text-gray-900 mb-1">{step.step}</p>
-                    <p className="text-xs text-gray-600">{step.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </TabsContent>
-          )}
-        </Tabs>
+          </div>
+        )}
         
         {/* Message metadata */}
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
-          <time className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
+          <time className="text-xs text-gray-500">
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </time>
           
           <div className="flex items-center gap-2">
             {message.executionTime && (
-              <motion.span 
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-              >
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {(message.executionTime / 1000).toFixed(1)}s
-              </motion.span>
+              </span>
             )}
             {message.tweetsAnalyzed && message.tweetsAnalyzed > 0 && (
-              <motion.span 
-                className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.3, type: "spring" }}
-              >
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
                 <Hash className="h-3 w-3" />
                 {message.tweetsAnalyzed}
-              </motion.span>
+              </span>
             )}
           </div>
         </div>
