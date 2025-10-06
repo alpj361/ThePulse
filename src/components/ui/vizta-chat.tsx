@@ -657,47 +657,6 @@ const ViztaChatUI = () => {
               ))}
             </AnimatePresence>
           )}
-                    whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="relative z-10 flex items-center gap-3">
-                      {prompt.icon}
-                      <span className="flex-1">{prompt.text}</span>
-                    </div>
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <AnimatePresence mode="popLayout">
-              {messages.map((message, index) => (
-                message.sender === "user" ? (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="flex items-start gap-3 ml-auto max-w-[85%]"
-                  >
-                    <div className="flex-1 rounded-2xl p-4 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white shadow-lg">
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                      <time className="text-xs text-white/70 mt-2 block">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </time>
-                    </div>
-                    <Avatar className="h-9 w-9 shadow-sm ring-2 ring-blue-100">
-                      <AvatarFallback className="bg-white/20 text-white border border-white/30">
-                        <MessageCircle className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </motion.div>
-                ) : (
-                  <AssistantMessage key={message.id} message={message} />
-                )
-              ))}
-            </AnimatePresence>
-          )}
           
           {/* Loading state */}
           <AnimatePresence>
