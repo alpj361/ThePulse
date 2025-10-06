@@ -501,15 +501,9 @@ const ViztaChatUI = () => {
           toolUsed: toolType,
           executionTime: response.executionTime || response.metadata?.processingTime,
           tweetsAnalyzed: response.toolResult?.tweets?.length || 0,
-          // Mock sources and steps for demo - in real app these would come from backend
-          sources: [
-            { title: "Fuente de datos oficial", url: "https://example.com" }
-          ],
-          steps: [
-            { step: "Análisis iniciado", description: "Procesando tu consulta" },
-            { step: "Datos obtenidos", description: "Información recopilada exitosamente" },
-            { step: "Respuesta generada", description: "Análisis completado" }
-          ]
+          // Only add sources/steps if they exist in the response
+          sources: response.sources || undefined,
+          steps: response.steps || undefined
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
