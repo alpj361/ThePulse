@@ -758,42 +758,6 @@ const ViztaChatUI = () => {
             </Button>
           </div>
         </div>
-                    "linear-gradient(270deg, #3b82f6, #8b5cf6)",
-                    "linear-gradient(360deg, #8b5cf6, #3b82f6)",
-                  ]
-                }}
-                transition={{ duration: 3, repeat: Infinity }}
-              >
-                <Textarea
-                  placeholder="Escribe tu consulta sobre Guatemala..."
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  className="h-12 w-full resize-none rounded-xl bg-white border-0 px-4 py-3 focus-visible:ring-0 focus-visible:outline-none placeholder:text-gray-400 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-              </motion.div>
-            </div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                size="icon" 
-                onClick={handleSend}
-                disabled={isLoading || !inputValue.trim()}
-                className="h-12 w-12 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-              >
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Enviar mensaje</span>
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
       </ViztaChatContent>
     </ViztaChat>
   );
