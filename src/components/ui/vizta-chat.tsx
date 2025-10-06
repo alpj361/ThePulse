@@ -554,34 +554,30 @@ const ViztaChatUI = () => {
           {/* Mode toggle */}
           <motion.div 
             className="flex items-center justify-between mb-2"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
           >
-            <div className="text-xs text-muted-foreground font-medium">Modo</div>
-            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 rounded-full border border-gray-200">
-              <motion.button
+            <div className="text-xs text-gray-600 font-medium">Modo</div>
+            <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
+              <button
                 onClick={() => setMode('chat')}
                 className={cn(
-                  'px-3 py-1 rounded-full text-xs font-medium transition-all duration-200',
-                  mode === 'chat' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600'
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                  mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
                 )}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
                 Chat
-              </motion.button>
-              <motion.button
+              </button>
+              <button
                 onClick={() => setMode('agentic')}
                 className={cn(
-                  'px-3 py-1 rounded-full text-xs font-medium transition-all duration-200',
-                  mode === 'agentic' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-600'
+                  'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                  mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
                 )}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
                 Agéntico
-              </motion.button>
+              </button>
             </div>
           </motion.div>
 
@@ -589,51 +585,23 @@ const ViztaChatUI = () => {
           {messages.length === 0 ? (
             <motion.div 
               className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
             >
-              {/* Logo y bienvenida */}
-              <motion.div 
-                className="relative mb-6"
-                animate={{ 
-                  rotate: [0, 5, -5, 0],
-                }}
-                transition={{ 
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 flex items-center justify-center shadow-xl ring-4 ring-blue-100">
-                  <span className="text-2xl font-bold text-white">V</span>
+              {/* Logo */}
+              <div className="mb-6">
+                <div className="h-16 w-16 border-2 border-[#1e40af] rounded-lg bg-white flex items-center justify-center shadow-sm">
+                  <span className="text-2xl font-bold text-[#1e40af]">V</span>
                 </div>
-                <motion.div 
-                  className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-400 rounded-full flex items-center justify-center ring-2 ring-white"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Zap className="h-3 w-3 text-white" />
-                </motion.div>
-              </motion.div>
+              </div>
               
-              <motion.h3 
-                className="text-2xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                ¡Hola! Soy Vizta
-              </motion.h3>
-              <motion.p 
-                className="text-sm text-muted-foreground mb-8 max-w-sm leading-relaxed"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                Tu asistente especializado en análisis de redes sociales, tendencias y sentimientos sobre Guatemala. 
-                Pregúntame lo que quieras saber.
-              </motion.p>
+              <h3 className="text-2xl font-semibold mb-2 text-gray-900">
+                Vizta
+              </h3>
+              <p className="text-sm text-gray-600 mb-8 max-w-sm leading-relaxed">
+                Asistente de análisis de noticias y tendencias de Guatemala
+              </p>
 
               {/* Quick prompts */}
               <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
@@ -642,12 +610,53 @@ const ViztaChatUI = () => {
                     key={index}
                     onClick={() => setInputValue(prompt.text)}
                     className={cn(
-                      "group relative overflow-hidden rounded-xl p-4 text-left text-sm font-medium text-white shadow-lg transition-all duration-300",
+                      "group relative overflow-hidden rounded-lg p-4 text-left text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200",
                       `bg-gradient-to-r ${prompt.gradient}`
                     )}
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1, type: "spring" }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="relative z-10 flex items-center gap-3">
+                      {prompt.icon}
+                      <span className="flex-1">{prompt.text}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {messages.map((message, index) => (
+                message.sender === "user" ? (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-start gap-3 ml-auto max-w-[85%]"
+                  >
+                    <div className="flex-1 rounded-lg p-4 bg-[#1e40af] text-white shadow-sm">
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <time className="text-xs text-white/70 mt-2 block">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </time>
+                    </div>
+                    <Avatar className="h-9 w-9 shadow-sm">
+                      <AvatarFallback className="bg-gray-200 text-gray-700">
+                        <MessageCircle className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </motion.div>
+                ) : (
+                  <AssistantMessage key={message.id} message={message} />
+                )
+              ))}
+            </AnimatePresence>
+          )}
                     whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
                     whileTap={{ scale: 0.98 }}
                   >
