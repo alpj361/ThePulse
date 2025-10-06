@@ -179,6 +179,79 @@ export async function getLatestTrendData(): Promise<any | null> {
 }
 
 /**
+ * Obtiene trends filtrados por tipo (deportes o no deportes)
+ * @param isDeportes - true para deportivos, false para no deportivos
+ * @param limit - número máximo de trends a retornar
+ */
+export async function getTrendsByType(isDeportes: boolean, limit: number = 10): Promise<any[]> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase not configured');
+    return [];
+  }
+  
+  try {
+    const { data, error} = await supabase
+      .from('trends')
+      .select('*')
+      .eq('is_deportes', isDeportes)
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    
+    console.log(`📊 Trends ${isDeportes ? 'deportivos' : 'generales'} encontrados:`, data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error(`Error fetching ${isDeportes ? 'sports' : 'general'} trends:`, error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene estadísticas de distribución deportes vs generales
+ */
+export async function getTrendsStats(): Promise<any> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase not configured');
+    return null;
+  }
+  
+  try {
+    // Obtener los últimos 30 días de trends
+    const { data, error } = await supabase
+      .from('trends')
+      .select('is_deportes, categoria_principal, timestamp')
+      .gte('timestamp', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .order('timestamp', { ascending: false });
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) return null;
+    
+    const deportivos = data.filter(t => t.is_deportes).length;
+    const total = data.length;
+    
+    // Contar por categorías
+    const categorias: Record<string, number> = {};
+    data.forEach(t => {
+      const cat = t.categoria_principal || 'General';
+      categorias[cat] = (categorias[cat] || 0) + 1;
+    });
+    
+    return {
+      total_trends: total,
+      deportivos,
+      no_deportivos: total - deportivos,
+      porcentaje_deportes: Math.round((deportivos / total) * 100),
+      categorias_count: categorias
+    };
+  } catch (error) {
+    console.error('Error fetching trends stats:', error);
+    return null;
+  }
+}
+
+/**
  * Tabla: codex_items
  * - id: uuid (primary key)
  * - user_id: uuid (referencia a auth.users)

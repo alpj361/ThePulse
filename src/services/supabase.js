@@ -164,6 +164,70 @@ export const getLatestTrendData = async () => {
   }
 }
 
+/**
+ * Obtiene trends filtrados por tipo (deportes o no deportes)
+ * @param {boolean} isDeportes - true para deportivos, false para no deportivos
+ * @param {number} limit - número máximo de trends a retornar
+ */
+export const getTrendsByType = async (isDeportes, limit = 10) => {
+  try {
+    const { data, error } = await supabase
+      .from('trends')
+      .select('*')
+      .eq('is_deportes', isDeportes)
+      .order('timestamp', { ascending: false })
+      .limit(limit)
+    
+    if (error) throw error
+    
+    console.log(`📊 Trends ${isDeportes ? 'deportivos' : 'generales'} encontrados:`, data?.length || 0)
+    return data || []
+  } catch (error) {
+    console.error(`Error fetching ${isDeportes ? 'sports' : 'general'} trends:`, error)
+    return []
+  }
+}
+
+/**
+ * Obtiene estadísticas de distribución deportes vs generales
+ */
+export const getTrendsStats = async () => {
+  try {
+    // Obtener los últimos 30 días de trends
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { data, error } = await supabase
+      .from('trends')
+      .select('is_deportes, categoria_principal, timestamp')
+      .gte('timestamp', thirtyDaysAgo)
+      .order('timestamp', { ascending: false })
+    
+    if (error) throw error
+    
+    if (!data || data.length === 0) return null
+    
+    const deportivos = data.filter(t => t.is_deportes).length
+    const total = data.length
+    
+    // Contar por categorías
+    const categorias = {}
+    data.forEach(t => {
+      const cat = t.categoria_principal || 'General'
+      categorias[cat] = (categorias[cat] || 0) + 1
+    })
+    
+    return {
+      total_trends: total,
+      deportivos,
+      no_deportivos: total - deportivos,
+      porcentaje_deportes: Math.round((deportivos / total) * 100),
+      categorias_count: categorias
+    }
+  } catch (error) {
+    console.error('Error fetching trends stats:', error)
+    return null
+  }
+}
+
 // Get user projects
 export const getUserProjects = async (userId) => {
   try {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { flushSync } from 'react-dom';
 import { BarChart3 as BarChartIcon, LayoutDashboard, Search, TrendingUp } from 'lucide-react';
+import { Trophy } from 'lucide-react'; // NUEVO: Icono para deportes
 import WordCloud from '../components/ui/WordCloud';
 import BarChart from '../components/ui/BarChart';
 import KeywordListCard from '../components/ui/KeywordListCard';
@@ -11,9 +12,10 @@ import NitterTweetsSection from '../components/ui/NitterTweetsSection';
 
 import { wordCloudData as mockWordCloudData, topKeywords as mockTopKeywords, categoryData as mockCategoryData } from '../data/mockData';
 import { fetchAndStoreTrends, getLatestTrends, AboutInfo, Statistics } from '../services/api';
+import { getTrendsStats } from '../services/supabase.js'; // NUEVO: Estadísticas de deportes
 import { LanguageContext } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { CategoryCount } from '../types';
+import { CategoryCount, TrendsStats } from '../types'; // NUEVO: TrendsStats
 import {
   Box,
   Typography,
@@ -32,7 +34,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Collapse
+  Collapse,
+  Tabs,
+  Tab
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -42,6 +46,8 @@ import UpdateIcon from '@mui/icons-material/Update';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer'; // NUEVO: Icono deportes
+import DashboardIcon from '@mui/icons-material/Dashboard'; // NUEVO: Icono general
 
 const translations = {
   es: {
@@ -66,7 +72,12 @@ const translations = {
     dataError: 'Los datos recibidos no tienen el formato esperado. Por favor, intente de nuevo.',
     fetchError: 'Error al obtener datos de tendencias. Por favor, intente nuevamente.',
     noDetailsAvailable: 'Información detallada no disponible. Haz clic en "Buscar Tendencias" para obtener datos actualizados.',
-    noStatisticsAvailable: 'Estadísticas de procesamiento no disponibles.'
+    noStatisticsAvailable: 'Estadísticas de procesamiento no disponibles.',
+    // NUEVO: Traducciones para tabs
+    all: 'Todos',
+    general: 'Generales',
+    sports: 'Deportes',
+    distribution: 'Distribución'
   },
   en: {
     summary: 'Trends Summary',
@@ -90,7 +101,12 @@ const translations = {
     dataError: 'The received data is not in the expected format. Please try again.',
     fetchError: 'Error fetching trend data. Please try again.',
     noDetailsAvailable: 'Detailed information not available. Click "Search Trends" to get updated data.',
-    noStatisticsAvailable: 'Processing statistics not available.'
+    noStatisticsAvailable: 'Processing statistics not available.',
+    // NUEVO: Traducciones para tabs
+    all: 'All',
+    general: 'General',
+    sports: 'Sports',
+    distribution: 'Distribution'
   },
 };
 
@@ -122,6 +138,9 @@ export const Trends = () => {
   const [controversyStatistics, setControversyStatistics] = useState<any>({});
   const [controversyChartData, setControversyChartData] = useState<any>({});
   const [controversyExpanded, setControversyExpanded] = useState(false);
+  // NUEVO: Estado para filtro deportes/generales
+  const [selectedTab, setSelectedTab] = useState<'all' | 'general' | 'sports'>('all');
+  const [trendsStats, setTrendsStats] = useState<TrendsStats | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -187,6 +206,28 @@ export const Trends = () => {
 
     loadLatestTrends();
   }, []);
+
+  // NUEVO: Cargar estadísticas de distribución deportes/generales
+  useEffect(() => {
+    const loadStats = async () => {
+      const stats = await getTrendsStats();
+      setTrendsStats(stats);
+    };
+    loadStats();
+  }, [wordCloudData]); // Recargar cuando cambien los datos
+
+  // NUEVO: Helper para detectar si un trend es deportivo (sin logs)
+  const isDeportivo = (item: any): boolean => {
+    const categoria = item?.categoria || item?.category;
+    if (!categoria) return false;
+    const categoryLower = String(categoria).toLowerCase();
+    return categoria === 'Deportes' ||
+      categoryLower.includes('deporte') ||
+      categoryLower.includes('fútbol') ||
+      categoryLower.includes('futbol') ||
+      categoryLower.includes('football') ||
+      categoryLower === 'sports';
+  };
 
   const fetchTrendingData = async () => {
     console.log('🚀 Botón Buscar Tendencias clickeado');
@@ -615,6 +656,57 @@ export const Trends = () => {
     );
   }
 
+  // NUEVO: Función para filtrar datos según tab seleccionado
+  const getFilteredData = () => {
+    // IMPORTANTE: Limitar a los últimos 15 items (del registro más reciente)
+    const latestAbout = aboutInfo.slice(0, 15);
+    const latestKeywords = topKeywords.slice(0, 15);
+    const latestWordCloud = wordCloudData.slice(0, 15);
+    
+    if (selectedTab === 'all') {
+      // Mostrar solo los últimos 15 trends
+      return {
+        wordCloud: latestWordCloud,
+        keywords: latestKeywords,
+        categories: categoryData,
+        about: latestAbout
+      };
+    }
+
+    // Filtrar por categoría según el tab
+    const isDeportesFilter = selectedTab === 'sports';
+    
+    // Filtrar about por categoría (de los últimos 15)
+    const filteredAbout = latestAbout.filter((item: AboutInfo) =>
+      isDeportesFilter ? isDeportivo(item) : !isDeportivo(item)
+    );
+
+    // Limitar explícitamente: 5 deportes o 10 generales
+    const limitedAbout = isDeportesFilter 
+      ? filteredAbout.slice(0, 5)  // Máximo 5 deportes
+      : filteredAbout.slice(0, 10); // Máximo 10 generales
+    
+    // Filtrar keywords que estén en about filtrado
+    const aboutKeywords = new Set(limitedAbout.map(a => a.trend?.toLowerCase()));
+    const filteredKeywords = latestKeywords.filter(kw => 
+      aboutKeywords.has(kw.keyword?.toLowerCase())
+    );
+
+    // Filtrar wordCloud
+    const filteredWordCloud = latestWordCloud.filter(wc => 
+      aboutKeywords.has(wc.text?.toLowerCase())
+    );
+
+    return {
+      wordCloud: filteredWordCloud.length > 0 ? filteredWordCloud : latestWordCloud.slice(0, isDeportesFilter ? 5 : 10),
+      keywords: filteredKeywords.length > 0 ? filteredKeywords : latestKeywords.slice(0, isDeportesFilter ? 5 : 10),
+      categories: categoryData,
+      about: limitedAbout
+    };
+  };
+
+  const filteredData = getFilteredData();
+
   return (
     <Box sx={{ '& > *': { mb: 4 }, animation: 'fadeIn 0.4s ease-out' }}>
       {/* Header Section */}
@@ -925,7 +1017,7 @@ export const Trends = () => {
             </Box>
           )}
           <WordCloud 
-            data={wordCloudData}
+            data={filteredData.wordCloud}
             onWordClick={(word) => {
               console.log('Clicked word:', word);
             }}
@@ -1041,7 +1133,7 @@ export const Trends = () => {
                     <CircularProgress size={20} color="secondary" />
                   </Box>
                 )}
-                <BarChart data={categoryData} title={t.categoryDistribution} />
+                <BarChart data={filteredData.categories} title={t.categoryDistribution} />
               </Box>
             ) : (
               <Box sx={{ 
@@ -1075,7 +1167,7 @@ export const Trends = () => {
         
         <Grid item xs={12} lg={4}>
           <KeywordListCard 
-            keywords={topKeywords} 
+            keywords={filteredData.keywords} 
             title={t.mainTopics} 
           />
         </Grid>
@@ -1189,7 +1281,7 @@ export const Trends = () => {
           </Typography>
           {aboutInfo && aboutInfo.length > 0 && (
             <Chip 
-              label={`${aboutInfo.length} tendencias`} 
+              label={`${Math.min(aboutInfo.length, 15)} tendencias`} 
               size="small" 
               sx={{ 
                 bgcolor: alpha(theme.palette.success.main, 0.08),
@@ -1202,11 +1294,113 @@ export const Trends = () => {
           )}
         </AccordionSummary>
         <AccordionDetails sx={{ p: 3, pt: 0 }}>
-          {aboutInfo && aboutInfo.length > 0 ? (
-            <Grid container spacing={3}>
-              {aboutInfo.map((about, index) => {
-                const keyword = topKeywords && topKeywords[index] 
-                  ? topKeywords[index].keyword 
+          {/* NUEVO: Tabs para filtrar deportes/generales */}
+          <Box sx={{ 
+            borderBottom: 1, 
+            borderColor: 'divider', 
+            mb: 3,
+            bgcolor: alpha(theme.palette.background.paper, 0.5),
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}>
+            <Tabs 
+              value={selectedTab} 
+              onChange={(e, newValue) => setSelectedTab(newValue)}
+              centered
+              sx={{
+                '& .MuiTab-root': {
+                  minHeight: 48,
+                  textTransform: 'none',
+                  fontWeight: 'medium',
+                  fontSize: '0.9rem'
+                }
+              }}
+            >
+              <Tab 
+                label={t.all}
+                value="all"
+                icon={<TrendingUp size={18} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label={`${t.general} (${aboutInfo.slice(0, 15).filter(item => !isDeportivo(item)).slice(0, 10).length})`}
+                value="general"
+                icon={<DashboardIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label={`${t.sports} (${aboutInfo.slice(0, 15).filter(item => isDeportivo(item)).slice(0, 5).length})`}
+                value="sports"
+                icon={<SportsSoccerIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
+
+          {/* Estadísticas de distribución */}
+          {selectedTab === 'all' && aboutInfo.length > 0 && (() => {
+            const latest15 = aboutInfo.slice(0, 15);
+            const deportivosCount = latest15.filter(item => isDeportivo(item)).length;
+            const generalesCount = latest15.length - deportivosCount;
+            const porcentaje = Math.round((deportivosCount / latest15.length) * 100);
+            
+            return (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: alpha(theme.palette.info.main, 0.05),
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.info.main, 0.2),
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+                  📊 {t.distribution}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <Chip 
+                    label={`${t.sports}: ${deportivosCount} (${porcentaje}%)`}
+                    size="small"
+                    color="primary"
+                    icon={<SportsSoccerIcon />}
+                  />
+                  <Chip 
+                    label={`${t.general}: ${generalesCount}`}
+                    size="small"
+                    color="secondary"
+                    icon={<DashboardIcon />}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                    • Total: {latest15.length} trends
+                  </Typography>
+                </Box>
+              </Paper>
+            );
+          })()}
+
+          {filteredData.about && filteredData.about.length > 0 ? (
+            <>
+              {/* Indicador de filtro activo */}
+              {selectedTab !== 'all' && (
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Mostrando: 
+                  </Typography>
+                  <Chip 
+                    label={selectedTab === 'sports' ? `${t.sports} (${filteredData.about.length})` : `${t.general} (${filteredData.about.length})`}
+                    size="small"
+                    color={selectedTab === 'sports' ? 'primary' : 'secondary'}
+                    onDelete={() => setSelectedTab('all')}
+                  />
+                </Box>
+              )}
+              
+              <Grid container spacing={3}>
+              {filteredData.about.map((about, index) => {
+                const keyword = filteredData.keywords && filteredData.keywords[index] 
+                  ? filteredData.keywords[index].keyword 
                   : `Tendencia ${index + 1}`;
                 return (
                   <Grid item xs={12} md={6} lg={4} key={index}>
@@ -1218,7 +1412,8 @@ export const Trends = () => {
                   </Grid>
                 );
               })}
-            </Grid>
+              </Grid>
+            </>
           ) : (
             <Box 
               sx={{ 
@@ -1467,6 +1662,42 @@ export const Trends = () => {
           />
         </AccordionSummary>
         <AccordionDetails sx={{ p: 0 }}>
+          {/* NUEVO: Tabs para filtrar deportes/generales en tweets */}
+          <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+            <Tabs 
+              value={selectedTab} 
+              onChange={(e, newValue) => setSelectedTab(newValue)}
+              centered
+              sx={{
+                minHeight: 42,
+                '& .MuiTab-root': {
+                  minHeight: 42,
+                  textTransform: 'none',
+                  fontWeight: 'medium',
+                  fontSize: '0.85rem'
+                }
+              }}
+            >
+              <Tab 
+                label={t.all}
+                value="all"
+                icon={<TrendingUp size={16} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label={t.general}
+                value="general"
+                icon={<DashboardIcon sx={{ fontSize: 16 }} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label={t.sports}
+                value="sports"
+                icon={<SportsSoccerIcon sx={{ fontSize: 16 }} />}
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
           <TrendingTweetsSection />
         </AccordionDetails>
       </Accordion>

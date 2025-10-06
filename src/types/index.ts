@@ -85,3 +85,6 @@ export interface User {
 
 // Re-export project types
 export * from './projects';
+
+// Re-export trends types
+export * from './trends';
