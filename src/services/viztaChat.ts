@@ -41,6 +41,8 @@ export interface ViztaChatResponse {
   requestId?: string;
   executionTime?: number;
   timestamp?: string;
+  sources?: Array<{ title: string; url: string; }>;
+  steps?: Array<{ step: string; description: string; }>;
   metadata?: {
     processingTime?: number;
     [key: string]: any;

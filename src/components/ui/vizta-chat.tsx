@@ -153,9 +153,10 @@ const ViztaChatContent = React.forwardRef<
 ViztaChatContent.displayName = "ViztaChatContent";
 
 // Message Component with Conditional Tabs
-const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
+const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message }>(({ message }, ref) => {
   const [activeTab, setActiveTab] = React.useState("answer");
   const [isExpanded, setIsExpanded] = React.useState(true);
+  const [showSources, setShowSources] = React.useState(false);
   const messageRef = React.useRef<HTMLDivElement>(null);
 
   // Check if we have sources or steps
@@ -270,6 +271,8 @@ const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
                   )}
                 </button>
               )}
+
+              {/* Fuentes visibles solo en la pestaña "Fuentes" */}
             </TabsContent>
 
             {/* Sources Tab */}
@@ -389,6 +392,8 @@ const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
                 )}
               </button>
             )}
+
+            {/* Fuentes visibles solo en la pestaña "Fuentes" */}
           </div>
         )}
         
@@ -416,7 +421,8 @@ const AssistantMessage: React.FC<{ message: Message }> = ({ message }) => {
       </div>
     </motion.div>
   );
-};
+});
+AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
 const ViztaChatUI = () => {
@@ -479,6 +485,35 @@ const ViztaChatUI = () => {
           // Fallback: si no podemos encontrar el mensaje, mostramos el objeto de respuesta para depurar
           messageContent = `Respuesta con formato inesperado. Recibido:\n\n\`\`\`json\n${JSON.stringify(response.response || response, null, 2)}\n\`\`\``;
         }
+
+        // Extraer fuentes del contenido si están en markdown
+        let extractedSources = response.sources || [];
+        
+        if (!extractedSources.length && (messageContent.includes('**Fuentes**') || messageContent.includes('Fuentes'))) {
+          // Buscar la sección de fuentes (con o sin markdown bold)
+          const sourcesRegex = /(?:^|\n)(?:\*\*)?Fuentes(?:\*\*)?[\s\n]+([\s\S]*?)(?=\n\n[A-Z]|\n\n$|$)/m;
+          const sourcesMatch = messageContent.match(sourcesRegex);
+          
+          if (sourcesMatch) {
+            const sourcesText = sourcesMatch[1].trim();
+            const sourceLines = sourcesText.split('\n').filter(line => {
+              const trimmed = line.trim();
+              return (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) && trimmed.length > 2;
+            });
+            
+            extractedSources = sourceLines.map(line => {
+              const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
+              return {
+                title: cleanLine,
+                url: '#' // Placeholder, ya que no tenemos URL en el markdown
+              };
+            });
+            
+            // Limpiar el contenido removiendo la sección de fuentes completa
+            // Buscar desde "Fuentes" hasta el final o hasta la próxima sección
+            messageContent = messageContent.replace(/(?:^|\n)(?:\*\*)?Fuentes(?:\*\*)?[\s\S]*$/, '').trim();
+          }
+        }
         
         // Extraer timestamp y type de manera segura
         let messageTimestamp = Date.now();
@@ -502,9 +537,11 @@ const ViztaChatUI = () => {
           executionTime: response.executionTime || response.metadata?.processingTime,
           tweetsAnalyzed: response.toolResult?.tweets?.length || 0,
           // Only add sources/steps if they exist in the response
-          sources: response.sources || undefined,
+          sources: extractedSources.length > 0 ? extractedSources : (response.sources || undefined),
           steps: response.steps || undefined
         };
+        
+        
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
         throw new Error(response.error || 'Error en la respuesta');
