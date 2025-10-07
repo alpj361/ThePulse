@@ -14,7 +14,9 @@ import {
   Link as LinkIcon,
   ChevronDown,
   ChevronUp,
-  Newspaper
+  Newspaper,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -41,6 +43,8 @@ interface Message {
   tweetsAnalyzed?: number;
   sources?: Array<{ title: string; url: string; }>;
   steps?: Array<{ step: string; description: string; }>;
+  queryLogId?: string; // For feedback
+  feedbackScore?: number; // User's rating 1-5
 }
 
 // Components
@@ -153,16 +157,48 @@ const ViztaChatContent = React.forwardRef<
 ViztaChatContent.displayName = "ViztaChatContent";
 
 // Message Component with Conditional Tabs
-const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message }>(({ message }, ref) => {
+const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; onFeedback?: (messageId: string, score: number) => void }>(({ message, onFeedback }, ref) => {
   const [activeTab, setActiveTab] = React.useState("answer");
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [showSources, setShowSources] = React.useState(false);
+  const [feedbackGiven, setFeedbackGiven] = React.useState(message.feedbackScore || null);
   const messageRef = React.useRef<HTMLDivElement>(null);
 
   // Check if we have sources or steps
   const hasSources = message.sources && message.sources.length > 0;
   const hasSteps = message.steps && message.steps.length > 0;
   const showTabs = hasSources || hasSteps;
+
+  const handleFeedback = async (score: number) => {
+    if (!message.queryLogId || feedbackGiven) return;
+    
+    setFeedbackGiven(score);
+    if (onFeedback) {
+      onFeedback(message.id, score);
+    }
+    
+    // Send feedback to backend
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/vizta/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          queryLogId: message.queryLogId,
+          feedbackScore: score
+        })
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to send feedback');
+        setFeedbackGiven(null); // Reset on error
+      }
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      setFeedbackGiven(null); // Reset on error
+    }
+  };
 
   React.useEffect(() => {
     if (messageRef.current) {
@@ -399,9 +435,39 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message }>(
         
         {/* Message metadata */}
         <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
-          <time className="text-xs text-gray-500">
-            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </time>
+          <div className="flex items-center gap-3">
+            <time className="text-xs text-gray-500">
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </time>
+            
+            {/* Feedback buttons */}
+            {message.queryLogId && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleFeedback(5)}
+                  disabled={!!feedbackGiven}
+                  className={cn(
+                    "p-1 rounded hover:bg-gray-100 transition-colors",
+                    feedbackGiven === 5 && "text-green-600 bg-green-50"
+                  )}
+                  title="Útil"
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleFeedback(1)}
+                  disabled={!!feedbackGiven}
+                  className={cn(
+                    "p-1 rounded hover:bg-gray-100 transition-colors",
+                    feedbackGiven === 1 && "text-red-600 bg-red-50"
+                  )}
+                  title="No útil"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center gap-2">
             {message.executionTime && (
@@ -538,7 +604,8 @@ const ViztaChatUI = () => {
           tweetsAnalyzed: response.toolResult?.tweets?.length || 0,
           // Only add sources/steps if they exist in the response
           sources: extractedSources.length > 0 ? extractedSources : (response.sources || undefined),
-          steps: response.steps || undefined
+          steps: response.steps || undefined,
+          queryLogId: response.queryLogId || undefined // For feedback
         };
         
         
