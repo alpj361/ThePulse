@@ -16,7 +16,12 @@ import {
   ChevronUp,
   Newspaper,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Info,
+  Maximize2,
+  Folder,
+  Activity,
+  FileUp
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -497,7 +502,10 @@ const ViztaChatUI = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
   const [mode, setMode] = React.useState<'chat' | 'agentic'>('chat');
+  const [isContextOpen, setIsContextOpen] = React.useState(false);
+  const [isContextModalOpen, setIsContextModalOpen] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const contextButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
@@ -793,9 +801,199 @@ const ViztaChatUI = () => {
           <div ref={scrollRef} />
         </div>
         
+        {/* Context Modal - Full screen */}
+        <AnimatePresence>
+          {isContextModalOpen && (
+            <>
+              <motion.div
+                className="fixed inset-0 bg-black/50 z-[60]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsContextModalOpen(false)}
+              />
+              <motion.div
+                className="fixed inset-4 md:inset-12 bg-white rounded-lg shadow-2xl z-[70] flex flex-col"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b">
+                  <h2 className="text-xl font-semibold text-gray-900">Contexto</h2>
+                  <button
+                    onClick={() => setIsContextModalOpen(false)}
+                    className="h-8 w-8 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                {/* Modal Content */}
+                <div className="flex-1 overflow-auto p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Documentos */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileUp className="h-5 w-5 text-[#1e40af]" />
+                        <h3 className="font-semibold text-gray-900">Documentos</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Archivos y documentos que has compartido
+                      </p>
+                      <div className="text-sm text-gray-500 italic">
+                        No hay documentos aún
+                      </div>
+                    </div>
+
+                    {/* Proyectos */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Folder className="h-5 w-5 text-[#1e40af]" />
+                        <h3 className="font-semibold text-gray-900">Proyectos</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Tus proyectos y análisis guardados
+                      </p>
+                      <div className="text-sm text-gray-500 italic">
+                        No hay proyectos aún
+                      </div>
+                    </div>
+
+                    {/* Actividades */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity className="h-5 w-5 text-[#1e40af]" />
+                        <h3 className="font-semibold text-gray-900">Actividades</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Historial de consultas y acciones
+                      </p>
+                      <div className="text-sm text-gray-500 italic">
+                        No hay actividades recientes
+                      </div>
+                    </div>
+
+                    {/* Información */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Info className="h-5 w-5 text-[#1e40af]" />
+                        <h3 className="font-semibold text-gray-900">Información</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Datos y configuraciones de la plataforma
+                      </p>
+                      <div className="text-sm text-gray-500 italic">
+                        Sin información adicional
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+        
         {/* Input area */}
         <div className="border-t bg-white p-4">
-          <div className="flex gap-3">
+          <div className="flex gap-2">
+            {/* Context Button */}
+            <div className="relative">
+              <button
+                ref={contextButtonRef}
+                onClick={() => setIsContextOpen(!isContextOpen)}
+                className="h-12 w-12 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
+                title="Contexto"
+              >
+                <Info className="h-5 w-5 text-gray-600" />
+              </button>
+
+              {/* Context Dropdown */}
+              <AnimatePresence>
+                {isContextOpen && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsContextOpen(false)}
+                    />
+                    
+                    {/* Dropdown Menu */}
+                    <motion.div
+                      className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {/* Dropdown Header */}
+                      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">Contexto</h3>
+                        <button
+                          onClick={() => {
+                            setIsContextOpen(false);
+                            setIsContextModalOpen(true);
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          title="Expandir"
+                        >
+                          <Maximize2 className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </div>
+
+                      {/* Dropdown Content */}
+                      <div className="p-3 space-y-2 max-h-96 overflow-auto">
+                        {/* Documentos */}
+                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileUp className="h-4 w-4 text-[#1e40af]" />
+                            <span className="text-sm font-medium text-gray-900">Documentos</span>
+                          </div>
+                          <p className="text-xs text-gray-500">0 documentos</p>
+                        </button>
+
+                        {/* Proyectos */}
+                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Folder className="h-4 w-4 text-[#1e40af]" />
+                            <span className="text-sm font-medium text-gray-900">Proyectos</span>
+                          </div>
+                          <p className="text-xs text-gray-500">0 proyectos</p>
+                        </button>
+
+                        {/* Actividades */}
+                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Activity className="h-4 w-4 text-[#1e40af]" />
+                            <span className="text-sm font-medium text-gray-900">Actividades</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Sin actividad reciente</p>
+                        </button>
+
+                        {/* Información */}
+                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Info className="h-4 w-4 text-[#1e40af]" />
+                            <span className="text-sm font-medium text-gray-900">Información</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Ver detalles</p>
+                        </button>
+                      </div>
+
+                      {/* Dropdown Footer */}
+                      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                        <p className="text-xs text-gray-500">
+                          Agrega contexto para mejorar las respuestas
+                        </p>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Input Field */}
             <div className="flex-1 relative">
               <Textarea
                 placeholder="Escribe tu consulta sobre Guatemala..."
@@ -810,11 +1008,13 @@ const ViztaChatUI = () => {
                 }}
               />
             </div>
+
+            {/* Send Button */}
             <Button 
               size="icon" 
               onClick={handleSend}
               disabled={isLoading || !inputValue.trim()}
-              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               <Send className="h-4 w-4" />
               <span className="sr-only">Enviar mensaje</span>
