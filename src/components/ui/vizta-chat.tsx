@@ -14,7 +14,13 @@ import {
   Link as LinkIcon,
   ChevronDown,
   ChevronUp,
-  Newspaper
+  Newspaper,
+  Info,
+  FileStack,
+  Maximize2,
+  Folder,
+  Activity,
+  FileUp
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
