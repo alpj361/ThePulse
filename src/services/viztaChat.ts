@@ -29,6 +29,8 @@ export interface ViztaChatResponse {
     message?: string;
     type?: string;
     timestamp?: string;
+    c1Response?: string; // Thesys Generative UI response
+    hasUIComponents?: boolean; // Indicates if UI components are present
   };
   conversationId?: string | {
     sessionId?: string;
@@ -86,16 +88,18 @@ async function getAuthToken(): Promise<string | null> {
 export async function sendViztaChatQuery(
   message: string,
   sessionId?: string,
-  mode: 'chat' | 'agentic' = 'chat'
+  mode: 'chat' | 'agentic' = 'chat',
+  useGenerativeUI: boolean = false
 ): Promise<ViztaChatResponse> {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('No hay sesión de usuario activa');
     }
 
     console.log('🤖 Enviando consulta a Vizta Chat:', message);
+    console.log('📊 Generative UI:', useGenerativeUI ? 'ENABLED' : 'DISABLED');
 
     const response = await fetch(`${EXTRACTOR_W_URL}/vizta-chat/query`, {
       method: 'POST',
@@ -106,7 +110,8 @@ export async function sendViztaChatQuery(
       body: JSON.stringify({
         message: message,
         sessionId: sessionId,
-        mode
+        mode,
+        useGenerativeUI
       })
     });
 

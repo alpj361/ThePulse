@@ -26,6 +26,8 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
+import { C1Component, ThemeProvider } from '@thesysai/genui-sdk';
+import '@crayonai/react-ui/styles/index.css';
 
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
@@ -50,6 +52,8 @@ interface Message {
   steps?: Array<{ step: string; description: string; }>;
   queryLogId?: string; // For feedback
   feedbackScore?: number; // User's rating 1-5
+  c1Response?: string; // For Thesys Generative UI
+  hasUIComponents?: boolean; // Indicates if message has UI components
 }
 
 // Components
@@ -293,13 +297,26 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
                   >
                     {message.content}
                   </ReactMarkdown>
+
+                  {/* Generative UI Components - shown below text */}
+                  {message.hasUIComponents && message.c1Response && (
+                    <div className="mt-6 border-t pt-4 border-gray-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <BarChart3 className="h-4 w-4 text-purple-600" />
+                        <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
+                      </div>
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
+                        <C1Component c1Response={message.c1Response} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
+
                 {!isExpanded && (
                   <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
                 )}
               </div>
-              
+
               {message.content.length > 500 && (
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
@@ -414,13 +431,26 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
                 >
                   {message.content}
                 </ReactMarkdown>
+
+                {/* Generative UI Components - shown below text */}
+                {message.hasUIComponents && message.c1Response && (
+                  <div className="mt-6 border-t pt-4 border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="h-4 w-4 text-purple-600" />
+                      <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
+                    </div>
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
+                      <C1Component c1Response={message.c1Response} />
+                    </div>
+                  </div>
+                )}
               </div>
-              
+
               {!isExpanded && (
                 <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
               )}
             </div>
-            
+
             {message.content.length > 500 && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -502,6 +532,7 @@ const ViztaChatUI = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
   const [mode, setMode] = React.useState<'chat' | 'agentic'>('chat');
+  const [useGenerativeUI, setUseGenerativeUI] = React.useState(false); // Toggle for Generative UI
   const [isContextOpen, setIsContextOpen] = React.useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -538,9 +569,9 @@ const ViztaChatUI = () => {
     try {
       // Importar dinámicamente el servicio
       const { sendViztaChatQuery } = await import('../../services/viztaChat');
-      
-      // Enviar consulta al backend
-      const response = await sendViztaChatQuery(currentInput, sessionId, mode);
+
+      // Enviar consulta al backend con el toggle de Generative UI
+      const response = await sendViztaChatQuery(currentInput, sessionId, mode, useGenerativeUI);
       console.log("🔍 Respuesta recibida del servidor:", JSON.stringify(response, null, 2));
 
       // Manejar diferentes estructuras de respuesta del backend
@@ -613,7 +644,14 @@ const ViztaChatUI = () => {
           // Only add sources/steps if they exist in the response
           sources: extractedSources.length > 0 ? extractedSources : (response.sources || undefined),
           steps: response.steps || undefined,
-          queryLogId: response.queryLogId || undefined // For feedback
+          queryLogId: response.queryLogId || undefined, // For feedback
+          // Generative UI fields
+          c1Response: response.response && typeof response.response === 'object' && 'c1Response' in response.response
+            ? response.response.c1Response
+            : undefined,
+          hasUIComponents: response.response && typeof response.response === 'object' && 'hasUIComponents' in response.response
+            ? response.response.hasUIComponents
+            : false
         };
         
         
@@ -659,36 +697,56 @@ const ViztaChatUI = () => {
   ];
 
   return (
-    <ViztaChat>
-      <ViztaChatTrigger />
-      <ViztaChatContent>
+    <ThemeProvider theme={{ mode: 'dark' }}>
+      <ViztaChat>
+        <ViztaChatTrigger />
+        <ViztaChatContent>
         <div className="flex flex-col space-y-4">
           {/* Mode toggle */}
-          <motion.div 
-            className="flex items-center justify-between mb-2"
+          <motion.div
+            className="flex flex-col gap-2 mb-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15 }}
           >
-            <div className="text-xs text-gray-600 font-medium">Modo</div>
-            <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-600 font-medium">Modo</div>
+              <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
+                <button
+                  onClick={() => setMode('chat')}
+                  className={cn(
+                    'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                    mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setMode('agentic')}
+                  className={cn(
+                    'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                    mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  Agéntico
+                </button>
+              </div>
+            </div>
+
+            {/* Generative UI Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-600 font-medium">Visualización</div>
               <button
-                onClick={() => setMode('chat')}
+                onClick={() => setUseGenerativeUI(!useGenerativeUI)}
                 className={cn(
-                  'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                  mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
+                  useGenerativeUI
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 )}
               >
-                Chat
-              </button>
-              <button
-                onClick={() => setMode('agentic')}
-                className={cn(
-                  'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                  mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
-                )}
-              >
-                Agéntico
+                <BarChart3 className="h-3.5 w-3.5" />
+                {useGenerativeUI ? 'UI Generativa' : 'Texto Simple'}
               </button>
             </div>
           </motion.div>
@@ -1023,6 +1081,7 @@ const ViztaChatUI = () => {
         </div>
       </ViztaChatContent>
     </ViztaChat>
+    </ThemeProvider>
   );
 };
 
