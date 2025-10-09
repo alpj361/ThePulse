@@ -905,11 +905,13 @@ const ViztaChatUI = () => {
                 }}
               />
             </div>
+
+            {/* Send Button */}
             <Button 
               size="icon" 
               onClick={handleSend}
               disabled={isLoading || !inputValue.trim()}
-              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               <Send className="h-4 w-4" />
               <span className="sr-only">Enviar mensaje</span>
