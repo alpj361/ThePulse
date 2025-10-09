@@ -431,7 +431,10 @@ const ViztaChatUI = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string>("");
   const [mode, setMode] = React.useState<'chat' | 'agentic'>('chat');
+  const [isContextOpen, setIsContextOpen] = React.useState(false);
+  const [isContextModalOpen, setIsContextModalOpen] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const contextButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
