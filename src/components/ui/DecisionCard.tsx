@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DecisionTimelineItem } from '../../types/projects';
-import { Badge } from './Badge';
+import { Badge } from './badge';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
