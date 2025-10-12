@@ -3,7 +3,7 @@
 import { cn } from "../../lib/utils";
 import { ScrollArea } from "./scroll-area";
 import { motion } from "framer-motion";
-import { Badge } from "./Badge";
+import { Badge } from "./badge";
 import {
   BarChart3,
   Database,
