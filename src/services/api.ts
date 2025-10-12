@@ -56,19 +56,20 @@ const VPS_API_URL = import.meta.env.VITE_VPS_API_URL || '';
 // 3. De lo contrario, usar el servidor de producción.
 
 function resolveExtractorWUrl(): string {
-  // 1. Entorno de desarrollo o hostname localhost → usar backend local
+  // 1. Variable de entorno explícita (permite override incluso en desarrollo)
+  const envUrl = (import.meta.env.VITE_EXTRACTORW_URL || import.meta.env.VITE_EXTRACTORW_API_URL) as string | undefined;
+  if (envUrl && envUrl.trim() !== '') {
+    // Normalizar localhost → 127.0.0.1 para evitar IPv6 (::1) resets en Docker Desktop (macOS)
+    const normalized = envUrl.trim().replace(/\/$/, '').replace('://localhost', '://127.0.0.1');
+    return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+  }
+
+  // 2. Entorno de desarrollo o hostname local → usar backend local en 127.0.0.1
   if (
     import.meta.env.DEV ||
     ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname)
   ) {
-    return 'http://localhost:8080/api';
-  }
-
-  // 2. Variable de entorno explícita
-  const envUrl = (import.meta.env.VITE_EXTRACTORW_URL || import.meta.env.VITE_EXTRACTORW_API_URL) as string | undefined;
-  if (envUrl && envUrl.trim() !== '') {
-    const cleaned = envUrl.trim().replace(/\/$/, '');
-    return cleaned.endsWith('/api') ? cleaned : `${cleaned}/api`;
+    return 'http://127.0.0.1:8081/api';
   }
 
   // 3. Fallback producción

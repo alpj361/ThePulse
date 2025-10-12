@@ -94,19 +94,23 @@ export async function sendViztaChatQuery(
   try {
     const token = await getAuthToken();
 
-    if (!token) {
-      throw new Error('No hay sesión de usuario activa');
-    }
-
     console.log('🤖 Enviando consulta a Vizta Chat:', message);
     console.log('📊 Generative UI:', useGenerativeUI ? 'ENABLED' : 'DISABLED');
+    console.log('🔑 Token disponible:', !!token);
+
+    // Preparar headers - en desarrollo, el backend no requiere auth
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Solo agregar Authorization si hay token
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(`${EXTRACTOR_W_URL}/vizta-chat/query`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers,
       body: JSON.stringify({
         message: message,
         sessionId: sessionId,
