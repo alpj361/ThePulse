@@ -28,5 +28,6 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
+    exclude: ['eventsource-parser', 'zod-to-json-schema']
   },
 });
