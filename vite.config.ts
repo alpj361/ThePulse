@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'eventsource-parser': 'eventsource-parser',
+      'zod-to-json-schema': 'zod-to-json-schema'
     },
   },
   server: {
