@@ -272,13 +272,19 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
         }));
 
         return (
-          <div key={topic} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800/20">
+          <div key={topic} className="p-5 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl bg-gradient-to-br from-blue-50/30 to-white dark:from-blue-950/10 dark:to-gray-800/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
             <div 
-              className="flex justify-between items-center cursor-pointer"
+              className="flex justify-between items-center cursor-pointer group"
               onClick={() => toggleTopic(topic)}
             >
-              <h3 className="text-lg font-semibold">{topic} ({groupCards.length})</h3>
-              <FiChevronDown className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                {topic} 
+                <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 rounded-full">
+                  {groupCards.length}
+                </span>
+              </h3>
+              <FiChevronDown className={`w-5 h-5 text-blue-600 dark:text-blue-400 transition-all duration-300 group-hover:scale-110 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
 
             {isExpanded ? (
