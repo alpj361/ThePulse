@@ -51,6 +51,7 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "eventsource-parser": "^3.0.6",
     "express": "^5.1.0",
     "framer-motion": "^12.16.0",
     "jotai": "^2.12.5",
@@ -75,6 +76,7 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "zod-to-json-schema": "^3.24.6",
     "zustand": "^4.5.7"
   },
   "devDependencies": {
