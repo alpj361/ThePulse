@@ -223,20 +223,25 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Hallazgos Capturados</h2>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <span className="inline-block p-2 bg-blue-500 rounded-lg">
+            <FiBox className="w-5 h-5 text-white" />
+          </span>
+          Hallazgos Capturados
+        </h2>
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+            className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-200 font-medium"
           >
-            Añadir hallazgo manual
+            + Añadir hallazgo
           </button>
           <button
             onClick={expandAll}
             title="Expandir todo"
             aria-label="Expandir todo"
-            className="p-2 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-800"
+            className="p-2 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 transition-all duration-200"
           >
             <FiChevronDown className="w-5 h-5" />
           </button>
@@ -244,7 +249,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
             onClick={collapseAll}
             title="Contraer todo"
             aria-label="Contraer todo"
-            className="p-2 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-800"
+            className="p-2 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 transition-all duration-200"
           >
             <FiChevronUp className="w-5 h-5" />
           </button>
@@ -254,7 +259,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
               await deleteAllCapturadoCards(projectId, session?.access_token || '');
               fetchCards();
             }}
-            className="text-sm text-red-600 hover:underline"
+            className="text-sm px-3 py-2 rounded-lg text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-all duration-200 font-medium"
           >
             Eliminar todo
           </button>
