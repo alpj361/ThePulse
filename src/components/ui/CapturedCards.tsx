@@ -283,45 +283,150 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
 
             {isExpanded ? (
               <div className="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {groupCards.map(card => (
-                  <Card key={card.id} className="relative group bg-white dark:bg-gray-800">
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                      {/* Botón de cobertura eliminado */}
-                      <button onClick={() => openEditModal(card)} className="p-1.5 text-gray-400 hover:text-yellow-500 rounded-full">
-                        <FiEdit />
-                      </button>
-                      <button onClick={() => handleDeleteCard(card.id)} disabled={deletingCard === card.id} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full">
-                        {deletingCard === card.id ? <FiWatch className="animate-spin" /> : <FiTrash2 />}
-                      </button>
-                      <div className="flex justify-end gap-2 mt-2">
+                {groupCards.map(card => {
+                  // Determine card data types for badges
+                  const hasFinancial = card.amount !== null;
+                  const hasLocation = card.city || card.department;
+                  const hasDuration = card.duration_days !== null;
+                  const hasQuantifiable = (card as any).counter || (card as any).percentage || (card as any).quantity;
+                  
+                  return (
+                    <Card 
+                      key={card.id} 
+                      className="relative group bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-800 border-2 border-blue-100 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 transition-all duration-300 backdrop-blur-sm overflow-hidden"
+                    >
+                      {/* Gradient overlay effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                      
+                      {/* Action buttons */}
+                      <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); openEditModal(card); }} 
+                          className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                          title="Editar"
+                        >
+                          <FiEdit className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} 
+                          disabled={deletingCard === card.id} 
+                          className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                          title="Eliminar"
+                        >
+                          {deletingCard === card.id ? <FiWatch className="animate-spin w-3.5 h-3.5" /> : <FiTrash2 className="w-3.5 h-3.5" />}
+                        </button>
                         {(card.amount || card.duration_days) && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleAddToSpreadsheet(card); }}
-                            className="p-1.5 rounded-md bg-green-600 text-white hover:bg-green-700"
+                            className="p-2 bg-green-500/90 backdrop-blur-sm text-white hover:bg-green-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                             title="Añadir al Spreadsheet"
-                            aria-label="Añadir al Spreadsheet"
                           >
-                            <FiGrid className="w-4 h-4" />
+                            <FiGrid className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
-                    </div>
-                    <CardHeader>
-                      <h3 className="font-semibold text-sm pr-12">{card.entity || card.discovery || 'Hallazgo'}</h3>
-                      <p className="text-xs text-gray-500">{new Date(card.created_at).toLocaleDateString()}</p>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      {card.amount && <p>Monto: <span className="font-medium">{card.currency || 'Q'} {card.amount.toLocaleString()}</span></p>}
-                      {card.city && <p>Ciudad: {card.city}</p>}
-                      {card.department && <p>Departamento: {card.department}</p>}
-                      {card.description && <p className="text-gray-700 dark:text-gray-200 italic">"{card.description}"</p>}
-                      {card.source && <blockquote className="text-xs text-gray-500 border-l-2 pl-2 mt-2">{card.source}</blockquote>}
-                    </CardContent>
-                  </Card>
-                ))}
+
+                      {/* Data type badges */}
+                      <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+                        {hasFinancial && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/90 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-sm">
+                            <FiDollarSign className="w-3 h-3" />
+                            Financiero
+                          </span>
+                        )}
+                        {hasLocation && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-sm">
+                            <FiMapPin className="w-3 h-3" />
+                            Ubicación
+                          </span>
+                        )}
+                        {hasDuration && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/90 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-sm">
+                            <FiClock className="w-3 h-3" />
+                            Duración
+                          </span>
+                        )}
+                        {hasQuantifiable && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/90 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-sm">
+                            <FiBarChart2 className="w-3 h-3" />
+                            Datos
+                          </span>
+                        )}
+                      </div>
+
+                      <CardHeader className="pt-16 pb-3">
+                        <h3 className="font-bold text-base text-gray-800 dark:text-gray-100 leading-tight">
+                          {card.entity || card.discovery || 'Hallazgo'}
+                        </h3>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
+                          {new Date(card.created_at).toLocaleDateString('es-ES', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </p>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-3 text-sm pb-5">
+                        {/* Financial info */}
+                        {card.amount && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <FiDollarSign className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Monto</p>
+                              <p className="font-bold text-green-700 dark:text-green-300">
+                                {card.currency || 'Q'} {card.amount.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Location info */}
+                        {hasLocation && (
+                          <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <FiMapPin className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Ubicación</p>
+                              <p className="font-medium text-blue-700 dark:text-blue-300">
+                                {[card.city, card.department].filter(Boolean).join(', ')}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Duration info */}
+                        {card.duration_days && (
+                          <div className="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <FiClock className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Duración</p>
+                              <p className="font-medium text-purple-700 dark:text-purple-300">
+                                {card.duration_days} días
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Description */}
+                        {card.description && (
+                          <p className="text-gray-700 dark:text-gray-300 italic leading-relaxed px-2 py-1 border-l-2 border-blue-300 dark:border-blue-700">
+                            "{card.description}"
+                          </p>
+                        )}
+
+                        {/* Source */}
+                        {card.source && (
+                          <blockquote className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-2 rounded-r">
+                            {card.source}
+                          </blockquote>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
-              <div className="mt-4" onClick={() => toggleTopic(topic)}>
+              <div className="mt-4 cursor-pointer" onClick={() => toggleTopic(topic)}>
                 <DisplayCards cards={displayCardsData as any} />
               </div>
             )}
