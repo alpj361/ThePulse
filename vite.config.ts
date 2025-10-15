@@ -8,8 +8,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'eventsource-parser': 'eventsource-parser',
-      'zod-to-json-schema': 'zod-to-json-schema'
     },
   },
   server: {
@@ -30,6 +28,15 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['eventsource-parser', 'zod-to-json-schema']
+    include: ['eventsource-parser', 'zod-to-json-schema'],
+    esbuildOptions: {
+      resolveExtensions: ['.js', '.jsx', '.ts', '.tsx', '.json', '.mjs', '.cjs']
+    }
   },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
+  }
 });
