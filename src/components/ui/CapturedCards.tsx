@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from './card';
-import { FiBox, FiAlertTriangle, FiWatch, FiTrash2, FiX, FiMapPin, FiEdit, FiSave, FiChevronDown, FiChevronUp, FiGrid } from 'react-icons/fi';
+import { FiBox, FiAlertTriangle, FiWatch, FiTrash2, FiX, FiMapPin, FiEdit, FiSave, FiChevronDown, FiChevronUp, FiGrid, FiDollarSign, FiClock, FiBarChart2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { EXTRACTORW_API_URL } from '../../services/api';
 import { deleteCapturadoCard, updateCapturadoCard, deleteAllCapturadoCards, CapturadoUpdatePayload, createCapturadoCard, CapturadoCreatePayload } from '../../services/capturados';
