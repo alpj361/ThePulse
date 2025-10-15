@@ -4,6 +4,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Responsive styles for Thesys C1 Components in narrow chat interface */
+@layer components {
+  /* Make Thesys components responsive for narrow chat */
+  .c1-component-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  
+  /* Responsive table styles for narrow screens */
+  .c1-component-container table {
+    min-width: 100%;
+    font-size: 0.875rem;
+  }
+  
+  .c1-component-container th,
+  .c1-component-container td {
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Responsive tabs for narrow screens */
+  .c1-component-container .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .c1-component-container .tab-trigger {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    min-width: auto;
+  }
+  
+  /* Responsive text content */
+  .c1-component-container .text-content {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Responsive cards and callouts */
+  .c1-component-container .card,
+  .c1-component-container .callout {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+  }
+  
+  /* Ensure content doesn't overflow horizontally */
+  .c1-component-container * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 @layer base {
 :root {
     --background: 0 0% 100%;

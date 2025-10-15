@@ -27,7 +27,8 @@ import {
   Person as PersonIcon,
   Newspaper as NewspaperIcon,
   TrendingUp as TrendingUpIcon,
-  DataUsage as DataUsageIcon
+  DataUsage as DataUsageIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 
 const translations = {
@@ -255,6 +256,41 @@ export default function RecentActivity() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Maintenance Warning */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          mb: 4,
+          p: 3,
+          border: `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+          backgroundColor: alpha(theme.palette.warning.light, 0.1),
+          borderRadius: 2
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box 
+            sx={{ 
+              p: 1.5,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.warning.main, 0.2),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <WarningIcon sx={{ fontSize: 32, color: theme.palette.warning.dark }} />
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.warning.dark, mb: 0.5 }}>
+              Mantenimiento
+            </Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.warning.dark }}>
+              Actividad está siendo renovada, en mantenimiento
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
       {/* Recent Tweets Extraction Section */}
       <RecentScrapesSection />
 

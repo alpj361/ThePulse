@@ -439,8 +439,14 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
                       <BarChart3 className="h-4 w-4 text-purple-600" />
                       <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
                     </div>
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
-                      <C1Component c1Response={message.c1Response} />
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 sm:p-4 overflow-hidden">
+                      <div className="c1-component-container max-w-full overflow-x-auto">
+                        {(() => {
+                          const cleanedResponse = message.c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                          console.log('🔍 C1Response cleaned:', cleanedResponse);
+                          return <C1Component c1Response={cleanedResponse} />;
+                        })()}
+                      </div>
                     </div>
                   </div>
                 )}

@@ -658,26 +658,26 @@ export const Trends = () => {
 
   // NUEVO: Función para filtrar datos según tab seleccionado
   const getFilteredData = () => {
-    // IMPORTANTE: Limitar a los últimos 15 items (del registro más reciente)
-    const latestAbout = aboutInfo.slice(0, 15);
-    const latestKeywords = topKeywords.slice(0, 15);
-    const latestWordCloud = wordCloudData.slice(0, 15);
+    // IMPORTANTE: Siempre limitar a los últimos 15 items más recientes
+    const latest15About = aboutInfo.slice(0, 15);
+    const latest15Keywords = topKeywords.slice(0, 15);
+    const latest15WordCloud = wordCloudData.slice(0, 15);
     
     if (selectedTab === 'all') {
       // Mostrar solo los últimos 15 trends
       return {
-        wordCloud: latestWordCloud,
-        keywords: latestKeywords,
+        wordCloud: latest15WordCloud,
+        keywords: latest15Keywords,
         categories: categoryData,
-        about: latestAbout
+        about: latest15About
       };
     }
 
-    // Filtrar por categoría según el tab
+    // Filtrar por categoría según el tab (dentro de los últimos 15)
     const isDeportesFilter = selectedTab === 'sports';
     
     // Filtrar about por categoría (de los últimos 15)
-    const filteredAbout = latestAbout.filter((item: AboutInfo) =>
+    const filteredAbout = latest15About.filter((item: AboutInfo) =>
       isDeportesFilter ? isDeportivo(item) : !isDeportivo(item)
     );
 
@@ -688,18 +688,18 @@ export const Trends = () => {
     
     // Filtrar keywords que estén en about filtrado
     const aboutKeywords = new Set(limitedAbout.map(a => a.trend?.toLowerCase()));
-    const filteredKeywords = latestKeywords.filter(kw => 
+    const filteredKeywords = latest15Keywords.filter(kw => 
       aboutKeywords.has(kw.keyword?.toLowerCase())
     );
 
     // Filtrar wordCloud
-    const filteredWordCloud = latestWordCloud.filter(wc => 
+    const filteredWordCloud = latest15WordCloud.filter(wc => 
       aboutKeywords.has(wc.text?.toLowerCase())
     );
 
     return {
-      wordCloud: filteredWordCloud.length > 0 ? filteredWordCloud : latestWordCloud.slice(0, isDeportesFilter ? 5 : 10),
-      keywords: filteredKeywords.length > 0 ? filteredKeywords : latestKeywords.slice(0, isDeportesFilter ? 5 : 10),
+      wordCloud: filteredWordCloud.length > 0 ? filteredWordCloud : latest15WordCloud.slice(0, isDeportesFilter ? 5 : 10),
+      keywords: filteredKeywords.length > 0 ? filteredKeywords : latest15Keywords.slice(0, isDeportesFilter ? 5 : 10),
       categories: categoryData,
       about: limitedAbout
     };
