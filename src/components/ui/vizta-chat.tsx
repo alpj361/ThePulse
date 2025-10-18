@@ -774,7 +774,7 @@ const ViztaChatUI = () => {
     <ThemeProvider theme={{ mode: 'dark' }}>
       <ViztaChat>
         <ViztaChatTrigger />
-        <ViztaChatContent>
+        <ViztaChatContent chatWidth={chatWidth} onWidthChange={setChatWidth}>
         <div className="flex flex-col space-y-4">
           {/* Mode toggle */}
           <motion.div
