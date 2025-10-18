@@ -1,212 +1,182 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
   Box,
-  Paper,
-  Divider,
+  Button,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Chip,
-  Alert,
-  Link
 } from '@mui/material';
-import {
-  ExpandMore as ExpandMoreIcon,
-  Money as MoneyIcon,
-  CreditCard as CreditCardIcon,
-  Email as EmailIcon
-} from '@mui/icons-material';
+import { ExpandMore, ArrowBack } from '@mui/icons-material';
+import Logo from '../components/common/Logo';
 
 export default function Refunds() {
-  return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography
-          variant="h3"
-          component="h1"
-          fontWeight="bold"
-          gutterBottom
-          sx={{ 
-            background: 'linear-gradient(45deg, #3b82f6, #4f46e5)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif'
-          }}
-        >
-          Política de Reembolsos
+  const navigate = useNavigate();
+
+  const sections = [
+    {
+      title: '1. Alcance',
+      content: (
+        <Typography paragraph color="#666">
+          Esta política aplica a suscripciones pagadas del plan Alpha "Supporter/Soporte". 
+          Los pagos son procesados por Paddle (Merchant of Record).
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
-          <Chip 
-            label="Versión Alpha" 
-            color="warning" 
-            variant="outlined"
-            icon={<MoneyIcon />}
-          />
-          <Chip 
-            label="Última actualización: 18 de octubre de 2025" 
-            color="info" 
-            variant="outlined"
-          />
+      ),
+    },
+    {
+      title: '2. Fase experimental',
+      content: (
+        <Typography paragraph color="#666">
+          Debido a la naturaleza experimental del proyecto y a que el acceso Alpha es principalmente 
+          para pruebas y soporte al desarrollo, <strong>no se ofrecen reembolsos durante esta fase</strong>.
+        </Typography>
+      ),
+    },
+    {
+      title: '3. Cancelaciones',
+      content: (
+        <Box>
+          <Typography paragraph color="#666">
+            La cancelación se gestiona a través de Paddle y surte efecto al final del ciclo 
+            de facturación vigente. Podrás seguir usando el servicio hasta el final del período que ya pagaste.
+          </Typography>
         </Box>
-        <Typography variant="h6" color="text.secondary">
-          Pulse Journal - Política de Reembolsos y Cancelaciones
+      ),
+    },
+    {
+      title: '4. Consideraciones legales',
+      content: (
+        <Typography paragraph color="#666">
+          Si la legislación aplicable requiere reembolsos en circunstancias específicas, 
+          evaluaremos cada situación de manera individual a través de Paddle.
         </Typography>
+      ),
+    },
+    {
+      title: '5. Disputas de pago',
+      content: (
+        <Typography paragraph color="#666">
+          Las disputas y contracargos se tramitan conforme a los procedimientos de Paddle 
+          y de los emisores de pago correspondientes.
+        </Typography>
+      ),
+    },
+  ];
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
+      {/* Header */}
+      <Box component="header" sx={{ py: 3, px: 4, bgcolor: 'white', borderBottom: '1px solid #e0e0e0' }}>
+        <Container maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <Logo size={32} variant="icon" />
+              <Box>
+                <Typography variant="h5" fontWeight="700" color="#000">
+                  pulse
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                  JOURNAL
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Button 
+              variant="text"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/')}
+              sx={{ 
+                textTransform: 'none',
+                color: '#666',
+                '&:hover': { color: '#000', bgcolor: 'transparent' }
+              }}
+            >
+              Volver
+            </Button>
+          </Box>
+        </Container>
       </Box>
 
-      {/* Política de Reembolsos */}
-      <Paper elevation={2} sx={{ p: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <CreditCardIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
-          <Typography variant="h4" component="h2" fontWeight="bold">
-            💳 Política de Reembolsos
+      {/* Content */}
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Typography variant="h3" fontWeight="700" color="#000" gutterBottom>
+            Política de Reembolsos
+          </Typography>
+          <Typography variant="body1" color="#666">
+            Versión Alpha · Última actualización: 18 de octubre de 2025
           </Typography>
         </Box>
 
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">1. Alcance</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Esta política aplica a suscripciones pagadas del plan Alpha "Supporter/Soporte". 
-            </Typography>
-            <Typography paragraph>
-              Los pagos son procesados por <strong>Paddle (Merchant of Record)</strong>.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
+          {sections.map((section, index) => (
+            <Accordion 
+              key={index}
+              disableGutters
+              elevation={0}
+              sx={{
+                '&:before': { display: 'none' },
+                borderBottom: index !== sections.length - 1 ? '1px solid #e0e0e0' : 'none'
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMore />}
+                sx={{
+                  px: 4,
+                  py: 2,
+                  '&:hover': { bgcolor: '#fafafa' }
+                }}
+              >
+                <Typography variant="h6" fontWeight="600" color="#000">
+                  {section.title}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ px: 4, pb: 3 }}>
+                {section.content}
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
 
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">2. Régimen de reembolsos en fase experimental</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              <Typography fontWeight="bold">Importante: Fase Experimental</Typography>
-            </Alert>
-            <Typography component="div">
-              <ul>
-                <li>Debido a la naturaleza experimental del proyecto y a que el acceso Alpha es principalmente para pruebas y soporte al desarrollo, 
-                    <strong> no se ofrecen reembolsos durante esta fase</strong></li>
-                <li>No aplican reembolsos prorrateados por cancelación durante el período facturado</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">3. Cancelaciones</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography component="div">
-              <ul>
-                <li>La cancelación se gestiona a través de Paddle</li>
-                <li>El efecto de cancelación ocurre al final del ciclo de facturación vigente</li>
-              </ul>
-            </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                Podrás seguir usando el servicio hasta el final del período que ya pagaste.
-              </Typography>
-            </Alert>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">4. Consideraciones legales</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Si la legislación aplicable requiere reembolsos en circunstancias específicas, evaluaremos cada situación de manera individual 
-              a través de Paddle, siempre buscando un equilibrio justo para un proyecto en desarrollo temprano.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">5. Disputas de pago y contracargos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Las disputas y contracargos se tramitan conforme a los procedimientos de Paddle y de los emisores de pago correspondientes. 
-            </Typography>
-            <Typography paragraph>
-              Podemos solicitar información adicional para su evaluación.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">6. Contacto</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Para preguntas sobre esta política: <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-      </Paper>
-
-      {/* Información Adicional */}
-      <Paper elevation={2} sx={{ p: 4, mb: 4, bgcolor: 'background.default' }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
-          ℹ️ Información Importante
-        </Typography>
-        <Typography paragraph>
-          Al participar en la fase Alpha de Pulse Journal, reconoces y aceptas que:
-        </Typography>
-        <Typography component="div">
-          <ul>
-            <li>El servicio está en desarrollo temprano y puede presentar inestabilidades</li>
-            <li>Tu aporte como "Supporter/Soporte" ayuda al desarrollo continuo del proyecto</li>
-            <li>Las funcionalidades pueden cambiar, mejorar o ajustarse sin previo aviso</li>
-            <li>Estás contribuyendo al crecimiento de una plataforma en fase experimental</li>
-          </ul>
-        </Typography>
-        
-        <Alert severity="success" sx={{ mt: 3 }}>
-          <Typography variant="body2">
-            <strong>¡Gracias por ser parte de nuestro proyecto Alpha!</strong> Tu apoyo es fundamental para el desarrollo de Pulse Journal.
+        <Box sx={{ mt: 6, p: 4, bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" fontWeight="600" color="#000" gutterBottom>
+            Gracias por apoyar Pulse Journal
           </Typography>
-        </Alert>
-      </Paper>
-
-      {/* Contacto */}
-      <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-          <EmailIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
-          <Typography variant="h5" component="h3" fontWeight="bold">
-            📬 Contacto
+          <Typography variant="body2" color="#666">
+            Tu aporte como "Supporter" ayuda al desarrollo continuo del proyecto. 
+            Reconoces que el servicio está en fase experimental y puede presentar inestabilidades.
           </Typography>
         </Box>
-        <Typography variant="h6" color="primary.main">
-          soporte@standatpd.com
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Para preguntas sobre pagos, suscripciones y reembolsos
-        </Typography>
-      </Paper>
 
-      <Divider sx={{ my: 4 }} />
+        <Box sx={{ mt: 6, textAlign: 'center' }}>
+          <Typography variant="body2" color="#999">
+            ¿Preguntas? Contáctanos en{' '}
+            <a href="mailto:soporte@standatpd.com" style={{ color: '#000', textDecoration: 'none' }}>
+              soporte@standatpd.com
+            </a>
+          </Typography>
+        </Box>
+      </Container>
 
       {/* Footer */}
-      <Box sx={{ textAlign: 'center', py: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          © 2025 Stand At Platform Development - Pulse Journal. Todos los derechos reservados.
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Versión Alpha - Documento actualizado el 18 de octubre de 2025
-        </Typography>
+      <Box 
+        component="footer" 
+        sx={{ 
+          py: 4, 
+          px: 4, 
+          bgcolor: 'white',
+          borderTop: '1px solid #e0e0e0',
+          mt: 8
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography variant="body2" color="#999" textAlign="center">
+            © {new Date().getFullYear()} Pulse Journal · Todos los derechos reservados
+          </Typography>
+        </Container>
       </Box>
-    </Container>
+    </Box>
   );
 }
-
