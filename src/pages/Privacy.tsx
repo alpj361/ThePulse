@@ -126,10 +126,10 @@ export default function Privacy() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }} onClick={() => navigate('/')}>
               <Logo size={32} variant="icon" />
               <Box>
-                <Typography variant="h5" fontWeight="700" color="#000">
+                <Typography variant="h5" fontWeight="700" color="#1a1a1a">
                   pulse
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                <Typography variant="caption" color="#666" sx={{ letterSpacing: 1.5 }}>
                   JOURNAL
                 </Typography>
               </Box>
@@ -142,7 +142,7 @@ export default function Privacy() {
               sx={{ 
                 textTransform: 'none',
                 color: '#666',
-                '&:hover': { color: '#000', bgcolor: 'transparent' }
+                '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
               }}
             >
               Volver
@@ -154,7 +154,7 @@ export default function Privacy() {
       {/* Content */}
       <Container maxWidth="md" sx={{ py: 8 }}>
         <Box sx={{ textAlign: 'center', mb: 6 }}>
-          <Typography variant="h3" fontWeight="700" color="#000" gutterBottom>
+          <Typography variant="h3" fontWeight="700" color="#1a1a1a" gutterBottom>
             Política de Privacidad
           </Typography>
           <Typography variant="body1" color="#666">
@@ -174,14 +174,14 @@ export default function Privacy() {
               }}
             >
               <AccordionSummary
-                expandIcon={<ExpandMore />}
+                expandIcon={<ExpandMore sx={{ color: '#3b82f6' }} />}
                 sx={{
                   px: 4,
                   py: 2,
                   '&:hover': { bgcolor: '#fafafa' }
                 }}
               >
-                <Typography variant="h6" fontWeight="600" color="#000">
+                <Typography variant="h6" fontWeight="600" color="#1a1a1a">
                   {section.title}
                 </Typography>
               </AccordionSummary>
@@ -195,7 +195,7 @@ export default function Privacy() {
         <Box sx={{ mt: 6, textAlign: 'center' }}>
           <Typography variant="body2" color="#999">
             ¿Preguntas? Contáctanos en{' '}
-            <a href="mailto:soporte@standatpd.com" style={{ color: '#000', textDecoration: 'none' }}>
+            <a href="mailto:soporte@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
               soporte@standatpd.com
             </a>
           </Typography>
