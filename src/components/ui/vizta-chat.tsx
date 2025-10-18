@@ -119,50 +119,101 @@ ViztaChatOverlay.displayName = "ViztaChatOverlay";
 
 const ViztaChatContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <ViztaChatPortal>
-    <ViztaChatOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed z-50 flex flex-col gap-0 right-0 inset-y-0 h-full w-full sm:w-[440px] border-l bg-white shadow-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-200",
-        className
-      )}
-      {...props}
-    >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-[#1e40af] text-white">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 border-2 border-white rounded flex items-center justify-center">
-              <span className="text-sm font-bold">V</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">Vizta</h2>
-              <p className="text-xs text-white/80">Análisis de noticias y tendencias</p>
-            </div>
-          </div>
-          <SheetPrimitive.Close asChild>
-            <motion.button
-              className="rounded-md h-8 w-8 hover:bg-white/10 flex items-center justify-center transition-colors"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Cerrar</span>
-            </motion.button>
-          </SheetPrimitive.Close>
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & {
+    chatWidth?: number;
+    onWidthChange?: (width: number) => void;
+  }
+>(({ className, children, chatWidth = 440, onWidthChange, ...props }, ref) => {
+  const [isResizing, setIsResizing] = React.useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = window.innerWidth - e.clientX;
+      const minWidth = 380;
+      const maxWidth = Math.min(900, window.innerWidth * 0.7);
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        onWidthChange?.(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, onWidthChange]);
+
+  return (
+    <ViztaChatPortal>
+      <ViztaChatOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed z-50 flex flex-col gap-0 right-0 inset-y-0 h-full border-l bg-white shadow-2xl transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-200",
+          className
+        )}
+        style={{
+          width: window.innerWidth < 640 ? '100%' : `${chatWidth}px`,
+        }}
+        {...props}
+      >
+        {/* Resize Handle */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 hover:w-1.5 bg-transparent hover:bg-[#1e40af] cursor-ew-resize transition-all z-10 group"
+          onMouseDown={() => setIsResizing(true)}
+        >
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-[#1e40af]/30 group-hover:bg-[#1e40af] rounded-r transition-all" />
         </div>
-        
-        {/* Messages area */}
-        <ScrollArea className="flex-1 p-4 bg-gray-50">
-          {children}
-        </ScrollArea>
-      </div>
-    </SheetPrimitive.Content>
-  </ViztaChatPortal>
-));
+
+        <div className="flex flex-col h-full" ref={contentRef}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-[#1e40af] text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 border-2 border-white rounded flex items-center justify-center">
+                <span className="text-sm font-bold">V</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Vizta</h2>
+                <p className="text-xs text-white/80">Análisis de noticias y tendencias</p>
+              </div>
+            </div>
+            <SheetPrimitive.Close asChild>
+              <motion.button
+                className="rounded-md h-8 w-8 hover:bg-white/10 flex items-center justify-center transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cerrar</span>
+              </motion.button>
+            </SheetPrimitive.Close>
+          </div>
+          
+          {/* Messages area */}
+          <ScrollArea className="flex-1 p-4 bg-gray-50">
+            {children}
+          </ScrollArea>
+        </div>
+      </SheetPrimitive.Content>
+    </ViztaChatPortal>
+  );
+});
 ViztaChatContent.displayName = "ViztaChatContent";
 
 // Message Component with Conditional Tabs
