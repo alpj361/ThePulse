@@ -594,8 +594,23 @@ const ViztaChatUI = () => {
   const [useGenerativeUI, setUseGenerativeUI] = React.useState(false); // Toggle for Generative UI
   const [isContextOpen, setIsContextOpen] = React.useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = React.useState(false);
+  const [chatWidth, setChatWidth] = React.useState<number>(() => {
+    // Load saved width from localStorage or use default
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vizta-chat-width');
+      return saved ? parseInt(saved, 10) : 440;
+    }
+    return 440;
+  });
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const contextButtonRef = React.useRef<HTMLButtonElement>(null);
+
+  // Save chat width to localStorage when it changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vizta-chat-width', chatWidth.toString());
+    }
+  }, [chatWidth]);
 
   // Generar sessionId al montar el componente
   React.useEffect(() => {
