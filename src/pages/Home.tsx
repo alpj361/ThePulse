@@ -83,10 +83,10 @@ const Home: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }} onClick={() => navigate('/')}>
               <Logo size={32} variant="icon" />
               <Box>
-                <Typography variant="h5" fontWeight="700" color="#000">
+                <Typography variant="h5" fontWeight="700" color="#1a1a1a">
                   pulse
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                <Typography variant="caption" color="#666" sx={{ letterSpacing: 1.5 }}>
                   JOURNAL
                 </Typography>
               </Box>
@@ -100,7 +100,7 @@ const Home: React.FC = () => {
                 sx={{ 
                   textTransform: 'none',
                   color: '#666',
-                  '&:hover': { color: '#000' }
+                  '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
                 }}
               >
                 Precios
@@ -111,11 +111,11 @@ const Home: React.FC = () => {
                 onClick={() => navigate('/login')}
                 sx={{ 
                   textTransform: 'none',
-                  borderColor: '#000',
-                  color: '#000',
+                  borderColor: '#3b82f6',
+                  color: '#3b82f6',
                   '&:hover': {
-                    borderColor: '#000',
-                    bgcolor: '#000',
+                    borderColor: '#3b82f6',
+                    bgcolor: '#3b82f6',
                     color: '#fff'
                   }
                 }}
@@ -139,7 +139,7 @@ const Home: React.FC = () => {
               <Typography 
                 variant={isMobile ? "h3" : "h2"} 
                 fontWeight="700" 
-                color="#000" 
+                color="#1a1a1a" 
                 sx={{ mb: 3, lineHeight: 1.2 }}
               >
                 La plataforma integral para periodistas y analistas
@@ -178,11 +178,11 @@ const Home: React.FC = () => {
                   fontWeight: '600',
                   borderRadius: 2,
                   textTransform: 'none',
-                  bgcolor: '#000',
+                  bgcolor: '#3b82f6',
                   color: '#fff',
                   boxShadow: 'none',
                   '&:hover': {
-                    bgcolor: '#333',
+                    bgcolor: '#2563eb',
                     boxShadow: 'none'
                   }
                 }}
@@ -204,7 +204,7 @@ const Home: React.FC = () => {
             variant="h4" 
             fontWeight="700" 
             textAlign="center" 
-            color="#000" 
+            color="#1a1a1a" 
             sx={{ mb: 6 }}
           >
             Características
@@ -219,10 +219,10 @@ const Home: React.FC = () => {
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
                   <Box sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: '#000', mb: 2 }}>
+                    <Box sx={{ color: '#3b82f6', mb: 2 }}>
                       {feature.icon}
                     </Box>
-                    <Typography variant="h6" fontWeight="600" color="#000" sx={{ mb: 1 }}>
+                    <Typography variant="h6" fontWeight="600" color="#1a1a1a" sx={{ mb: 1 }}>
                       {feature.title}
                     </Typography>
                     <Typography variant="body2" color="#666" sx={{ lineHeight: 1.6 }}>
@@ -243,7 +243,7 @@ const Home: React.FC = () => {
             variant="h4" 
             fontWeight="700" 
             textAlign="center" 
-            color="#000" 
+            color="#1a1a1a" 
             sx={{ mb: 2 }}
           >
             Funcionalidades en acción
@@ -273,7 +273,8 @@ const Home: React.FC = () => {
                       border: '1px solid #e0e0e0',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
+                        boxShadow: '0 8px 24px rgba(59, 130, 246, 0.12)',
+                        borderColor: '#3b82f6'
                       }
                     }}
                     onClick={() => navigate(item.href)}
@@ -291,7 +292,7 @@ const Home: React.FC = () => {
                       />
                     </Box>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" fontWeight="600" color="#000" sx={{ mb: 1 }}>
+                      <Typography variant="h6" fontWeight="600" color="#1a1a1a" sx={{ mb: 1 }}>
                         {item.title}
                       </Typography>
                       <Typography variant="body2" color="#666">
@@ -328,10 +329,10 @@ const Home: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Logo size={24} variant="icon" />
               <Box>
-                <Typography variant="h6" fontWeight="700" color="#000">
+                <Typography variant="h6" fontWeight="700" color="#1a1a1a">
                   pulse
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                <Typography variant="caption" color="#666" sx={{ letterSpacing: 1.5 }}>
                   JOURNAL
                 </Typography>
               </Box>
@@ -350,7 +351,7 @@ const Home: React.FC = () => {
                 sx={{ 
                   textTransform: 'none',
                   color: '#666',
-                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                  '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
                 }}
               >
                 Precios
@@ -362,7 +363,7 @@ const Home: React.FC = () => {
                 sx={{ 
                   textTransform: 'none',
                   color: '#666',
-                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                  '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
                 }}
               >
                 Privacidad
@@ -374,7 +375,7 @@ const Home: React.FC = () => {
                 sx={{ 
                   textTransform: 'none',
                   color: '#666',
-                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                  '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
                 }}
               >
                 Términos
@@ -386,7 +387,7 @@ const Home: React.FC = () => {
                 sx={{ 
                   textTransform: 'none',
                   color: '#666',
-                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                  '&:hover': { color: '#3b82f6', bgcolor: 'transparent' }
                 }}
               >
                 Reembolsos
