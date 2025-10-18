@@ -356,9 +356,18 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
                         <BarChart3 className="h-4 w-4 text-purple-600" />
                         <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
                       </div>
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full overflow-x-auto">
-                        <div className="min-w-0 w-full">
-                          <C1Component c1Response={message.c1Response} />
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full">
+                        <div className="relative w-full">
+                          <div className="w-full overflow-hidden">
+                            <div style={{ 
+                              maxWidth: '100%', 
+                              transform: 'scale(1)',
+                              transformOrigin: 'top left',
+                              width: 'fit-content'
+                            }}>
+                              <C1Component c1Response={message.c1Response} />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
