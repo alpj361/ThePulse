@@ -487,13 +487,13 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
 
                 {/* Generative UI Components - shown below text */}
                 {message.hasUIComponents && message.c1Response && (
-                  <div className="mt-6 border-t pt-4 border-gray-200">
+                  <div className="mt-6 border-t pt-4 border-gray-200 w-full">
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart3 className="h-4 w-4 text-purple-600" />
                       <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
                     </div>
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 sm:p-4 overflow-hidden">
-                      <div className="c1-component-container max-w-full overflow-x-auto">
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full overflow-x-auto">
+                      <div className="min-w-0 w-full">
                         {(() => {
                           const cleanedResponse = message.c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
                           console.log('🔍 C1Response cleaned:', cleanedResponse);
