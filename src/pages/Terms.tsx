@@ -9,13 +9,14 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
-  Alert
+  Alert,
+  Link
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   Description as DescriptionIcon,
-  Security as SecurityIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  Gavel as GavelIcon
 } from '@mui/icons-material';
 
 export default function Terms() {
@@ -36,7 +37,7 @@ export default function Terms() {
             fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif'
           }}
         >
-          Términos y Condiciones
+          Términos y Condiciones de Uso
         </Typography>
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
           <Chip 
@@ -46,13 +47,13 @@ export default function Terms() {
             icon={<DescriptionIcon />}
           />
           <Chip 
-            label="Última actualización: 1 de Mayo 2025" 
+            label="Última actualización: 18 de octubre de 2025" 
             color="info" 
             variant="outlined"
           />
         </Box>
         <Typography variant="h6" color="text.secondary">
-          Pulse Journal - Plataforma de Análisis de Tendencias
+          Pulse Journal - Stand At Platform Development
         </Typography>
       </Box>
 
@@ -61,39 +62,55 @@ export default function Terms() {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <DescriptionIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
           <Typography variant="h4" component="h2" fontWeight="bold">
-            📄 TÉRMINOS Y CONDICIONES DE USO
+            📄 Términos y Condiciones
           </Typography>
         </Box>
 
         <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">1. Información general</Typography>
+            <Typography variant="h6" fontWeight="bold">1. Sobre el proyecto</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Typography paragraph>
-              Bienvenido a <strong>Pulse Journal</strong>, una plataforma en fase <strong>Alpha</strong> orientada a periodistas, comunicadores, instituciones y personas interesadas en el análisis de tendencias informativas. El acceso se proporciona por invitación y está sujeto a los presentes Términos y Condiciones de uso.
-            </Typography>
-            <Typography paragraph>
-              Pulse Journal es operada por StandatPD, con jurisdicción en <strong>Guatemala</strong>. Para consultas, puedes contactarnos en <strong>support@standatpd.com</strong>.
+            <Typography component="div">
+              <ul>
+                <li><strong>Proyecto:</strong> Stand At Platform Development</li>
+                <li><strong>Ubicación:</strong> Guatemala</li>
+                <li><strong>Contacto oficial:</strong> <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link></li>
+              </ul>
             </Typography>
           </AccordionDetails>
         </Accordion>
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">2. Estado del servicio (Alpha)</Typography>
+            <Typography variant="h6" fontWeight="bold">2. Descripción del servicio</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Pulse Journal es un servicio agéntico para investigación, organización y gestión de datos orientado a periodistas y otras personas profesionales, 
+              impulsado por IA con capacidades para extraer, automatizar y visualizar información. 
+            </Typography>
+            <Typography paragraph>
+              Funcionalidades actuales incluyen, entre otras: Vista de Tendencias, últimos contenidos de X, gestión de proyectos, 
+              captura inteligente de datos, tablas con exportación CSV, Vizta (agente investigativo y visualización), 
+              y Vizta App para marcadores de contenido desde Instagram y X.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">3. Acceso Alpha por invitación</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Alert severity="warning" sx={{ mb: 2 }}>
               La plataforma se encuentra en <strong>fase de desarrollo (Alpha)</strong>
             </Alert>
             <Typography component="div">
-              Esto significa que:
               <ul>
-                <li>Puede presentar errores, fallos o interrupciones.</li>
-                <li>Las funcionalidades pueden cambiar sin previo aviso.</li>
-                <li>Los datos ofrecidos pueden estar en constante ajuste o prueba.</li>
-                <li>No se garantiza continuidad ni soporte técnico formal en esta etapa.</li>
+                <li>Acceso restringido mediante códigos de invitación</li>
+                <li>Las funcionalidades pueden cambiar sin previo aviso, con errores o inestabilidad</li>
+                <li>No se garantiza disponibilidad, rendimiento ni continuidad del servicio</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -101,13 +118,63 @@ export default function Terms() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">3. Acceso y registro</Typography>
+            <Typography variant="h6" fontWeight="bold">4. Cuentas y requisitos</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Para crear una cuenta se solicita: nombre completo, correo electrónico y número de teléfono (para funciones con WhatsApp). 
+            </Typography>
+            <Typography paragraph>
+              La persona usuaria es responsable de mantener la confidencialidad de sus credenciales y de toda actividad realizada con su cuenta.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">5. Uso aceptable</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>Queda prohibido utilizar el servicio para:</Typography>
+            <Typography component="div">
+              <ul>
+                <li>Contenidos o actividades ilegales</li>
+                <li>Acoso, spam o abuso de la plataforma</li>
+              </ul>
+            </Typography>
+            <Typography paragraph>
+              Durante esta fase Alpha, nos reservamos el derecho de suspender o terminar cuentas ante incumplimientos, 
+              siempre buscando resolver situaciones mediante diálogo previo cuando sea posible.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">6. Propiedad de contenidos</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              La propiedad de la información creada o almacenada en Pulse Journal corresponde a la persona usuaria que la generó. 
+              El contenido original extraído pertenece a su creador o titular de derechos correspondiente.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">7. Planes, pagos y Paddle (Merchant of Record)</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography component="div">
               <ul>
-                <li>El acceso está limitado a usuarios invitados o aprobados por el equipo de Pulse Journal.</li>
-                <li>Al registrarte, aceptas proporcionar información veraz y mantener la confidencialidad de tus credenciales.</li>
+                <li>Procesamiento de pagos mediante Paddle, quien actúa como Merchant of Record y gestiona cobros, impuestos y cumplimiento PCI DSS</li>
+                <li><strong>Vendedor en Paddle:</strong> ID 243336</li>
+                <li><strong>Plan Alpha "Supporter/Soporte":</strong> USD $10 mensuales</li>
+                <li><strong>Monedas admitidas:</strong> GTQ y USD</li>
+                <li><strong>Métodos de pago:</strong> tarjeta de crédito y PayPal</li>
+                <li><strong>Facturación:</strong> mensual con renovación automática, hasta que se cancele</li>
+                <li>Paddle es responsable del procesamiento del pago y de la gestión de impuestos aplicables</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -115,68 +182,13 @@ export default function Terms() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">4. Descripción del servicio</Typography>
+            <Typography variant="h6" fontWeight="bold">8. Renovación y cancelación</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Typography paragraph>Pulse Journal permite:</Typography>
             <Typography component="div">
               <ul>
-                <li>Analizar publicaciones en redes sociales.</li>
-                <li>Identificar tendencias y generar insights.</li>
-                <li>Usar modelos de IA para contextualización de temas y storytelling.</li>
-                <li>Consultar librerías informativas con datos agregados.</li>
-                <li>Generar contenido periodístico con apoyo técnico.</li>
-              </ul>
-            </Typography>
-            <Typography paragraph>
-              Estas funcionalidades pueden conectarse a servicios de terceros como <strong>Supabase, Perplexity, OpenAI y Google Drive</strong>, que pueden tener sus propias políticas de uso y privacidad.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">5. Uso gratuito y créditos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Durante la fase Alpha, el acceso es gratuito bajo invitación. Sin embargo, algunas funcionalidades pueden estar limitadas por uso de <strong>créditos</strong>. En el futuro, ciertos servicios podrán requerir pago adicional. El uso indebido del sistema puede resultar en suspensión del acceso.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">6. Datos recolectados</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>Recolectamos y procesamos los siguientes datos de los usuarios:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Nombre y correo electrónico</li>
-                <li>Número de teléfono (si se proporciona)</li>
-                <li>Cookies para análisis de navegación</li>
-                <li>Logs de uso y actividad dentro de la plataforma</li>
-              </ul>
-            </Typography>
-            <Typography paragraph>
-              Esta información se utiliza para mejorar el servicio y no se comparte con terceros sin consentimiento expreso, salvo por obligación legal.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">7. Uso aceptable</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>Queda prohibido:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Reproducir o distribuir partes del contenido generado sin autorización.</li>
-                <li>Utilizar ingeniería inversa sobre la plataforma o sus modelos.</li>
-                <li>Automatizar solicitudes masivas o realizar scraping no autorizado.</li>
-                <li>Usar Pulse Journal con fines ilegales, difamatorios o para difundir desinformación.</li>
+                <li>La suscripción se renueva automáticamente cada período mensual</li>
+                <li>La cancelación puede realizarse a través de Paddle y surtirá efecto al final del período de facturación en curso</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -184,196 +196,132 @@ export default function Terms() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">8. Propiedad intelectual</Typography>
+            <Typography variant="h6" fontWeight="bold">9. Disponibilidad del servicio y mantenimiento</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography paragraph>
-              Todos los derechos sobre el software, diseño y arquitectura de Pulse Journal pertenecen a sus desarrolladores. Los datos generados por el usuario le pertenecen, pero la plataforma se reserva derechos sobre el entorno de análisis y visualización.
+              El servicio se ofrece "tal cual" y "según disponibilidad", sin garantías de uptime. 
+              Podemos realizar mantenimiento programado y notificaremos por correo cuando sea posible.
             </Typography>
           </AccordionDetails>
         </Accordion>
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">9. Limitación de responsabilidad</Typography>
+            <Typography variant="h6" fontWeight="bold">10. Limitación de responsabilidad</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Typography paragraph>Pulse Journal no se hace responsable por:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Pérdidas derivadas del uso de información incorrecta, incompleta o desactualizada.</li>
-                <li>Daños causados por interrupciones del servicio.</li>
-                <li>Decisiones tomadas por el usuario basadas en los contenidos generados durante esta fase de prueba.</li>
-              </ul>
+            <Typography paragraph>
+              Dado que este es un proyecto en desarrollo temprano (fase Alpha), el servicio se ofrece en su estado actual con limitaciones inherentes. 
+              En la máxima medida permitida por la ley aplicable, Stand At Platform Development no será responsable por daños indirectos, 
+              incidentales, especiales, consecuenciales ni pérdida de datos o beneficios derivados del uso del servicio.
+            </Typography>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Recomendamos encarecidamente respaldar tu información importante de manera regular. 
+              El uso del proyecto Alpha es bajo responsabilidad de quien participa en las pruebas.
+            </Alert>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">11. Indemnización</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Como proyecto en fase experimental, solicitamos que quienes participan en las pruebas acepten indemnizar y mantener 
+              indemne a Stand At Platform Development frente a reclamaciones derivadas del uso del servicio o incumplimiento de estos Términos.
             </Typography>
           </AccordionDetails>
         </Accordion>
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">10. Modificaciones</Typography>
+            <Typography variant="h6" fontWeight="bold">12. Terminación</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography paragraph>
-              Nos reservamos el derecho de modificar estos Términos en cualquier momento. Se notificará a los usuarios registrados mediante correo electrónico o aviso dentro de la plataforma.
+              Podemos suspender o terminar cuentas en cualquier circunstancia, incluyendo violaciones a estos Términos. 
+              La persona usuaria puede cerrar su cuenta en cualquier momento. 
+              Tras la terminación, el acceso cesa y la información se conserva conforme a la Política de Privacidad hasta su eliminación.
             </Typography>
           </AccordionDetails>
         </Accordion>
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">11. Legislación aplicable</Typography>
+            <Typography variant="h6" fontWeight="bold">13. Ley aplicable y resolución de disputas</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography paragraph>
-              Estos Términos se rigen por las leyes de <strong>Guatemala</strong>, sin perjuicio de los derechos que puedan corresponderte según otras jurisdicciones.
+              Estos Términos se rigen por las leyes de Guatemala. Te invitamos a contactarnos primero a{' '}
+              <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link> si tienes alguna inquietud.
+            </Typography>
+            <Typography paragraph>
+              Como proyecto en fase temprana, priorizamos el diálogo directo para resolver cualquier problema. 
+              Si una disputa no puede resolverse de forma amistosa, estará sujeta a la legislación guatemalteca de protección al consumidor.
+            </Typography>
+            <Typography paragraph>
+              Los usuarios pueden presentar quejas ante las autoridades de protección al consumidor en Guatemala si así lo consideran necesario.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">14. Cambios a los Términos</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Podemos actualizar estos Términos. Notificaremos cambios relevantes por medios razonables. El uso continuado implica aceptación.
             </Typography>
           </AccordionDetails>
         </Accordion>
       </Paper>
 
-      {/* Política de Privacidad */}
+      {/* Resolución de Disputas */}
       <Paper elevation={2} sx={{ p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <SecurityIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
+          <GavelIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
           <Typography variant="h4" component="h2" fontWeight="bold">
-            🔐 POLÍTICA DE PRIVACIDAD
+            ⚖️ Resolución de Disputas
           </Typography>
         </Box>
 
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">1. Introducción</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              En <strong>Pulse Journal</strong>, valoramos tu privacidad y nos comprometemos a proteger tus datos personales. Esta Política explica qué información recopilamos, cómo la usamos y con quién la compartimos mientras utilizas nuestra plataforma, actualmente en fase <strong>Alpha</strong>.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
+        <Typography paragraph>
+          Te alentamos a contactarnos primero al{' '}
+          <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link>{' '}
+          si tienes alguna inquietud o disputa con respecto a Pulse Journal. 
+          Estamos comprometidos a resolver los problemas de manera oportuna y justa.
+        </Typography>
 
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">2. Responsable del tratamiento</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              La plataforma es operada por <strong>StandatPD</strong>, bajo jurisdicción de <strong>Guatemala</strong>. Si tienes preguntas o deseas ejercer tus derechos sobre tus datos, puedes contactarnos en <strong>support@standatpd.com</strong>.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
+        <Typography paragraph>
+          Si no podemos resolver una disputa a través de comunicación directa dentro de 30 días, 
+          las disputas estarán sujetas a las disposiciones de la Ley de Protección al Consumidor y Usuario de Guatemala (Decreto 006-2003).
+        </Typography>
 
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">3. Información que recolectamos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>Durante tu uso de Pulse Journal, podemos recopilar los siguientes datos:</Typography>
-            <Typography component="div">
-              <ul>
-                <li><strong>Datos de identificación</strong>: nombre, correo electrónico, número de teléfono (si lo proporcionas).</li>
-                <li><strong>Datos técnicos</strong>: tipo de navegador, dirección IP, sistema operativo.</li>
-                <li><strong>Datos de uso</strong>: actividad dentro de la plataforma, interacciones, errores, y logs de navegación.</li>
-                <li><strong>Cookies</strong>: empleadas para análisis interno y mejora de la experiencia de usuario.</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+            Recursos de protección al consumidor en Guatemala:
+          </Typography>
+          <Typography component="div">
+            Como proyecto guatemalteco, reconocemos la legislación de protección al consumidor (Decreto 006-2003). 
+            Si bien estamos en fase experimental, los usuarios cuentan con el derecho de presentar quejas ante las autoridades competentes si lo consideran necesario.
+            <br/><br/>
+            <ul>
+              <li><strong>Contacto de autoridades de protección al consumidor:</strong>{' '}
+                <Link href="mailto:diacoquejasweb@mineco.gob.gt">diacoquejasweb@mineco.gob.gt</Link>
+              </li>
+              <li><strong>Autoridad:</strong> Ministerio de Economía de Guatemala</li>
+            </ul>
+          </Typography>
+        </Alert>
 
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">4. Finalidades del tratamiento</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>Utilizamos tus datos para:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Permitir y gestionar tu acceso a la plataforma.</li>
-                <li>Analizar el uso del sistema para mejorar nuestras funcionalidades.</li>
-                <li>Generar estadísticas internas y detectar fallos.</li>
-                <li>Contactarte con fines técnicos o administrativos.</li>
-                <li>Cumplir con requisitos legales aplicables.</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">5. Uso de servicios de terceros</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Pulse Journal se conecta con herramientas de terceros como <strong>Supabase, Perplexity, OpenAI y Google Drive</strong>. Estas plataformas pueden recopilar información de acuerdo con sus propias políticas de privacidad, ajenas a nuestro control directo.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">6. Compartición de datos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>No compartimos tu información con terceros, salvo:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Que nos brindes tu consentimiento expreso.</li>
-                <li>Que sea necesario para cumplir con obligaciones legales.</li>
-                <li>Que se requiera para el funcionamiento técnico del servicio (por ejemplo, almacenamiento en la nube).</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">7. Seguridad</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Adoptamos medidas razonables para proteger tus datos contra pérdida, acceso no autorizado, alteración o divulgación. Sin embargo, al estar en fase Alpha, no podemos garantizar una seguridad total.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">8. Retención de datos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Conservaremos tus datos mientras mantengas una cuenta activa en Pulse Journal, o mientras sea necesario para fines de desarrollo, legales o administrativos. Puedes solicitar su eliminación escribiéndonos a <strong>support@standatpd.com</strong>.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">9. Tus derechos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>De acuerdo con la legislación aplicable, puedes ejercer los siguientes derechos:</Typography>
-            <Typography component="div">
-              <ul>
-                <li>Acceder a tus datos.</li>
-                <li>Solicitar correcciones o actualizaciones.</li>
-                <li>Solicitar la eliminación de tu cuenta y datos personales.</li>
-                <li>Retirar tu consentimiento cuando lo desees.</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">10. Cambios a esta política</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Podemos actualizar esta Política en cualquier momento. Notificaremos los cambios relevantes a través de la plataforma o por correo electrónico si eres un usuario registrado.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
+        <Typography paragraph>
+          Sin embargo, como proyecto en desarrollo temprano, te invitamos primero a dialogar directamente con nosotros en{' '}
+          <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link>{' '}
+          para resolver cualquier inquietud de manera ágil y constructiva.
+        </Typography>
       </Paper>
 
       {/* Contacto */}
@@ -385,7 +333,7 @@ export default function Terms() {
           </Typography>
         </Box>
         <Typography variant="h6" color="primary.main">
-          support@standatpd.com
+          soporte@standatpd.com
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Para consultas, soporte técnico o ejercicio de derechos sobre tus datos
@@ -397,12 +345,12 @@ export default function Terms() {
       {/* Footer */}
       <Box sx={{ textAlign: 'center', py: 2 }}>
         <Typography variant="body2" color="text.secondary">
-          © 2025 StandatPD - Pulse Journal. Todos los derechos reservados.
+          © 2025 Stand At Platform Development - Pulse Journal. Todos los derechos reservados.
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          Versión Alpha - Documento actualizado el 1 de Mayo de 2025
+          Versión Alpha - Documento actualizado el 18 de octubre de 2025
         </Typography>
       </Box>
     </Container>
   );
-} 
+}

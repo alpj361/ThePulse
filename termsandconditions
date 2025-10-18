@@ -1,0 +1,193 @@
+# Términos y Condiciones de Uso
+
+Última actualización: 18 de octubre de 2025
+
+## 1. Sobre el proyecto
+
+- Proyecto: Stand At Platform Development
+- Ubicación: Guatemala
+- Contacto oficial: [soporte@standatpd.com](mailto:soporte@standatpd.com)
+
+## 2. Descripción del servicio
+
+Pulse Journal es un servicio agéntico para investigación, organización y gestión de datos orientado a periodistas y otras personas profesionales, impulsado por IA con capacidades para extraer, automatizar y visualizar información. Funcionalidades actuales incluyen, entre otras: Vista de Tendencias, últimos contenidos de X, gestión de proyectos, captura inteligente de datos, tablas con exportación CSV, Vizta (agente investigativo y visualización), y Vizta App para marcadores de contenido desde Instagram y X.
+
+## 3. Acceso Alpha por invitación
+
+- Acceso restringido mediante códigos de invitación.
+- Las funcionalidades pueden cambiar sin previo aviso, con errores o inestabilidad.
+- No se garantiza disponibilidad, rendimiento ni continuidad del servicio.
+
+## 4. Cuentas y requisitos
+
+Para crear una cuenta se solicita: nombre completo, correo electrónico y número de teléfono (para funciones con WhatsApp). La persona usuaria es responsable de mantener la confidencialidad de sus credenciales y de toda actividad realizada con su cuenta.
+
+## 5. Uso aceptable
+
+Queda prohibido utilizar el servicio para: contenidos o actividades ilegales, acoso, spam o abuso de la plataforma. Durante esta fase Alpha, nos reservamos el derecho de suspender o terminar cuentas ante incumplimientos, siempre buscando resolver situaciones mediante diálogo previo cuando sea posible.
+
+## 6. Propiedad de contenidos
+
+La propiedad de la información creada o almacenada en Pulse Journal corresponde a la persona usuaria que la generó. El contenido original extraído pertenece a su creador o titular de derechos correspondiente.
+
+## 7. Planes, pagos y Paddle (Merchant of Record)
+
+- Procesamiento de pagos mediante Paddle, quien actúa como Merchant of Record y gestiona cobros, impuestos y cumplimiento PCI DSS.
+- Vendedor en Paddle: ID 243336.
+- Plan Alpha “Supporter/Soporte”: USD $10 mensuales.
+- Monedas admitidas: GTQ y USD.
+- Métodos de pago: tarjeta de crédito y PayPal.
+- Facturación: mensual con renovación automática, hasta que se cancele.
+- Paddle es responsable del procesamiento del pago y de la gestión de impuestos aplicables.
+
+## 8. Renovación y cancelación
+
+- La suscripción se renueva automáticamente cada período mensual.
+- La cancelación puede realizarse a través de Paddle y surtirá efecto al final del período de facturación en curso.
+
+## 9. Disponibilidad del servicio y mantenimiento
+
+El servicio se ofrece “tal cual” y “según disponibilidad”, sin garantías de uptime. Podemos realizar mantenimiento programado y notificaremos por correo cuando sea posible.
+
+## 10. Limitación de responsabilidad
+
+Dado que este es un proyecto en desarrollo temprano (fase Alpha), el servicio se ofrece en su estado actual con limitaciones inherentes. En la máxima medida permitida por la ley aplicable, Stand At Platform Development no será responsable por daños indirectos, incidentales, especiales, consecuenciales ni pérdida de datos o beneficios derivados del uso del servicio. Recomendamos encarecidamente respaldar tu información importante de manera regular. El uso del proyecto Alpha es bajo responsabilidad de quien participa en las pruebas.
+
+## 11. Indemnización
+
+Como proyecto en fase experimental, solicitamos que quienes participan en las pruebas acepten indemnizar y mantener indemne a Stand At Platform Development frente a reclamaciones derivadas del uso del servicio o incumplimiento de estos Términos.
+
+## 12. Terminación
+
+Podemos suspender o terminar cuentas en cualquier circunstancia, incluyendo violaciones a estos Términos. La persona usuaria puede cerrar su cuenta en cualquier momento. Tras la terminación, el acceso cesa y la información se conserva conforme a la Política de Privacidad hasta su eliminación.
+
+## 13. Ley aplicable y resolución de disputas
+
+Estos Términos se rigen por las leyes de Guatemala. Te invitamos a contactarnos primero a [soporte@standatpd.com](mailto:soporte@standatpd.com) si tienes alguna inquietud. Como proyecto en fase temprana, priorizamos el diálogo directo para resolver cualquier problema. Si una disputa no puede resolverse de forma amistosa, estará sujeta a la legislación guatemalteca de protección al consumidor. Los usuarios pueden presentar quejas ante las autoridades de protección al consumidor en Guatemala si así lo consideran necesario.
+
+## 14. Cambios a los Términos
+
+Podemos actualizar estos Términos. Notificaremos cambios relevantes por medios razonables. El uso continuado implica aceptación.
+
+---
+
+# Política de Privacidad
+
+Última actualización: 18 de octubre de 2025
+
+## 1. Sobre este proyecto y contacto
+
+- Proyecto: Stand At Platform Development
+- Contacto: [soporte@standatpd.com](mailto:soporte@standatpd.com)
+- Ámbito: usuarios en Centroamérica, con foco inicial en Guatemala.
+
+## 2. Datos personales que recopilamos
+
+- Identificadores: nombre, correo electrónico, número de teléfono.
+- Datos de pago (si corresponde al plan de soporte): gestionados por Paddle.
+- Datos de uso y analíticas, incluyendo categorizaciones de uso.
+- Contenido que subes o gestionas en el servicio.
+
+## 3. Cómo recopilamos los datos
+
+- Aportados directamente por la persona usuaria.
+- Cookies y tecnologías de análisis.
+- Integraciones de terceros.
+
+## 4. Finalidades del tratamiento
+
+- Gestión de cuenta y prestación del servicio.
+- Facturación y cobros del plan de soporte mediante Paddle.
+- Analítica y mejora del producto.
+
+## 5. Bases legales
+
+- Ejecución de contrato para la prestación del servicio y facturación.
+- Interés legítimo para analítica y mejora del servicio.
+- Cuando corresponda, cumplimiento de obligaciones legales.
+
+## 6. Terceros con los que compartimos datos
+
+- Paddle: procesamiento de pagos y gestión de impuestos.
+- Supabase: alojamiento y base de datos de la plataforma.
+- Proveedores de IA y análisis: OpenAI, Anthropic (Claude) y DeepSeek, para funcionalidades agénticas y de análisis.
+
+## 7. Cookies
+
+Usamos cookies de analítica. Puedes gestionar preferencias desde la configuración de tu navegador y, cuando corresponda, a través de controles de consentimiento.
+
+## 8. Transferencias internacionales y ubicación de datos
+
+Los datos se alojan en Supabase, en Estados Unidos. Pueden realizarse transferencias internacionales sujetas a garantías adecuadas. Paddle y otros terceros pueden procesar datos en sus propias jurisdicciones.
+
+## 9. Retención y eliminación
+
+- Conservamos datos por hasta 2 meses después del cierre de la cuenta, salvo obligación legal distinta.
+- Eliminación a petición: atendemos solicitudes en un plazo aproximado de 2 meses.
+
+## 10. Derechos de las personas usuarias
+
+- Acceso, rectificación, eliminación, oposición y portabilidad, conforme a la normativa aplicable.
+- Solicitudes: por correo a [soporte@standatpd.com](mailto:soporte@standatpd.com). Podemos requerir verificación de identidad.
+
+## 11. Seguridad
+
+Como proyecto en fase Alpha, aplicamos medidas técnicas y organizativas razonables, incluyendo cifrado en tránsito y controles de acceso. Estamos mejorando continuamente nuestras prácticas de seguridad conforme el proyecto madura. No obstante, ningún sistema es 100% seguro, por lo que recomendamos precaución con información sensible.
+
+## 12. Menores de edad
+
+El servicio está dirigido únicamente a personas mayores de edad. No recopilamos intencionalmente datos de menores de 16 años.
+
+## 13. Naturaleza experimental del proyecto y cambios en la Política
+
+Al ser un proyecto en fase Alpha, las funcionalidades y prácticas pueden evolucionar rápidamente conforme aprendemos y mejoramos. Podemos actualizar esta Política y te notificaremos los cambios importantes por medios razonables, generalmente por correo electrónico.
+
+---
+
+# Política de Reembolsos
+
+Última actualización: 18 de octubre de 2025
+
+## 1. Alcance
+
+Esta política aplica a suscripciones pagadas del plan Alpha “Supporter/Soporte”. Los pagos son procesados por Paddle (Merchant of Record).
+
+## 2. Régimen de reembolsos en fase experimental
+
+- Debido a la naturaleza experimental del proyecto y a que el acceso Alpha es principalmente para pruebas y soporte al desarrollo, no se ofrecen reembolsos durante esta fase.
+- No aplican reembolsos prorrateados por cancelación durante el período facturado.
+
+## 3. Cancelaciones
+
+- La cancelación se gestiona a través de Paddle.
+- El efecto de cancelación ocurre al final del ciclo de facturación vigente.
+
+## 4. Consideraciones legales
+
+Si la legislación aplicable requiere reembolsos en circunstancias específicas, evaluaremos cada situación de manera individual a través de Paddle, siempre buscando un equilibrio justo para un proyecto en desarrollo temprano.
+
+## 5. Disputas de pago y contracargos
+
+Las disputas y contracargos se tramitan conforme a los procedimientos de Paddle y de los emisores de pago correspondientes. Podemos solicitar información adicional para su evaluación.
+
+## 6. Contacto
+
+Para preguntas sobre esta política: [soporte@standatpd.com](mailto:soporte@standatpd.com)
+
+
+
+## Resolución de Disputas
+
+Te alentamos a contactarnos primero al [soporte@standatpd.com](mailto:soporte@standatpd.com) si tienes alguna inquietud o disputa con respecto a Pulse Journal. Estamos comprometidos a resolver los problemas de manera oportuna y justa.
+
+Si no podemos resolver una disputa a través de comunicación directa dentro de 30 días, las disputas estarán sujetas a las disposiciones de la Ley de Protección al Consumidor y Usuario de Guatemala (Decreto 006-2003).
+
+**Recursos de protección al consumidor en Guatemala:**
+
+Como proyecto guatemalteco, reconocemos la legislación de protección al consumidor (Decreto 006-2003). Si bien estamos en fase experimental, los usuarios cuentan con el derecho de presentar quejas ante las autoridades competentes si lo consideran necesario.
+
+- Contacto de autoridades de protección al consumidor: [diacoquejasweb@mineco.gob.gt](mailto:diacoquejasweb@mineco.gob.gt)
+- Autoridad: Ministerio de Economía de Guatemala
+
+Sin embargo, como proyecto en desarrollo temprano, te invitamos primero a dialogar directamente con nosotros en [soporte@standatpd.com](mailto:soporte@standatpd.com) para resolver cualquier inquietud de manera ágil y constructiva.
+

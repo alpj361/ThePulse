@@ -54,7 +54,16 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6 }}
+                style={{ display: 'flex', gap: 12 }}
               >
+                <Button 
+                  variant="text" 
+                  size="small"
+                  onClick={() => navigate('/pricing')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Precios
+                </Button>
                 <Button 
                   variant="outlined" 
                   size="small"
@@ -158,7 +167,8 @@ const Home: React.FC = () => {
                   }}
                 >
                   <Button
-                    onClick={handleStart}
+                    component="a"
+                    href="mailto:soporte@standatpd.com?subject=Solicitud de Invitación - Pulse Journal Alpha"
                     variant="contained"
                     size="large"
                     fullWidth
@@ -176,10 +186,14 @@ const Home: React.FC = () => {
                       }
                     }}
                   >
-                    Empezar ahora
+                    Solicitar Invitación
                   </Button>
 
                   <Box sx={{ mt: 3, textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, fontStyle: 'italic' }}>
+                      📧 Acceso Alpha por invitación • Completamente gratuito
+                    </Typography>
+                    
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       ¿Ya tienes una cuenta?{' '}
                       <Button
@@ -197,19 +211,37 @@ const Home: React.FC = () => {
                       </Button>
                     </Typography>
                     
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={() => navigate('/terms')}
-                      sx={{ 
-                        fontSize: '0.75rem',
-                        textDecoration: 'underline',
-                        textTransform: 'none',
-                        color: 'text.secondary'
-                      }}
-                    >
-                      Ver Términos y Condiciones
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => navigate('/terms')}
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          textDecoration: 'underline',
+                          textTransform: 'none',
+                          color: 'text.secondary'
+                        }}
+                      >
+                        Términos y Condiciones
+                      </Button>
+                      <Typography variant="body2" color="text.disabled" sx={{ fontSize: '0.75rem' }}>
+                        •
+                      </Typography>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => navigate('/refunds')}
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          textDecoration: 'underline',
+                          textTransform: 'none',
+                          color: 'text.secondary'
+                        }}
+                      >
+                        Política de Reembolsos
+                      </Button>
+                    </Box>
                   </Box>
                 </Box>
               </motion.div>
@@ -264,6 +296,18 @@ const Home: React.FC = () => {
                   <Button
                     variant="text"
                     size="small"
+                    onClick={() => navigate('/pricing')}
+                    sx={{ 
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      '&:hover': { color: 'text.primary' }
+                    }}
+                  >
+                    Precios
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
                     onClick={() => navigate('/privacy')}
                     sx={{ 
                       textTransform: 'none',
@@ -284,6 +328,18 @@ const Home: React.FC = () => {
                     }}
                   >
                     Términos de Servicio
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => navigate('/refunds')}
+                    sx={{ 
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      '&:hover': { color: 'text.primary' }
+                    }}
+                  >
+                    Reembolsos
                   </Button>
                   <Button
                     variant="text"

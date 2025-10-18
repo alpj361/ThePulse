@@ -9,13 +9,15 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
-  Alert
+  Alert,
+  Link
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   Shield as PrivacyIcon,
   Security as SecurityIcon,
-  DataUsage as DataUsageIcon
+  DataUsage as DataUsageIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 
 export default function Privacy() {
@@ -46,7 +48,7 @@ export default function Privacy() {
             icon={<PrivacyIcon />}
           />
           <Chip 
-            label="Última actualización: 1 de Mayo 2025" 
+            label="Última actualización: 18 de octubre de 2025" 
             color="info" 
             variant="outlined"
           />
@@ -61,50 +63,39 @@ export default function Privacy() {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <PrivacyIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
           <Typography variant="h4" component="h2" fontWeight="bold">
-            🔒 POLÍTICA DE PRIVACIDAD
+            🔒 Política de Privacidad
           </Typography>
         </Box>
 
         <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">1. Introducción</Typography>
+            <Typography variant="h6" fontWeight="bold">1. Sobre este proyecto y contacto</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Typography paragraph>
-              En <strong>Pulse Journal</strong>, tu privacidad es nuestra prioridad. Esta Política de Privacidad explica cómo recolectamos, usamos, compartimos y protegemos tu información personal cuando utilizas nuestra plataforma.
-            </Typography>
-            <Typography paragraph>
-              StandatPD, con sede en <strong>Guatemala</strong>, es la entidad responsable del tratamiento de tus datos personales. Para cualquier consulta sobre privacidad, contáctanos en <strong>privacy@standatpd.com</strong>.
+            <Typography component="div">
+              <ul>
+                <li><strong>Proyecto:</strong> Stand At Platform Development</li>
+                <li><strong>Contacto:</strong> <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link></li>
+                <li><strong>Ámbito:</strong> usuarios en Centroamérica, con foco inicial en Guatemala</li>
+              </ul>
             </Typography>
           </AccordionDetails>
         </Accordion>
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">2. Información que recolectamos</Typography>
+            <Typography variant="h6" fontWeight="bold">2. Datos personales que recopilamos</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Alert severity="info" sx={{ mb: 2 }}>
               Solo recolectamos la información necesaria para brindarte el mejor servicio
             </Alert>
-            <Typography paragraph><strong>Información que proporcionas directamente:</strong></Typography>
             <Typography component="div">
               <ul>
-                <li>Nombre completo y dirección de correo electrónico</li>
-                <li>Número de teléfono (opcional)</li> 
-                <li>Información de perfil profesional</li>
-                <li>Contenido que cargas o creas en la plataforma</li>
-                <li>Proyectos, coberturas y documentos de trabajo</li>
-              </ul>
-            </Typography>
-            <Typography paragraph><strong>Información recolectada automáticamente:</strong></Typography>
-            <Typography component="div">
-              <ul>
-                <li>Direcciones IP y ubicación aproximada</li>
-                <li>Información del dispositivo y navegador</li>
-                <li>Cookies y tecnologías similares</li>
-                <li>Logs de uso y actividad en la plataforma</li>
-                <li>Métricas de rendimiento y errores</li>
+                <li><strong>Identificadores:</strong> nombre, correo electrónico, número de teléfono</li>
+                <li><strong>Datos de pago</strong> (si corresponde al plan de soporte): gestionados por Paddle</li>
+                <li><strong>Datos de uso y analíticas,</strong> incluyendo categorizaciones de uso</li>
+                <li><strong>Contenido</strong> que subes o gestionas en el servicio</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -112,19 +103,14 @@ export default function Privacy() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">3. Cómo usamos tu información</Typography>
+            <Typography variant="h6" fontWeight="bold">3. Cómo recopilamos los datos</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography component="div">
-              Utilizamos tu información para:
               <ul>
-                <li>Proporcionar y mejorar nuestros servicios</li>
-                <li>Personalizar tu experiencia en la plataforma</li>
-                <li>Procesar análisis de tendencias y generar insights</li>
-                <li>Comunicarnos contigo sobre actualizaciones y soporte</li>
-                <li>Garantizar la seguridad y prevenir fraudes</li>
-                <li>Cumplir con obligaciones legales</li>
-                <li>Desarrollar nuevas funcionalidades</li>
+                <li>Aportados directamente por la persona usuaria</li>
+                <li>Cookies y tecnologías de análisis</li>
+                <li>Integraciones de terceros</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -132,18 +118,86 @@ export default function Privacy() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">4. Compartir información</Typography>
+            <Typography variant="h6" fontWeight="bold">4. Finalidades del tratamiento</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography component="div">
+              <ul>
+                <li>Gestión de cuenta y prestación del servicio</li>
+                <li>Facturación y cobros del plan de soporte mediante Paddle</li>
+                <li>Analítica y mejora del producto</li>
+              </ul>
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">5. Bases legales</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography component="div">
+              <ul>
+                <li>Ejecución de contrato para la prestación del servicio y facturación</li>
+                <li>Interés legítimo para analítica y mejora del servicio</li>
+                <li>Cuando corresponda, cumplimiento de obligaciones legales</li>
+              </ul>
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">6. Terceros con los que compartimos datos</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <strong>No vendemos ni alquilamos tu información personal a terceros</strong>
+            </Alert>
+            <Typography component="div">
+              Solo compartimos datos con:
+              <ul>
+                <li><strong>Paddle:</strong> procesamiento de pagos y gestión de impuestos</li>
+                <li><strong>Supabase:</strong> alojamiento y base de datos de la plataforma</li>
+                <li><strong>Proveedores de IA y análisis:</strong> OpenAI, Anthropic (Claude) y DeepSeek, para funcionalidades agénticas y de análisis</li>
+              </ul>
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">7. Cookies</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Typography paragraph>
-              <strong>No vendemos ni alquilamos tu información personal a terceros.</strong> Solo compartimos información en las siguientes circunstancias:
+              Usamos cookies de analítica. Puedes gestionar preferencias desde la configuración de tu navegador y, 
+              cuando corresponda, a través de controles de consentimiento.
             </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">8. Transferencias internacionales y ubicación de datos</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Los datos se alojan en Supabase, en Estados Unidos. Pueden realizarse transferencias internacionales sujetas a garantías adecuadas. 
+              Paddle y otros terceros pueden procesar datos en sus propias jurisdicciones.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">9. Retención y eliminación</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
             <Typography component="div">
               <ul>
-                <li><strong>Proveedores de servicios:</strong> Supabase (base de datos), OpenAI/Perplexity (IA), Google Drive (almacenamiento)</li>
-                <li><strong>Cumplimiento legal:</strong> Cuando sea requerido por ley o autoridades competentes</li>
-                <li><strong>Protección:</strong> Para proteger nuestros derechos, propiedad o seguridad</li>
-                <li><strong>Consentimiento:</strong> Cuando tengas consentimiento explícito</li>
+                <li>Conservamos datos por hasta 2 meses después del cierre de la cuenta, salvo obligación legal distinta</li>
+                <li><strong>Eliminación a petición:</strong> atendemos solicitudes en un plazo aproximado de 2 meses</li>
               </ul>
             </Typography>
           </AccordionDetails>
@@ -151,156 +205,94 @@ export default function Privacy() {
 
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">5. Seguridad de datos</Typography>
+            <Typography variant="h6" fontWeight="bold">10. Derechos de las personas usuarias</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Tienes derecho a: <strong>acceso, rectificación, eliminación, oposición y portabilidad,</strong> conforme a la normativa aplicable.
+            </Typography>
+            <Typography paragraph>
+              <strong>Solicitudes:</strong> por correo a <Link href="mailto:soporte@standatpd.com">soporte@standatpd.com</Link>. 
+              Podemos requerir verificación de identidad.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">11. Seguridad</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <SecurityIcon sx={{ mr: 1, color: 'success.main' }} />
               <Typography fontWeight="bold">Medidas de seguridad implementadas</Typography>
             </Box>
-            <Typography component="div">
-              <ul>
-                <li>Encriptación SSL/TLS para todas las comunicaciones</li>
-                <li>Autenticación segura con tokens JWT</li>
-                <li>Acceso restringido por roles y permisos</li>
-                <li>Respaldos regulares y seguros</li>
-                <li>Monitoreo continuo de actividad sospechosa</li>
-                <li>Cumplimiento con estándares de seguridad internacional</li>
-              </ul>
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">6. Tus derechos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>Tienes derecho a:</Typography>
-            <Typography component="div">
-              <ul>
-                <li><strong>Acceso:</strong> Solicitar una copia de tu información personal</li>
-                <li><strong>Rectificación:</strong> Corregir información inexacta o incompleta</li>
-                <li><strong>Eliminación:</strong> Solicitar la eliminación de tus datos personales</li>
-                <li><strong>Portabilidad:</strong> Recibir tus datos en formato estructurado</li>
-                <li><strong>Oposición:</strong> Oponerte al procesamiento de tus datos</li>
-                <li><strong>Limitación:</strong> Restringir ciertos usos de tu información</li>
-              </ul>
-            </Typography>
             <Typography paragraph>
-              Para ejercer estos derechos, contáctanos en <strong>privacy@standatpd.com</strong>
+              Como proyecto en fase Alpha, aplicamos medidas técnicas y organizativas razonables, incluyendo cifrado en tránsito y controles de acceso. 
+              Estamos mejorando continuamente nuestras prácticas de seguridad conforme el proyecto madura.
             </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">7. Cookies y tecnologías similares</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Utilizamos cookies y tecnologías similares para mejorar tu experiencia:
-            </Typography>
-            <Typography component="div">
-              <ul>
-                <li><strong>Cookies esenciales:</strong> Para el funcionamiento básico de la plataforma</li>
-                <li><strong>Cookies analíticas:</strong> Para entender cómo usas la plataforma</li>
-                <li><strong>Cookies de preferencias:</strong> Para recordar tus configuraciones</li>
-              </ul>
-            </Typography>
-            <Typography paragraph>
-              Puedes controlar las cookies através de la configuración de tu navegador.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">8. Retención de datos</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography component="div">
-              <ul>
-                <li><strong>Datos de cuenta:</strong> Mientras mantengas tu cuenta activa</li>
-                <li><strong>Datos de uso:</strong> Hasta 2 años después de la inactividad</li>
-                <li><strong>Logs técnicos:</strong> Hasta 12 meses</li>
-                <li><strong>Datos de respaldo:</strong> Hasta 90 días en sistemas de respaldo</li>
-              </ul>
-            </Typography>
-            <Typography paragraph>
-              Cuando elimines tu cuenta, eliminaremos tus datos personales dentro de 30 días, excepto cuando sea requerido mantenerlos por obligaciones legales.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">9. Transferencias internacionales</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Algunos de nuestros proveedores de servicios pueden estar ubicados fuera de Guatemala. Cuando transferimos datos internacionalmente, implementamos medidas apropiadas para proteger tu información conforme a estándares internacionales.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">10. Menores de edad</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Pulse Journal no está dirigido a menores de 18 años. No recolectamos conscientemente información personal de menores. Si te das cuenta de que un menor ha proporcionado información personal, contáctanos inmediatamente.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">11. Cambios a esta política</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography paragraph>
-              Podemos actualizar esta Política de Privacidad ocasionalmente. Te notificaremos sobre cambios significativos por correo electrónico o através de la plataforma. La fecha de "Última actualización" indica cuándo se modificó por última vez.
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="h6" fontWeight="bold">12. Contacto</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <DataUsageIcon sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography fontWeight="bold">Oficial de Protección de Datos</Typography>
-            </Box>
-            <Typography component="div">
-              Si tienes preguntas sobre esta Política de Privacidad o el tratamiento de tus datos personales:
-              <ul>
-                <li><strong>Email:</strong> privacy@standatpd.com</li>
-                <li><strong>Soporte general:</strong> support@standatpd.com</li>
-                <li><strong>Jurisdicción:</strong> Guatemala</li>
-              </ul>
-            </Typography>
-            <Alert severity="success" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Respuesta garantizada en 72 horas</strong> para consultas sobre privacidad y protección de datos.
-              </Typography>
+            <Alert severity="info">
+              No obstante, ningún sistema es 100% seguro, por lo que recomendamos precaución con información sensible.
             </Alert>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">12. Menores de edad</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              El servicio está dirigido únicamente a personas mayores de edad. No recopilamos intencionalmente datos de menores de 16 años.
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6" fontWeight="bold">13. Naturaleza experimental del proyecto y cambios en la Política</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography paragraph>
+              Al ser un proyecto en fase Alpha, las funcionalidades y prácticas pueden evolucionar rápidamente conforme aprendemos y mejoramos. 
+              Podemos actualizar esta Política y te notificaremos los cambios importantes por medios razonables, generalmente por correo electrónico.
+            </Typography>
           </AccordionDetails>
         </Accordion>
       </Paper>
 
-      {/* Footer Note */}
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <Typography variant="body2" color="text.secondary">
-          Esta Política de Privacidad es efectiva a partir del 1 de Mayo de 2025
+      {/* Contacto */}
+      <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+          <EmailIcon sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
+          <Typography variant="h5" component="h3" fontWeight="bold">
+            📬 Contacto
+          </Typography>
+        </Box>
+        <Typography variant="h6" color="primary.main">
+          soporte@standatpd.com
         </Typography>
-        <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
-          StandatPD - Pulse Journal © 2025
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Para consultas sobre privacidad y protección de datos
+        </Typography>
+        <Alert severity="success" sx={{ mt: 2, maxWidth: 600, mx: 'auto' }}>
+          <Typography variant="body2">
+            <strong>Respuesta garantizada en 72 horas</strong> para consultas sobre privacidad y protección de datos.
+          </Typography>
+        </Alert>
+      </Paper>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Footer */}
+      <Box sx={{ textAlign: 'center', py: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          © 2025 Stand At Platform Development - Pulse Journal. Todos los derechos reservados.
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Versión Alpha - Documento actualizado el 18 de octubre de 2025
         </Typography>
       </Box>
     </Container>
   );
-} 
+}

@@ -16,6 +16,8 @@ import AuthCallback from './pages/AuthCallback';
 import AuthVerification from './pages/AuthVerification';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Refunds from './pages/Refunds';
+import Pricing from './pages/Pricing';
 import TestHashtagCard from './components/test/TestHashtagCard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useUserProfile } from './hooks/useUserProfile';
@@ -146,6 +148,8 @@ function App() {
           <Route path="/auth/verify" element={<AuthVerification />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refunds" element={<Refunds />} />
+          <Route path="/pricing" element={<Pricing />} />
           
           {/* Ruta de prueba para el nuevo formato JSON */}
           <Route path="/test-hashtag" element={
