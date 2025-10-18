@@ -7,393 +7,409 @@ import {
   Container,
   useTheme,
   useMediaQuery,
+  Card,
+  CardContent,
+  Grid,
 } from '@mui/material';
-import { ArrowForward } from '@mui/icons-material';
+import { ArrowForward, TrendingUp, FolderOpen, MenuBook, Satellite, BarChart } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { BackgroundPaths } from '@/components/ui/BackgroundPaths';
 import Logo from '../components/common/Logo';
-import { FeaturesSectionWithHoverEffects } from '../components/ui/feature-section-with-hover-effects';
-import { Gallery4 } from '../components/ui/gallery4';
+
+// Importar GIFs
+import sondeosGif from '../assets/gifs/Sondeos.gif';
+import projectsGif from '../assets/gifs/Projects.gif';
+import trendsGif from '../assets/gifs/Trends.gif';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handleStart = () => {
-    navigate('/login');
-  };
+  const features = [
+    {
+      icon: <TrendingUp sx={{ fontSize: 40 }} />,
+      title: 'Monitoreo de Tendencias',
+      description: 'Detecta temas en auge y analiza coyunturas relevantes en tiempo real.',
+    },
+    {
+      icon: <FolderOpen sx={{ fontSize: 40 }} />,
+      title: 'Gestión de Proyectos',
+      description: 'Organiza investigaciones con metodología de capas y seguimiento detallado.',
+    },
+    {
+      icon: <MenuBook sx={{ fontSize: 40 }} />,
+      title: 'Códex y Librería',
+      description: 'Base de conocimiento con recursos, referencias y conceptos clave.',
+    },
+    {
+      icon: <Satellite sx={{ fontSize: 40 }} />,
+      title: 'Monitoreo de Medios',
+      description: 'Rastrea contenido de X (Twitter) para análisis político, deportivo y más.',
+    },
+    {
+      icon: <BarChart sx={{ fontSize: 40 }} />,
+      title: 'Sondeos y Análisis',
+      description: 'Análisis inteligente con múltiples fuentes para interpretación de datos.',
+    },
+  ];
+
+  const showcaseItems = [
+    {
+      title: 'Sondeos Inteligentes',
+      description: 'Análisis detallado de datos con IA',
+      image: sondeosGif,
+      href: '/sondeos',
+    },
+    {
+      title: 'Gestión de Proyectos',
+      description: 'Metodología de capas para organizar investigaciones',
+      image: projectsGif,
+      href: '/projects',
+    },
+    {
+      title: 'Monitoreo de Tendencias',
+      description: 'Detecta tendencias emergentes en tiempo real',
+      image: trendsGif,
+      href: '/dashboard',
+    },
+  ];
 
   return (
-    <BackgroundPaths>
-      <Box sx={{ minHeight: '100vh' }}>
-        {/* Header */}
-        <Box component="header" sx={{ py: 3, px: 4 }}>
-          <Container maxWidth="xl">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Logo size={32} variant="icon" />
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight="bold" color="text.primary">
-                    pulse
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 2 }}>
-                    JOURNAL
-                  </Typography>
-                </Box>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                style={{ display: 'flex', gap: 12 }}
-              >
-                <Button 
-                  variant="text" 
-                  size="small"
-                  onClick={() => navigate('/pricing')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Precios
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => navigate('/login')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Iniciar Sesión
-                </Button>
-              </motion.div>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
+      {/* Header */}
+      <Box component="header" sx={{ py: 3, px: 4, bgcolor: 'white', borderBottom: '1px solid #e0e0e0' }}>
+        <Container maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <Logo size={32} variant="icon" />
+              <Box>
+                <Typography variant="h5" fontWeight="700" color="#000">
+                  pulse
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                  JOURNAL
+                </Typography>
+              </Box>
             </Box>
-          </Container>
-        </Box>
-
-        {/* Hero Section */}
-        <Box component="main" sx={{ py: { xs: 8, md: 12 } }}>
-          <Container maxWidth="lg">
-            <Box sx={{ textAlign: 'center', maxWidth: 900, mx: 'auto' }}>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button 
+                variant="text" 
+                size="small"
+                onClick={() => navigate('/pricing')}
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#666',
+                  '&:hover': { color: '#000' }
+                }}
               >
-                <Typography 
-                  variant={isMobile ? "h2" : "h1"} 
-                  fontWeight="bold" 
-                  color="text.primary" 
-                  sx={{ mb: 3, lineHeight: 1.2 }}
+                Precios
+              </Button>
+              <Button 
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/login')}
+                sx={{ 
+                  textTransform: 'none',
+                  borderColor: '#000',
+                  color: '#000',
+                  '&:hover': {
+                    borderColor: '#000',
+                    bgcolor: '#000',
+                    color: '#fff'
+                  }
+                }}
+              >
+                Iniciar Sesión
+              </Button>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Hero Section */}
+      <Box component="main" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', maxWidth: 800, mx: 'auto' }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Typography 
+                variant={isMobile ? "h3" : "h2"} 
+                fontWeight="700" 
+                color="#000" 
+                sx={{ mb: 3, lineHeight: 1.2 }}
+              >
+                La plataforma integral para periodistas y analistas
+              </Typography>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Typography 
+                variant={isMobile ? "body1" : "h6"} 
+                color="#666" 
+                sx={{ mb: 6, maxWidth: 600, mx: 'auto', lineHeight: 1.6, fontWeight: 400 }}
+              >
+                Conecta tu Google Drive, analiza tendencias y gestiona tu contenido en un solo lugar.
+              </Typography>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Button
+                component="a"
+                href="mailto:soporte@standatpd.com?subject=Solicitud de Invitación - Pulse Journal Alpha"
+                variant="contained"
+                size="large"
+                endIcon={<ArrowForward />}
+                sx={{
+                  py: 2,
+                  px: 4,
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  bgcolor: '#000',
+                  color: '#fff',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    bgcolor: '#333',
+                    boxShadow: 'none'
+                  }
+                }}
+              >
+                Solicitar Invitación
+              </Button>
+              <Typography variant="caption" color="#999" sx={{ display: 'block', mt: 2 }}>
+                Acceso Alpha por invitación • Completamente gratuito
+              </Typography>
+            </motion.div>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: '#fafafa' }}>
+        <Container maxWidth="lg">
+          <Typography 
+            variant="h4" 
+            fontWeight="700" 
+            textAlign="center" 
+            color="#000" 
+            sx={{ mb: 6 }}
+          >
+            Características
+          </Typography>
+          
+          <Grid container spacing={4}>
+            {features.map((feature, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
-                  Analiza tendencias.
-                  <br />
-                  <Box component="span" sx={{ color: 'primary.main' }}>
-                    Organiza contenido.
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Box sx={{ color: '#000', mb: 2 }}>
+                      {feature.icon}
+                    </Box>
+                    <Typography variant="h6" fontWeight="600" color="#000" sx={{ mb: 1 }}>
+                      {feature.title}
+                    </Typography>
+                    <Typography variant="body2" color="#666" sx={{ lineHeight: 1.6 }}>
+                      {feature.description}
+                    </Typography>
                   </Box>
-                  <br />
-                  Descubre insights.
-                </Typography>
-              </motion.div>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-              >
-                <Typography 
-                  variant={isMobile ? "body1" : "h6"} 
-                  color="text.secondary" 
-                  sx={{ mb: 2, maxWidth: 700, mx: 'auto', lineHeight: 1.6 }}
+      {/* Showcase Section */}
+      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
+        <Container maxWidth="lg">
+          <Typography 
+            variant="h4" 
+            fontWeight="700" 
+            textAlign="center" 
+            color="#000" 
+            sx={{ mb: 2 }}
+          >
+            Funcionalidades en acción
+          </Typography>
+          <Typography 
+            variant="body1" 
+            textAlign="center" 
+            color="#666" 
+            sx={{ mb: 8, maxWidth: 700, mx: 'auto' }}
+          >
+            Descubre cómo Pulse Journal transforma el análisis de datos y la gestión de información.
+          </Typography>
+
+          <Grid container spacing={6}>
+            {showcaseItems.map((item, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
-                  La plataforma integral para periodistas y analistas que transforma datos en historias poderosas. 
-                  Conecta tu Google Drive, analiza tendencias y gestiona tu contenido en un solo lugar.
-                </Typography>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-              >
-                <Typography 
-                  variant="body2" 
-                  color="primary.main" 
-                  fontWeight="medium" 
-                  sx={{ mb: 8, fontStyle: 'italic' }}
-                >
-                  Know the pulse, shape the story.
-                </Typography>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.1 }}
-              >
-                <FeaturesSectionWithHoverEffects />
-              </motion.div>
-
-              {/* GIF Gallery */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.2 }}
-              >
-                <Gallery4 />
-              </motion.div>
-
-              {/* CTA Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.3 }}
-              >
-                <Box 
-                  sx={{ 
-                    p: 4, 
-                    maxWidth: 400, 
-                    mx: 'auto',
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: 4,
-                    boxShadow: theme.shadows[8]
-                  }}
-                >
-                  <Button
-                    component="a"
-                    href="mailto:soporte@standatpd.com?subject=Solicitud de Invitación - Pulse Journal Alpha"
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    endIcon={<ArrowForward />}
-                    sx={{
-                      py: 2,
-                      fontSize: '1.1rem',
-                      fontWeight: 'semibold',
-                      borderRadius: 3,
-                      textTransform: 'none',
-                      transition: 'all 0.2s',
+                  <Card 
+                    sx={{ 
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      boxShadow: 'none',
+                      border: '1px solid #e0e0e0',
                       '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: theme.shadows[12]
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
                       }
                     }}
+                    onClick={() => navigate(item.href)}
                   >
-                    Solicitar Invitación
-                  </Button>
-
-                  <Box sx={{ mt: 3, textAlign: 'center' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, fontStyle: 'italic' }}>
-                      📧 Acceso Alpha por invitación • Completamente gratuito
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      ¿Ya tienes una cuenta?{' '}
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => navigate('/login')}
-                        sx={{ 
-                          p: 0, 
-                          minWidth: 'auto', 
-                          fontWeight: 'medium',
-                          textTransform: 'none'
+                    <Box sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        style={{ 
+                          width: '100%', 
+                          height: '200px', 
+                          objectFit: 'cover',
+                          borderRadius: '4px'
                         }}
-                      >
-                        Inicia sesión aquí
-                      </Button>
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => navigate('/terms')}
-                        sx={{ 
-                          fontSize: '0.75rem',
-                          textDecoration: 'underline',
-                          textTransform: 'none',
-                          color: 'text.secondary'
-                        }}
-                      >
-                        Términos y Condiciones
-                      </Button>
-                      <Typography variant="body2" color="text.disabled" sx={{ fontSize: '0.75rem' }}>
-                        •
-                      </Typography>
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => navigate('/refunds')}
-                        sx={{ 
-                          fontSize: '0.75rem',
-                          textDecoration: 'underline',
-                          textTransform: 'none',
-                          color: 'text.secondary'
-                        }}
-                      >
-                        Política de Reembolsos
-                      </Button>
+                      />
                     </Box>
-                  </Box>
-                </Box>
-              </motion.div>
-            </Box>
-          </Container>
-        </Box>
-
-        {/* Footer */}
-        <Box 
-          component="footer" 
-          sx={{ 
-            py: 6, 
-            px: 4, 
-            borderTop: 1, 
-            borderColor: 'rgba(0, 0, 0, 0.05)',
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          <Container maxWidth="lg">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.5 }}
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: { xs: 'column', md: 'row' },
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Logo size={24} variant="icon" />
-                  </Box>
-                  <Typography variant="h6" fontWeight="bold" color="text.primary">
-                    pulse
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 2 }}>
-                    JOURNAL
-                  </Typography>
-                </Box>
-
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 3,
-                  flexWrap: 'wrap',
-                  justifyContent: 'center'
-                }}>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => navigate('/pricing')}
-                    sx={{ 
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&:hover': { color: 'text.primary' }
-                    }}
-                  >
-                    Precios
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => navigate('/privacy')}
-                    sx={{ 
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&:hover': { color: 'text.primary' }
-                    }}
-                  >
-                    Política de Privacidad
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => navigate('/terms')}
-                    sx={{ 
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&:hover': { color: 'text.primary' }
-                    }}
-                  >
-                    Términos de Servicio
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => navigate('/refunds')}
-                    sx={{ 
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&:hover': { color: 'text.primary' }
-                    }}
-                  >
-                    Reembolsos
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    component="a"
-                    href="mailto:contacto@standatpd.com"
-                    sx={{ 
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&:hover': { color: 'text.primary' }
-                    }}
-                  >
-                    contacto@standatpd.com
-                  </Button>
-                </Box>
-              </Box>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.7 }}
-            >
-              <Box sx={{ 
-                mt: 4, 
-                pt: 4, 
-                borderTop: 1, 
-                borderColor: 'rgba(0, 0, 0, 0.05)',
-                textAlign: 'center'
-              }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: { xs: 'column', md: 'row' },
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  gap: { xs: 1, md: 2 }
-                }}>
-                  <Typography variant="body2" color="text.secondary">
-                    © {new Date().getFullYear()} Pulse Journal. Todos los derechos reservados.
-                  </Typography>
-                  <Typography variant="body2" color="text.disabled" sx={{ display: { xs: 'none', md: 'block' } }}>
-                    •
-                  </Typography>
-                  <Typography variant="body2" fontWeight="medium" color="text.secondary">
-                    standatpd
-                  </Typography>
-                </Box>
-              </Box>
-            </motion.div>
-          </Container>
-        </Box>
+                    <CardContent sx={{ p: 3 }}>
+                      <Typography variant="h6" fontWeight="600" color="#000" sx={{ mb: 1 }}>
+                        {item.title}
+                      </Typography>
+                      <Typography variant="body2" color="#666">
+                        {item.description}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
       </Box>
-    </BackgroundPaths>
+
+      {/* Footer */}
+      <Box 
+        component="footer" 
+        sx={{ 
+          py: 6, 
+          px: 4, 
+          bgcolor: 'white',
+          borderTop: '1px solid #e0e0e0'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'center', md: 'flex-start' },
+            gap: 4,
+            mb: 4
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Logo size={24} variant="icon" />
+              <Box>
+                <Typography variant="h6" fontWeight="700" color="#000">
+                  pulse
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1.5 }}>
+                  JOURNAL
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 4,
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/pricing')}
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#666',
+                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                }}
+              >
+                Precios
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/privacy')}
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#666',
+                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                }}
+              >
+                Privacidad
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/terms')}
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#666',
+                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                }}
+              >
+                Términos
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/refunds')}
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#666',
+                  '&:hover': { color: '#000', bgcolor: 'transparent' }
+                }}
+              >
+                Reembolsos
+              </Button>
+            </Box>
+          </Box>
+
+          <Box sx={{ 
+            pt: 4, 
+            borderTop: '1px solid #e0e0e0',
+            textAlign: 'center'
+          }}>
+            <Typography variant="body2" color="#999">
+              © {new Date().getFullYear()} Pulse Journal · standatpd · Todos los derechos reservados
+            </Typography>
+            <Typography variant="caption" color="#ccc" sx={{ display: 'block', mt: 1 }}>
+              contacto@standatpd.com
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 
-export default Home; 
+export default Home;
