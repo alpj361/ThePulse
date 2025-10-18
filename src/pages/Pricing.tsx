@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -14,30 +14,9 @@ import Logo from '../components/common/Logo';
 export default function Pricing() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Cargar el script de Buy Me a Coffee
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js';
-    script.setAttribute('data-name', 'bmc-button');
-    script.setAttribute('data-slug', 'pulsejornal');
-    script.setAttribute('data-color', '#5F7FFF');
-    script.setAttribute('data-emoji', '☕');
-    script.setAttribute('data-font', 'Inter');
-    script.setAttribute('data-text', 'Buy me a coffee');
-    script.setAttribute('data-outline-color', '#000000');
-    script.setAttribute('data-font-color', '#ffffff');
-    script.setAttribute('data-coffee-color', '#FFDD00');
-    script.async = true;
-    
-    document.body.appendChild(script);
-
-    return () => {
-      // Limpiar el script cuando el componente se desmonte
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
+  const handleBuyCoffee = () => {
+    window.open('https://buymeacoffee.com/pulsejornal', '_blank');
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
@@ -124,29 +103,29 @@ export default function Pricing() {
               </Box>
             </Box>
 
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              component="a"
-              href="mailto:soporte@standatpd.com?subject=Suscripción Plan Supporter - Pulse Journal"
-              sx={{
-                py: 2,
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: 2,
-                textTransform: 'none',
-                bgcolor: '#3b82f6',
-                color: '#fff',
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: '#2563eb',
-                  boxShadow: 'none'
-                }
-              }}
-            >
-              Suscribirse como Supporter
-            </Button>
+             <Button
+               variant="contained"
+               size="large"
+               fullWidth
+               disabled
+               sx={{
+                 py: 2,
+                 fontSize: '1rem',
+                 fontWeight: '600',
+                 borderRadius: 2,
+                 textTransform: 'none',
+                 bgcolor: '#9ca3af',
+                 color: '#fff',
+                 boxShadow: 'none',
+                 cursor: 'not-allowed',
+                 '&:hover': {
+                   bgcolor: '#9ca3af',
+                   boxShadow: 'none'
+                 }
+               }}
+             >
+               Pronto Disponible
+             </Button>
 
             <Typography variant="caption" color="#999" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
               Procesamiento seguro mediante Paddle
@@ -167,7 +146,31 @@ export default function Pricing() {
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <div id="bmc-button-container"></div>
+              <Button
+                onClick={handleBuyCoffee}
+                variant="contained"
+                size="large"
+                sx={{
+                  py: 2,
+                  px: 4,
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  bgcolor: '#FFDD00',
+                  color: '#000000',
+                  border: '2px solid #000000',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    bgcolor: '#FFE066',
+                    boxShadow: 'none',
+                    transform: 'translateY(-2px)',
+                    transition: 'all 0.2s'
+                  }
+                }}
+              >
+                ☕ Buy me a coffee
+              </Button>
             </Box>
 
             <Typography variant="caption" color="#999" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
