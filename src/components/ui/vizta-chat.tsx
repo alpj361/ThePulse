@@ -520,7 +520,9 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
                               const cleanedResponse = message.c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
                               console.log('🔍 C1Response cleaned:', cleanedResponse);
                               return <C1Component c1Response={cleanedResponse} />;
-                        })()}
+                            })()}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
