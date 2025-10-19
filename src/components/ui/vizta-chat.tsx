@@ -216,6 +216,86 @@ const ViztaChatContent = React.forwardRef<
 });
 ViztaChatContent.displayName = "ViztaChatContent";
 
+// Auto-scaling C1Component Wrapper
+interface C1ComponentWrapperProps {
+  c1Response: string;
+  cleanResponse?: boolean;
+}
+
+const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cleanResponse = false }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(1);
+
+  React.useEffect(() => {
+    if (!containerRef.current || !contentRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!containerRef.current || !contentRef.current) return;
+
+      const containerWidth = containerRef.current.offsetWidth;
+      const contentWidth = contentRef.current.scrollWidth;
+
+      if (contentWidth > containerWidth) {
+        const newScale = containerWidth / contentWidth;
+        setScale(Math.max(newScale, 0.5)); // Min scale 50%
+      } else {
+        setScale(1);
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(contentRef.current);
+
+    // Initial calculation
+    setTimeout(() => {
+      if (!containerRef.current || !contentRef.current) return;
+      const containerWidth = containerRef.current.offsetWidth;
+      const contentWidth = contentRef.current.scrollWidth;
+      if (contentWidth > containerWidth) {
+        const newScale = containerWidth / contentWidth;
+        setScale(Math.max(newScale, 0.5));
+      }
+    }, 100);
+
+    return () => resizeObserver.disconnect();
+  }, [c1Response]);
+
+  const processedResponse = cleanResponse
+    ? c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    : c1Response;
+
+  return (
+    <div className="mt-6 border-t pt-4 border-gray-200 w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 className="h-4 w-4 text-purple-600" />
+        <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
+        {scale < 1 && (
+          <span className="text-xs text-gray-500 ml-auto">
+            {Math.round(scale * 100)}% escala
+          </span>
+        )}
+      </div>
+      <div 
+        ref={containerRef}
+        className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full overflow-hidden"
+      >
+        <div
+          ref={contentRef}
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            width: scale < 1 ? `${100 / scale}%` : '100%',
+            transition: 'transform 0.2s ease-out'
+          }}
+        >
+          <C1Component c1Response={processedResponse} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Message Component with Conditional Tabs
 interface AssistantMessageProps {
   message: Message;
