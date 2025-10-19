@@ -357,26 +357,7 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                   {/* Generative UI Components - shown below text */}
                   {message.hasUIComponents && message.c1Response && (
-                    <div className="mt-6 border-t pt-4 border-gray-200 w-full">
-                      <div className="flex items-center gap-2 mb-3">
-                        <BarChart3 className="h-4 w-4 text-purple-600" />
-                        <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
-                      </div>
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full">
-                        <div className="relative w-full">
-                          <div className="w-full overflow-hidden">
-                            <div style={{ 
-                              maxWidth: '100%', 
-                              transform: 'scale(1)',
-                              transformOrigin: 'top left',
-                              width: 'fit-content'
-                            }}>
-                              <C1Component c1Response={message.c1Response} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <C1ComponentWrapper c1Response={message.c1Response} />
                   )}
                 </div>
 
