@@ -224,7 +224,7 @@ interface AssistantMessageProps {
 
 const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>(
   function AssistantMessage({ message, onFeedback }, ref) {
-  const [activeTab, setActiveTab] = React.useState("answer");
+    const [activeTab, setActiveTab] = React.useState("answer");
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [showSources, setShowSources] = React.useState(false);
   const [feedbackGiven, setFeedbackGiven] = React.useState(message.feedbackScore || null);
