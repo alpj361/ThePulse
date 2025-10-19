@@ -603,8 +603,8 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
       </div>
     </motion.div>
   );
-  }
-);
+});
+AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
 const ViztaChatUI = () => {
