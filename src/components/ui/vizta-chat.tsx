@@ -225,54 +225,54 @@ interface AssistantMessageProps {
 const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>(
   function AssistantMessage({ message, onFeedback }, ref) {
     const [activeTab, setActiveTab] = React.useState("answer");
-  const [isExpanded, setIsExpanded] = React.useState(true);
-  const [showSources, setShowSources] = React.useState(false);
-  const [feedbackGiven, setFeedbackGiven] = React.useState(message.feedbackScore || null);
-  const messageRef = React.useRef<HTMLDivElement>(null);
+    const [isExpanded, setIsExpanded] = React.useState(true);
+    const [showSources, setShowSources] = React.useState(false);
+    const [feedbackGiven, setFeedbackGiven] = React.useState(message.feedbackScore || null);
+    const messageRef = React.useRef<HTMLDivElement>(null);
 
-  // Check if we have sources or steps
-  const hasSources = message.sources && message.sources.length > 0;
-  const hasSteps = message.steps && message.steps.length > 0;
-  const showTabs = hasSources || hasSteps;
+    // Check if we have sources or steps
+    const hasSources = message.sources && message.sources.length > 0;
+    const hasSteps = message.steps && message.steps.length > 0;
+    const showTabs = hasSources || hasSteps;
 
-  const handleFeedback = async (score: number) => {
-    if (!message.queryLogId || feedbackGiven) return;
-    
-    setFeedbackGiven(score);
-    if (onFeedback) {
-      onFeedback(message.id, score);
-    }
-    
-    // Send feedback to backend
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/vizta/feedback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          queryLogId: message.queryLogId,
-          feedbackScore: score
-        })
-      });
+    const handleFeedback = async (score: number) => {
+      if (!message.queryLogId || feedbackGiven) return;
       
-      if (!response.ok) {
-        console.error('Failed to send feedback');
+      setFeedbackGiven(score);
+      if (onFeedback) {
+        onFeedback(message.id, score);
+      }
+      
+      // Send feedback to backend
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/vizta/feedback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            queryLogId: message.queryLogId,
+            feedbackScore: score
+          })
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to send feedback');
+          setFeedbackGiven(null); // Reset on error
+        }
+      } catch (error) {
+        console.error('Error sending feedback:', error);
         setFeedbackGiven(null); // Reset on error
       }
-    } catch (error) {
-      console.error('Error sending feedback:', error);
-      setFeedbackGiven(null); // Reset on error
-    }
-  };
+    };
 
-  React.useEffect(() => {
-    if (messageRef.current) {
-      messageRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, []);
+    React.useEffect(() => {
+      if (messageRef.current) {
+        messageRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, []);
 
-  return (
+    return (
     <motion.div
       ref={messageRef}
       initial={{ opacity: 0, y: 20 }}
