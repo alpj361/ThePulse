@@ -273,24 +273,24 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
     }, []);
 
     return (
-    <motion.div
-      ref={messageRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-150"
-    >
-      <Avatar className="h-9 w-9 shadow-sm">
-        <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
-          <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
-            V
-          </div>
-        </AvatarFallback>
-      </Avatar>
-      
-      <div className="flex-1 min-w-0">
-        {/* Tabs - Only show if we have sources or steps */}
-        {showTabs ? (
+      <motion.div
+        ref={messageRef}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-150"
+      >
+        <Avatar className="h-9 w-9 shadow-sm">
+          <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
+            <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
+              V
+            </div>
+          </AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1 min-w-0">
+          {/* Tabs - Only show if we have sources or steps */}
+          {showTabs ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-3 bg-gray-100">
               <TabsTrigger value="answer" className="text-xs gap-1.5">
