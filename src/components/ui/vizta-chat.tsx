@@ -217,7 +217,13 @@ const ViztaChatContent = React.forwardRef<
 ViztaChatContent.displayName = "ViztaChatContent";
 
 // Message Component with Conditional Tabs
-const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; onFeedback?: (messageId: string, score: number) => void }>(({ message, onFeedback }, ref) => {
+interface AssistantMessageProps {
+  message: Message;
+  onFeedback?: (messageId: string, score: number) => void;
+}
+
+const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>(
+  function AssistantMessage({ message, onFeedback }, ref) {
   const [activeTab, setActiveTab] = React.useState("answer");
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [showSources, setShowSources] = React.useState(false);
@@ -597,8 +603,8 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, { message: Message; on
       </div>
     </motion.div>
   );
-});
-AssistantMessage.displayName = "AssistantMessage";
+  }
+);
 
 // Main component
 const ViztaChatUI = () => {
