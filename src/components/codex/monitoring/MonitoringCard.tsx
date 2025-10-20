@@ -171,7 +171,7 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
         setLoadingLinks(true);
         try {
           // Importar la función de supabase
-          const { getLinksForParentItem } = await import('../../services/supabase');
+          const { getLinksForParentItem } = await import('../../../services/supabase');
           const links = await getLinksForParentItem(item.id);
           setChildLinks(links || []);
         } catch (error) {
