@@ -336,7 +336,7 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
             className="w-full mt-3"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
-            Ver {item.recent_scrape?.tweet_count || 0} posts
+            Ver {tweetCount} posts
           </Button>
         )}
       </CardContent>
