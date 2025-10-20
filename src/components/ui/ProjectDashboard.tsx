@@ -806,41 +806,18 @@ export function ProjectDashboard({
                   </div>
 
                   {(projects && projects.length > 0) ? (
-                    <div className="grid gap-4">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {projects.map((project) => (
-                        <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent 
-                            className="p-6"
-                            onClick={() => handleViewProjectDetails(project)}
-                          >
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-semibold">{project.title}</h3>
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{project.description}</p>
-                                <div className="flex items-center gap-3 mb-3">
-                                  <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
-                                    {getStatusText(project.status)}
-                                  </span>
-                                  <span className={cn("text-sm font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
-                                    {getPriorityText(project.priority)}
-                                  </span>
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProject(project.id);
-                                }}
-                                className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-                                title={t.deleteTooltip}
-                              >
-                                <FiTrash2 className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <EnhancedProjectCard
+                          key={project.id}
+                          project={project}
+                          onView={handleViewProjectDetails}
+                          onDelete={handleDeleteProject}
+                          decisionsCount={0}
+                          assetsCount={0}
+                          findingsCount={0}
+                          progress={project.status === 'completed' ? 100 : 0}
+                        />
                       )) || []}
                     </div>
                   ) : (
