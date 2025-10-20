@@ -66,6 +66,7 @@ export interface Project {
   status: 'active' | 'paused' | 'completed' | 'archived';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
+  cover_image?: string; // Optional cover image URL
   tags: string[];
   start_date?: string;
   target_date?: string;
