@@ -137,7 +137,26 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
   };
 
   // Determinar si es colección o post individual
-  const isCollection = item.recent_scrape?.tweet_count > 1 || false;
+  const getTweetCount = () => {
+    // Primero verificar recent_scrape
+    if (item.recent_scrape?.tweet_count) return item.recent_scrape.tweet_count;
+    if (item.recent_scrape?.tweets?.length) return item.recent_scrape.tweets.length;
+    
+    // Verificar child links cargados
+    if (childLinks.length > 0) return childLinks.length;
+    
+    // Verificar etiquetas
+    const tweetCountTag = item.etiquetas?.find(tag => tag.includes('tweet'));
+    if (tweetCountTag) {
+      const match = tweetCountTag.match(/(\d+)/);
+      if (match) return parseInt(match[1]);
+    }
+    
+    return 0;
+  };
+
+  const tweetCount = getTweetCount();
+  const isCollection = tweetCount > 1;
 
   return (
     <Card className="relative bg-white shadow-md hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden flex flex-col">
