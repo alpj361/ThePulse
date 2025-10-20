@@ -3562,86 +3562,28 @@ export default function EnhancedCodex() {
                       toggleSelectItem={toggleSelectItem}
                     />
                   } else {
-                    // Monitores: mostrar igual que otros tipos (tamaño, layout) y un botón para abrir el mini modal de enlaces
-                    if (item.tipo === 'item' && (item as any).original_type === 'monitor') {
-                      const IconComponent = getTypeIcon('enlace');
+                    // Monitoring cards - usar nuevo componente con logos de plataforma
+                    if (item.tipo === 'monitoreos' || (item.tipo === 'item' && (item as any).original_type === 'monitor')) {
                       return (
-                        <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
-                          {selectionMode && (
-                            <Checkbox
-                              checked={selectedIds.includes(item.id)}
-                              onChange={() => toggleSelectItem(item.id)}
-                              className="absolute top-2 left-2 z-20 bg-white rounded"
-                            />
-                          )}
-                          <CardHeader className="p-4 border-b border-slate-200">
-                            <div className="flex items-center justify-between gap-2 min-w-0">
-                              <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
-                                {item.titulo}
-                              </CardTitle>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={async () => {
-                                  let rows: any[] = []
-                                  try {
-                                    rows = await getLinksForParentItem(item.id) || []
-                                  } catch (e) {
-                                    rows = []
-                                  }
-                                  openMonitorMiniModal(item, rows)
-                                }}
-                                title="Abrir enlaces en modal"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
-                                <IconComponent className="h-5 w-5 text-slate-600" />
-                              </div>
-                              <CardDescription className="text-sm text-slate-500">
-                                {formatFileSize(item.tamano)}
-                              </CardDescription>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-3 space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
-                                Monitoreos
-                              </Badge>
-                            </div>
-                            {item.proyecto && (
-                              <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <Folder className="h-4 w-4" />
-                                <span className="truncate">{item.proyecto}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(item.fecha)}</span>
-                            </div>
-                            {item.etiquetas && item.etiquetas.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {item.etiquetas.slice(0, 2).map((tag, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {item.etiquetas.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                    +{item.etiquetas.length - 2}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                            {item.descripcion && (
-                              <p className="text-sm text-slate-600 line-clamp-2">
-                                {item.descripcion}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
+                        <MonitoringCard
+                          key={item.id}
+                          item={item}
+                          selectionMode={selectionMode}
+                          selectedIds={selectedIds}
+                          toggleSelectItem={toggleSelectItem}
+                          onView={handleViewItem}
+                          onEdit={handleEditItem}
+                          onDelete={handleDeleteItemConfirm}
+                          onOpenLinks={async (itm) => {
+                            let rows: any[] = []
+                            try {
+                              rows = await getLinksForParentItem(itm.id) || []
+                            } catch (e) {
+                              rows = []
+                            }
+                            openMonitorMiniModal(itm, rows)
+                          }}
+                        />
                       )
                     } else {
                       // Card normal para otros tipos (audio, video, documento, enlace, nota)
