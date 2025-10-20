@@ -399,7 +399,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
                         </p>
                       </CardHeader>
                       
-                      <CardContent className="space-y-3 text-sm pb-5">
+                      <CardContent className="space-y-3 text-sm pb-5 flex-grow">
                         {/* Financial info */}
                         {card.amount && (
                           <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
