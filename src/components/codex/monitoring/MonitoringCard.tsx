@@ -77,15 +77,28 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
   onOpenLinks
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [childLinks, setChildLinks] = useState<any[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
 
   // Determinar la plataforma del contenido
   const getPlatform = (): 'x' | 'instagram' | 'other' => {
+    // Primero verificar si hay recent_scrape con herramienta
+    if (item.recent_scrape?.herramienta) {
+      if (item.recent_scrape.herramienta === 'instagram') return 'instagram';
+      if (item.recent_scrape.herramienta === 'twitter' || item.recent_scrape.herramienta === 'x') return 'x';
+    }
+    
     if (item.original_type === 'instagram' || item.source_url?.includes('instagram.com')) {
       return 'instagram';
     }
     if (item.original_type === 'twitter' || item.original_type === 'x' || item.source_url?.includes('twitter.com') || item.source_url?.includes('x.com')) {
       return 'x';
     }
+    
+    // Verificar etiquetas
+    if (item.etiquetas?.includes('instagram')) return 'instagram';
+    if (item.etiquetas?.includes('twitter') || item.etiquetas?.includes('x')) return 'x';
+    
     return 'other';
   };
 
