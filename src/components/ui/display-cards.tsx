@@ -16,7 +16,7 @@ interface DisplayCardProps {
 
 function DisplayCard({
   className,
-  icon = <Sparkles className="size-4 text-blue-300" />,
+  icon = <FiBox className="size-4 text-blue-300" />,
   title = "Featured",
   description = "Discover amazing content",
   date = "Just now",
@@ -26,18 +26,18 @@ function DisplayCard({
   return (
     <div
       className={cn(
-        "relative flex h-36 w-full sm:w-[22rem] select-none flex-col justify-between rounded-xl border-2 bg-muted/70 backdrop-blur-sm px-4 py-3 transition-all duration-700 overflow-hidden after:absolute after:-right-1 after:top-[-5%] after:h-[110%] after:w-[20rem] after:bg-gradient-to-l after:from-background after:to-transparent after:pointer-events-none after:content-[''] hover:border-white/20 hover:bg-muted [&>*]:flex [&>*]:items-center [&>*]:gap-2",
+        "relative flex h-36 w-full sm:w-[22rem] select-none flex-col justify-between rounded-xl border-2 border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-800 backdrop-blur-sm px-4 py-3 transition-all duration-300 overflow-hidden after:absolute after:-right-1 after:top-[-5%] after:h-[110%] after:w-[20rem] after:bg-gradient-to-l after:from-background after:to-transparent after:pointer-events-none after:content-[''] hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-lg [&>*]:flex [&>*]:items-center [&>*]:gap-2",
         className
       )}
     >
       <div>
-        <span className="relative inline-block rounded-full bg-blue-800 p-1">
+        <span className="relative inline-block rounded-full bg-blue-500 p-2">
           {icon}
         </span>
-        <p className={cn("text-lg font-medium", titleClassName)}>{title}</p>
+        <p className={cn("text-base font-semibold text-gray-800 dark:text-gray-100", titleClassName)}>{title}</p>
       </div>
-      <p className="text-lg truncate w-full">{description}</p>
-      <p className="text-muted-foreground">{date}</p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 truncate w-full leading-relaxed">{description}</p>
+      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{date}</p>
     </div>
   );
 }
