@@ -181,7 +181,7 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className="text-xs">
-                  {isCollection ? `${item.recent_scrape?.tweet_count || 0} posts` : 'Post individual'}
+                  {isCollection ? `${tweetCount} posts` : 'Post individual'}
                 </Badge>
                 {platform !== 'other' && (
                   <Badge variant="outline" className="text-xs capitalize">
