@@ -270,11 +270,32 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
         const groupCards = groupedByTopic[topic];
         const isExpanded = expandedTopics.includes(topic);
         
-        const displayCardsData = groupCards.slice(0,3).map(c => ({
-          title: c.entity || c.discovery || 'Hallazgo',
-          description: c.description || '',
-          date: new Date(c.created_at).toLocaleDateString(),
-        }));
+        const displayCardsData = groupCards.slice(0,3).map(c => {
+          // Create a more informative title
+          const title = c.entity || c.discovery || 'Hallazgo';
+          
+          // Create a more informative description
+          let description = c.description || '';
+          if (!description && c.amount) {
+            description = `Monto: ${c.currency || 'Q'} ${c.amount.toLocaleString()}`;
+          }
+          if (!description && (c.city || c.department)) {
+            description = [c.city, c.department].filter(Boolean).join(', ');
+          }
+          if (!description) {
+            description = 'Ver detalles...';
+          }
+          
+          return {
+            title,
+            description,
+            date: new Date(c.created_at).toLocaleDateString('es-ES', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            }),
+          };
+        });
 
         return (
           <div key={topic} className="p-5 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl bg-gradient-to-br from-blue-50/30 to-white dark:from-blue-950/10 dark:to-gray-800/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
