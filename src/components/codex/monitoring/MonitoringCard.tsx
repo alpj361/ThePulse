@@ -50,6 +50,7 @@ interface CodexItem {
   shares?: number;
   views?: number;
   recent_scrape?: any;
+  recent_scrape_id?: string;
   is_child_link?: boolean;
   parent_item_id?: string;
 }
