@@ -663,7 +663,9 @@ export function ProjectDashboard({
             </div>
           )}
 
-            <AnimatePresence mode="wait">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0">
+              <AnimatePresence mode="wait">
               {activeTab === 'overview' && (
                 <motion.div
                   key="overview"
@@ -1767,12 +1769,12 @@ export function ProjectDashboard({
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </div>
+              </AnimatePresence>
+            </div>
 
-          {/* Panel lateral con información adicional */}
-          {projectForDetails && (
-          <div className="w-80 space-y-4 flex-shrink-0">
+            {/* Panel lateral con información adicional */}
+            {projectForDetails && (
+              <div className="w-80 space-y-4 flex-shrink-0">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -1946,8 +1948,9 @@ export function ProjectDashboard({
                 </div>
               </CardContent>
             </Card>
+              </div>
+            )}
           </div>
-          )}
         </div>
       </div>
 

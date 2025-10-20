@@ -226,6 +226,8 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
   const containerRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(1);
+  const [isCompact, setIsCompact] = React.useState(false);
+  const [showFullSize, setShowFullSize] = React.useState(false);
 
   React.useEffect(() => {
     if (!containerRef.current || !contentRef.current) return;
@@ -238,9 +240,12 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
 
       if (contentWidth > containerWidth) {
         const newScale = containerWidth / contentWidth;
-        setScale(Math.max(newScale, 0.5)); // Min scale 50%
+        const finalScale = Math.max(newScale, 0.3); // Min scale 30% para chat
+        setScale(finalScale);
+        setIsCompact(finalScale < 0.7);
       } else {
         setScale(1);
+        setIsCompact(false);
       }
     });
 
@@ -254,7 +259,9 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
       const contentWidth = contentRef.current.scrollWidth;
       if (contentWidth > containerWidth) {
         const newScale = containerWidth / contentWidth;
-        setScale(Math.max(newScale, 0.5));
+        const finalScale = Math.max(newScale, 0.3);
+        setScale(finalScale);
+        setIsCompact(finalScale < 0.7);
       }
     }, 100);
 
@@ -266,32 +273,54 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
     : c1Response;
 
   return (
-    <div className="mt-6 border-t pt-4 border-gray-200 w-full">
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="h-4 w-4 text-purple-600" />
-        <h4 className="text-sm font-semibold text-gray-900">Visualización Interactiva</h4>
-        {scale < 1 && (
-          <span className="text-xs text-gray-500 ml-auto">
-            {Math.round(scale * 100)}% escala
-          </span>
-        )}
+    <div className="mt-4 border-t pt-3 border-gray-200 w-full">
+      <div className="flex items-center gap-2 mb-2">
+        <BarChart3 className="h-3.5 w-3.5 text-purple-600" />
+        <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
+        <div className="ml-auto flex items-center gap-2">
+          {isCompact && (
+            <span className="text-xs text-gray-500">
+              {Math.round(scale * 100)}%
+            </span>
+          )}
+          {isCompact && (
+            <button
+              onClick={() => setShowFullSize(!showFullSize)}
+              className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
+            >
+              {showFullSize ? (
+                <>Compactar <ChevronUp className="h-3 w-3" /></>
+              ) : (
+                <>Expandir <ChevronDown className="h-3 w-3" /></>
+              )}
+            </button>
+          )}
+        </div>
       </div>
       <div 
         ref={containerRef}
-        className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 w-full overflow-hidden"
+        className={cn(
+          "bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 w-full overflow-hidden",
+          isCompact && !showFullSize && "max-h-64 overflow-y-auto"
+        )}
       >
         <div
           ref={contentRef}
           style={{
-            transform: `scale(${scale})`,
+            transform: showFullSize ? 'scale(1)' : `scale(${scale})`,
             transformOrigin: 'top left',
-            width: scale < 1 ? `${100 / scale}%` : '100%',
+            width: showFullSize ? '100%' : (scale < 1 ? `${100 / scale}%` : '100%'),
             transition: 'transform 0.2s ease-out'
           }}
         >
           <C1Component c1Response={processedResponse} />
         </div>
       </div>
+      {isCompact && !showFullSize && (
+        <div className="mt-2 text-xs text-gray-500 text-center">
+          Visualización compactada para chat
+        </div>
+      )}
     </div>
   );
 };
@@ -564,13 +593,6 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
                 {/* Generative UI Components - shown below text */}
                 {message.hasUIComponents && message.c1Response && (
                   <C1ComponentWrapper c1Response={message.c1Response} cleanResponse={true} />
-                )}
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 )}
               </div>
 
