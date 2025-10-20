@@ -29,7 +29,9 @@ import {
   FiAlertTriangle,
   FiDownload,
   FiLayers,
-  FiRefreshCw
+  FiRefreshCw,
+  FiArrowLeft,
+  FiCheckCircle
 } from 'react-icons/fi';
 
 import { Card, CardContent, CardHeader, CardTitle } from './card';
