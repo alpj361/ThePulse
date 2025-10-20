@@ -325,7 +325,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
                   return (
                     <Card 
                       key={card.id} 
-                      className="relative group bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-800 border-2 border-blue-100 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 transition-all duration-300 backdrop-blur-sm overflow-hidden"
+                      className="relative group h-full bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-800 border-2 border-blue-100 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 transition-all duration-300 backdrop-blur-sm overflow-hidden flex flex-col"
                     >
                       {/* Gradient overlay effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
