@@ -314,7 +314,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
             </div>
 
             {isExpanded ? (
-              <div className="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {groupCards.map(card => {
                   // Determine card data types for badges
                   const hasFinancial = card.amount !== null;
