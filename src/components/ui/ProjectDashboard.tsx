@@ -643,9 +643,7 @@ export function ProjectDashboard({
             </div>
           )}
 
-          <div className="flex gap-6">
-            <div className="flex-1 min-w-0">
-              <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait">
               {/* Overview tab removed as per user request */}
               {false && activeTab === 'overview' && (
                 <motion.div
@@ -1056,18 +1054,7 @@ export function ProjectDashboard({
                   className="space-y-6"
                 >
                   {projectForDetails ? (
-                    <>
-                      <div className="flex justify-end mb-4">
-                        <button
-                          onClick={handleShowDocumentSelection}
-                          disabled={isExtractingCaptures}
-                          className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 disabled:opacity-50">
-                          <FiDownload className="w-4 h-4" />
-                          {isExtractingCaptures ? 'Extrayendo...' : 'Extraer hallazgos'}
-                        </button>
-                      </div>
-                      <CapturedCards projectId={projectForDetails.id} reloadKey={capturedReloadKey} />
-                    </>
+                    <CapturedCards projectId={projectForDetails.id} reloadKey={capturedReloadKey} />
                   ) : (
                     <div className="text-center text-gray-500 py-8">
                       Selecciona un proyecto para ver hallazgos capturados.
@@ -1128,6 +1115,16 @@ export function ProjectDashboard({
 
                   {/* Assets Content */}
                   <div id="assets-content">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contenido del Codex</h3>
+                      <button
+                        onClick={() => setShowAddAssetsModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                      >
+                        <FiPlus className="w-4 h-4" />
+                        Añadir del Codex
+                      </button>
+                    </div>
                     {projectAssets.length > 0 ? (
                       <div className="space-y-3">
                         {projectAssets.map((asset) => (
@@ -1145,7 +1142,19 @@ export function ProjectDashboard({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-gray-500 py-8">No hay assets asignados a este proyecto</p>
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                          <FiDatabase className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 mb-4">No hay documentos del Codex asignados a este proyecto</p>
+                        <button
+                          onClick={() => setShowAddAssetsModal(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <FiPlus className="w-4 h-4" />
+                          Añadir del Codex
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1837,188 +1846,7 @@ export function ProjectDashboard({
                   </div>
                 </motion.div>
               )}
-              </AnimatePresence>
-            </div>
-
-            {/* Panel lateral con información adicional */}
-            {projectForDetails && (
-              <div className="w-80 space-y-4 flex-shrink-0">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FiCalendar className="w-4 h-4" />
-                  Información del Proyecto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="font-medium text-gray-700 dark:text-gray-300">Creado</label>
-                    <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                      {format(new Date(projectForDetails.created_at), 'dd MMM yyyy')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="font-medium text-gray-700 dark:text-gray-300">Actualizado</label>
-                    <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                      {format(new Date(projectForDetails.updated_at), 'dd MMM yyyy')}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Fecha de Inicio</label>
-                      {isEditing ? (
-                        <input
-                          type="date"
-                          value={editingData.start_date}
-                          onChange={(e) => handleEditingChange('start_date', e.target.value)}
-                          className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      ) : (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                          {projectForDetails.start_date ? 
-                            format(new Date(projectForDetails.start_date), 'dd MMM yyyy') : 
-                            'No definida'
-                          }
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Fecha Objetivo</label>
-                      {isEditing ? (
-                        <input
-                          type="date"
-                          value={editingData.target_date}
-                          onChange={(e) => handleEditingChange('target_date', e.target.value)}
-                          className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      ) : (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                          {projectForDetails.target_date ? 
-                            format(new Date(projectForDetails.target_date), 'dd MMM yyyy') : 
-                            'No definida'
-                          }
-                        </p>
-                      )}
-                    </div>
-
-                    {(projectForDetails.completed_date || isEditing) && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Completado</label>
-                        {isEditing ? (
-                          <input
-                            type="date"
-                            value={editingData.completed_date}
-                            onChange={(e) => handleEditingChange('completed_date', e.target.value)}
-                            className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        ) : (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                            {projectForDetails.completed_date ? 
-                              format(new Date(projectForDetails.completed_date), 'dd MMM yyyy') : 
-                              'No completado'
-                            }
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">ID del Proyecto</label>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 font-mono">
-                      {projectForDetails.id.slice(0, 8)}...
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Opciones del Proyecto</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1">
-                  <button
-                    onClick={() => {
-                      handleSelectProjectForDecisions(projectForDetails);
-                      setActiveTab('decisions');
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      activeTab === 'decisions'
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <FiBarChart className="w-4 h-4" />
-                    Decisiones
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedProject(projectForDetails);
-                      setActiveTab('timeline');
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      activeTab === 'timeline'
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <FiLayers className="w-4 h-4" />
-                    Capas
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('captured')}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      activeTab === 'captured'
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <FiFileText className="w-4 h-4" />
-                    Capturado
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('coverages')}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      activeTab === 'coverages'
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <FiTarget className="w-4 h-4" />
-                    Coberturas
-                  </button>
-                  
-                  <div className="border-t border-gray-200 dark:border-gray-700 my-2 pt-2">
-                    <button
-                      onClick={() => onCreateDecision?.(projectForDetails.id)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                    >
-                      <FiPlus className="w-4 h-4" />
-                      Nueva Decisión
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-              </div>
-            )}
-          </div>
+          </AnimatePresence>
         </div>
       </div>
 

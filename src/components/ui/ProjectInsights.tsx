@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FiBrain, 
+  FiCpu, 
   FiTrendingUp, 
   FiAlertCircle, 
   FiCheckCircle,
@@ -176,7 +176,7 @@ export function ProjectInsights({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FiBrain className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <FiCpu className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             <span>Pensamientos e Insights del Proyecto</span>
           </div>
           <button
@@ -226,7 +226,7 @@ export function ProjectInsights({
           </div>
         ) : (
           <div className="text-center py-12">
-            <FiBrain className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
+            <FiCpu className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Los insights se generarán automáticamente a medida que avances en el proyecto.
             </p>

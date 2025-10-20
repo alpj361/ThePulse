@@ -8,7 +8,7 @@ import {
   FiCheckSquare,
   FiBox,
   FiLayers,
-  FiBrain,
+  FiCpu,
   FiArrowLeft
 } from 'react-icons/fi';
 import { Card } from './card';
@@ -31,7 +31,7 @@ interface SimplifiedProjectDetailProps {
 }
 
 const sections = [
-  { id: 'insights', label: 'Pensamientos', icon: FiBrain },
+  { id: 'insights', label: 'Pensamientos', icon: FiCpu },
   { id: 'decisions', label: 'Decisiones', icon: FiCheckCircle },
   { id: 'assets', label: 'Codex/Assets', icon: FiDatabase },
   { id: 'tasks', label: 'Tareas', icon: FiCheckSquare },
