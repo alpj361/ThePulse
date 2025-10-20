@@ -1108,8 +1108,95 @@ export function ProjectDashboard({
               )}
 
               {activeTab === 'details' && projectForDetails && (
+                <SimplifiedProjectDetail
+                  project={projectForDetails}
+                  onClose={() => {
+                    setProjectForDetails(null);
+                    setActiveTab('projects');
+                  }}
+                  onEdit={() => setIsEditing(true)}
+                  decisionsCount={projectDecisions.length}
+                  assetsCount={projectAssets.length}
+                  findingsCount={0}
+                  tasksCompleted={projectTasks.filter(t => t.completed).length}
+                  totalTasks={projectTasks.length}
+                >
+                  {/* Decisions Content */}
+                  <div id="decisions-content">
+                    <LatestDecisions projectId={projectForDetails.id} />
+                  </div>
+
+                  {/* Assets Content */}
+                  <div id="assets-content">
+                    {projectAssets.length > 0 ? (
+                      <div className="space-y-3">
+                        {projectAssets.map((asset) => (
+                          <div key={asset.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-start gap-3">
+                              {getAssetTypeIcon(asset.tipo, asset.is_from_google_drive)}
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm">{asset.titulo}</h4>
+                                {asset.metadata?.description && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.metadata.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-8">No hay assets asignados a este proyecto</p>
+                    )}
+                  </div>
+
+                  {/* Tasks Content */}
+                  <div id="tasks-content">
+                    <div className="space-y-3">
+                      {projectTasks.length > 0 ? (
+                        projectTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                          >
+                            <button
+                              onClick={() => handleToggleTask(task.id)}
+                              className={cn(
+                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                task.completed
+                                  ? "bg-green-600 border-green-600 text-white"
+                                  : "border-gray-300 dark:border-gray-600 hover:border-green-500"
+                              )}
+                            >
+                              {task.completed && <FiCheck className="w-3 h-3" />}
+                            </button>
+                            <div className="flex-1">
+                              <p className={cn(
+                                "text-sm",
+                                task.completed ? "text-gray-500 line-through" : "text-gray-900 dark:text-white"
+                              )}>
+                                {task.title}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-500 py-8">No hay tareas en este proyecto</p>
+                      )}
+                    </div>
+                  </div>
+                </SimplifiedProjectDetail>
+              )}
+
+              {/* Keep old details view for reference but commented out */}
+              {false && activeTab === 'details' && projectForDetails && (
                 <motion.div
-                  key="details"
+                  key="details-old"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
