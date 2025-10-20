@@ -646,7 +646,8 @@ export function ProjectDashboard({
           <div className="flex gap-6">
             <div className="flex-1 min-w-0">
               <AnimatePresence mode="wait">
-              {activeTab === 'overview' && (
+              {/* Overview tab removed as per user request */}
+              {false && activeTab === 'overview' && (
                 <motion.div
                   key="overview"
                   initial={{ opacity: 0, y: 20 }}
