@@ -152,11 +152,37 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
       if (match) return parseInt(match[1]);
     }
     
+    // Verificar descripción
+    if (item.descripcion) {
+      const match = item.descripcion.match(/Análisis de (\d+) tweets/i);
+      if (match) return parseInt(match[1]);
+    }
+    
     return 0;
   };
 
   const tweetCount = getTweetCount();
   const isCollection = tweetCount > 1;
+
+  // Cargar child links si es un monitor y no los tenemos cargados
+  React.useEffect(() => {
+    const loadChildLinks = async () => {
+      if (item.original_type === 'monitor' && childLinks.length === 0 && !loadingLinks && onOpenLinks) {
+        setLoadingLinks(true);
+        try {
+          // Importar la función de supabase
+          const { getLinksForParentItem } = await import('../../services/supabase');
+          const links = await getLinksForParentItem(item.id);
+          setChildLinks(links || []);
+        } catch (error) {
+          console.error('Error loading child links:', error);
+        } finally {
+          setLoadingLinks(false);
+        }
+      }
+    };
+    loadChildLinks();
+  }, [item.id, item.original_type, childLinks.length, loadingLinks, onOpenLinks]);
 
   return (
     <Card className="relative bg-white shadow-md hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden flex flex-col">
