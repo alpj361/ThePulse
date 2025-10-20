@@ -89,7 +89,8 @@ export async function sendViztaChatQuery(
   message: string,
   sessionId?: string,
   mode: 'chat' | 'agentic' = 'chat',
-  useGenerativeUI: boolean = false
+  useGenerativeUI: boolean = false,
+  codexItemIds?: string[]  // ✨ NUEVO: IDs de items del Codex seleccionados
 ): Promise<ViztaChatResponse> {
   try {
     const token = await getAuthToken();
@@ -97,6 +98,10 @@ export async function sendViztaChatQuery(
     console.log('🤖 Enviando consulta a Vizta Chat:', message);
     console.log('📊 Generative UI:', useGenerativeUI ? 'ENABLED' : 'DISABLED');
     console.log('🔑 Token disponible:', !!token);
+    // ✨ NUEVO: Log de codex items seleccionados
+    if (codexItemIds && codexItemIds.length > 0) {
+      console.log('📚 Codex items seleccionados:', codexItemIds.length);
+    }
 
     // Preparar headers - en desarrollo, el backend no requiere auth
     const headers: Record<string, string> = {
@@ -115,7 +120,8 @@ export async function sendViztaChatQuery(
         message: message,
         sessionId: sessionId,
         mode,
-        useGenerativeUI
+        useGenerativeUI,
+        codex_item_ids: codexItemIds || []  // ✨ NUEVO: Enviar IDs al backend
       })
     });
 

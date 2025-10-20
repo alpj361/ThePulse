@@ -38,6 +38,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { TypingIndicator } from "./typing-indicator";
 import { SkeletonLoader } from "./skeleton-loader";
 import { CopyButton } from "./copy-button";
+import CodexSelector from "./CodexSelector";  // ✨ NUEVO: Import CodexSelector
 
 // Types
 interface Message {
@@ -685,6 +686,8 @@ const ViztaChatUI = () => {
   const [useGenerativeUI, setUseGenerativeUI] = React.useState(false); // Toggle for Generative UI
   const [isContextOpen, setIsContextOpen] = React.useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = React.useState(false);
+  // ✨ NUEVO: Estado para items del Codex seleccionados
+  const [selectedCodex, setSelectedCodex] = React.useState<string[]>([]);
   const [chatWidth, setChatWidth] = React.useState<number>(() => {
     // Load saved width from localStorage or use default
     if (typeof window !== 'undefined') {
@@ -731,12 +734,22 @@ const ViztaChatUI = () => {
     setInputValue("");
     setIsLoading(true);
 
+    // ✨ DEBUG: Log de codex items antes de enviar
+    console.log('🔍 [VIZTA-CHAT] Enviando mensaje con contexto:', {
+      message: currentInput.substring(0, 50) + '...',
+      selectedCodex: selectedCodex,
+      selectedCodexCount: selectedCodex.length
+    });
+
     try {
       // Importar dinámicamente el servicio
       const { sendViztaChatQuery } = await import('../../services/viztaChat');
 
-      // Enviar consulta al backend con el toggle de Generative UI
-      const response = await sendViztaChatQuery(currentInput, sessionId, mode, useGenerativeUI);
+      // ✨ Enviar consulta al backend con el toggle de Generative UI y codex items seleccionados
+      const response = await sendViztaChatQuery(currentInput, sessionId, mode, useGenerativeUI, selectedCodex);
+      
+      // ✨ DEBUG: Verificar respuesta
+      console.log('✅ [VIZTA-CHAT] Respuesta recibida, usó codex?', response);
       console.log("🔍 Respuesta recibida del servidor:", JSON.stringify(response, null, 2));
 
       // Manejar diferentes estructuras de respuesta del backend
@@ -1053,64 +1066,53 @@ const ViztaChatUI = () => {
                   </button>
                 </div>
                 
-                {/* Modal Content */}
+                {/* ✨ Modal Content - CodexSelector funcional */}
                 <div className="flex-1 overflow-auto p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Documentos */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileUp className="h-5 w-5 text-[#1e40af]" />
-                        <h3 className="font-semibold text-gray-900">Documentos</h3>
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">📚 Selecciona items del Codex</h3>
+                    <p className="text-sm text-gray-600">
+                      Selecciona documentos, Wiki items, o monitoreos para que Vizta los use como contexto en su respuesta.
+                    </p>
+                    {selectedCodex.length > 0 && (
+                      <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                        <p className="text-sm text-blue-800 font-medium">
+                          ✅ {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Archivos y documentos que has compartido
-                      </p>
-                      <div className="text-sm text-gray-500 italic">
-                        No hay documentos aún
-                      </div>
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Proyectos */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Folder className="h-5 w-5 text-[#1e40af]" />
-                        <h3 className="font-semibold text-gray-900">Proyectos</h3>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Tus proyectos y análisis guardados
-                      </p>
-                      <div className="text-sm text-gray-500 italic">
-                        No hay proyectos aún
-                      </div>
-                    </div>
-
-                    {/* Actividades */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Activity className="h-5 w-5 text-[#1e40af]" />
-                        <h3 className="font-semibold text-gray-900">Actividades</h3>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Historial de consultas y acciones
-                      </p>
-                      <div className="text-sm text-gray-500 italic">
-                        No hay actividades recientes
-                      </div>
-                    </div>
-
-                    {/* Información */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Info className="h-5 w-5 text-[#1e40af]" />
-                        <h3 className="font-semibold text-gray-900">Información</h3>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Datos y configuraciones de la plataforma
-                      </p>
-                      <div className="text-sm text-gray-500 italic">
-                        Sin información adicional
-                      </div>
-                    </div>
+                  {/* ✨ Usar CodexSelector real */}
+                  <CodexSelector 
+                    selectedCodex={selectedCodex} 
+                    onCodexChange={setSelectedCodex} 
+                  />
+                </div>
+                
+                {/* Modal Actions */}
+                <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
+                  <button
+                    onClick={() => setSelectedCodex([])}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Limpiar selección
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsContextModalOpen(false)}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsContextModalOpen(false);
+                        setIsContextOpen(false);
+                      }}
+                      className="px-6 py-2 bg-[#1e40af] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-sm font-medium"
+                    >
+                      Aplicar ({selectedCodex.length})
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -1167,41 +1169,40 @@ const ViztaChatUI = () => {
 
                       {/* Dropdown Content */}
                       <div className="p-3 space-y-2 max-h-96 overflow-auto">
-                        {/* Documentos */}
-                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                        {/* ✨ Codex - Abrir modal completo */}
+                        <button 
+                          className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                          onClick={() => {
+                            setIsContextOpen(false);
+                            setIsContextModalOpen(true);
+                          }}
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <FileUp className="h-4 w-4 text-[#1e40af]" />
-                            <span className="text-sm font-medium text-gray-900">Documentos</span>
+                            <span className="text-sm font-medium text-gray-900">📚 Codex</span>
+                            {selectedCodex.length > 0 && (
+                              <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                                {selectedCodex.length}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500">0 documentos</p>
+                          <p className="text-xs text-gray-500">
+                            {selectedCodex.length > 0 
+                              ? `${selectedCodex.length} items seleccionados` 
+                              : 'Docs, Wiki, Monitoreos'}
+                          </p>
                         </button>
 
-                        {/* Proyectos */}
-                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                        {/* Información sobre Wiki */}
+                        <div className="px-3 py-2 rounded-md bg-blue-50 border border-blue-100">
                           <div className="flex items-center gap-2 mb-1">
-                            <Folder className="h-4 w-4 text-[#1e40af]" />
-                            <span className="text-sm font-medium text-gray-900">Proyectos</span>
+                            <Info className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-900">✨ Nuevo: Wiki</span>
                           </div>
-                          <p className="text-xs text-gray-500">0 proyectos</p>
-                        </button>
-
-                        {/* Actividades */}
-                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Activity className="h-4 w-4 text-[#1e40af]" />
-                            <span className="text-sm font-medium text-gray-900">Actividades</span>
-                          </div>
-                          <p className="text-xs text-gray-500">Sin actividad reciente</p>
-                        </button>
-
-                        {/* Información */}
-                        <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Info className="h-4 w-4 text-[#1e40af]" />
-                            <span className="text-sm font-medium text-gray-900">Información</span>
-                          </div>
-                          <p className="text-xs text-gray-500">Ver detalles</p>
-                        </button>
+                          <p className="text-xs text-blue-700">
+                            Selecciona perfiles de Wiki (👤 personas, 🏢 organizaciones, 📅 eventos) como contexto
+                          </p>
+                        </div>
                       </div>
 
                       {/* Dropdown Footer */}

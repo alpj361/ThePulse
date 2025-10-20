@@ -59,6 +59,11 @@ interface CodexItem {
   original_type?: string;
   is_child_link?: boolean;
   parent_item_id?: string | null;
+  // ✨ NUEVO: Campos de categorización
+  category?: 'general' | 'monitoring' | 'wiki';
+  subcategory?: string;
+  source_type?: string;
+  metadata?: any;
 }
 
 interface CodexSelectorProps {
@@ -77,6 +82,9 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState<CodexItem[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  // ✨ NUEVO: Filtros por categoría y subcategoría
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'general' | 'monitoring' | 'wiki'>('all');
+  const [subcategoryFilter, setSubcategoryFilter] = useState<string>('all');
   const [groupedItems, setGroupedItems] = useState<Map<string, CodexItem[]>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   // Estado para monitores y sus enlaces hijos
@@ -91,11 +99,21 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
     }
   }, [user]);
 
-  // Filtrar items por término de búsqueda y tipo
+  // Filtrar items por término de búsqueda, tipo, categoría y subcategoría
   useEffect(() => {
     let filtered = codexItems;
 
-    // Filtrar por tipo
+    // ✨ NUEVO: Filtrar por categoría
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(item => item.category === categoryFilter);
+    }
+
+    // ✨ NUEVO: Filtrar por subcategoría
+    if (subcategoryFilter !== 'all') {
+      filtered = filtered.filter(item => item.subcategory === subcategoryFilter);
+    }
+
+    // Filtrar por tipo (legacy)
     if (typeFilter !== 'all') {
       filtered = filtered.filter(item => item.tipo === typeFilter);
     }
@@ -111,7 +129,7 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
       );
     }
 
-    setFilteredItems(filtered.slice(0, 50)); // Limitar a 50 items
+    setFilteredItems(filtered.slice(0, 100)); // Aumentar límite a 100 items
 
     // Agrupar items filtrados
     const grouped = new Map<string, CodexItem[]>();
@@ -124,7 +142,7 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
       }
     });
     setGroupedItems(grouped);
-  }, [searchTerm, typeFilter, codexItems]);
+  }, [searchTerm, typeFilter, categoryFilter, subcategoryFilter, codexItems]);
 
   // Cargar hijos (enlaces) de un monitor on-demand
   const loadMonitorChildren = async (parentId: string) => {
@@ -220,8 +238,42 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
     setExpandedGroups(newExpanded);
   };
 
-  const getTypeIcon = (tipo: string) => {
-    switch (tipo) {
+  const getTypeIcon = (item: CodexItem) => {
+    // ✨ NUEVO: Iconos basados en subcategory
+    if (item.subcategory) {
+      switch (item.subcategory) {
+        // Wiki
+        case 'wiki_person':
+          return <span style={{ fontSize: '1.2rem' }}>👤</span>;
+        case 'wiki_organization':
+          return <span style={{ fontSize: '1.2rem' }}>🏢</span>;
+        case 'wiki_location':
+          return <span style={{ fontSize: '1.2rem' }}>📍</span>;
+        case 'wiki_event':
+          return <span style={{ fontSize: '1.2rem' }}>📅</span>;
+        case 'wiki_concept':
+          return <span style={{ fontSize: '1.2rem' }}>💡</span>;
+        // Monitoring
+        case 'bookmark':
+          return <span style={{ fontSize: '1.2rem' }}>📌</span>;
+        case 'activity':
+          return <span style={{ fontSize: '1.2rem' }}>📈</span>;
+        case 'internal_spreadsheet':
+          return <span style={{ fontSize: '1.2rem' }}>📑</span>;
+        // General
+        case 'document':
+          return <DocumentIcon sx={{ color: '#f44336' }} />;
+        case 'audio':
+          return <AudioIcon sx={{ color: '#ff9800' }} />;
+        case 'video':
+          return <VideoIcon sx={{ color: '#9c27b0' }} />;
+        case 'external_spreadsheet':
+          return <span style={{ fontSize: '1.2rem' }}>📊</span>;
+      }
+    }
+    
+    // Legacy: Iconos basados en tipo
+    switch (item.tipo) {
       case 'documento':
         return <DocumentIcon sx={{ color: '#f44336' }} />;
       case 'audio':
@@ -232,6 +284,10 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
         return <LinkIcon sx={{ color: '#2196f3' }} />;
       case 'nota':
         return <TextIcon sx={{ color: '#4caf50' }} />;
+      case 'wiki':
+        return <span style={{ fontSize: '1.2rem' }}>📚</span>;
+      case 'actividad':
+        return <span style={{ fontSize: '1.2rem' }}>📊</span>;
       default:
         return <FolderIcon sx={{ color: '#757575' }} />;
     }
@@ -313,31 +369,113 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
           sx={{ mb: 2 }}
         />
 
-        {/* Filtro por tipo */}
+        {/* ✨ NUEVO: Filtro por categoría */}
         <Box sx={{ mb: 2 }}>
           <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Filtrar por tipo:
+            Categoría:
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
               label="Todos"
-              onClick={() => setTypeFilter('all')}
-              color={typeFilter === 'all' ? 'primary' : 'default'}
-              variant={typeFilter === 'all' ? 'filled' : 'outlined'}
+              onClick={() => {
+                setCategoryFilter('all');
+                setSubcategoryFilter('all');
+              }}
+              color={categoryFilter === 'all' ? 'primary' : 'default'}
+              variant={categoryFilter === 'all' ? 'filled' : 'outlined'}
               size="small"
             />
-            {getAvailableTypes().map(tipo => (
-              <Chip
-                key={tipo}
-                label={tipo}
-                onClick={() => setTypeFilter(tipo)}
-                color={typeFilter === tipo ? 'primary' : 'default'}
-                variant={typeFilter === tipo ? 'filled' : 'outlined'}
-                size="small"
-              />
-            ))}
+            <Chip
+              label="📁 Archivos Generales"
+              onClick={() => {
+                setCategoryFilter('general');
+                setSubcategoryFilter('all');
+              }}
+              color={categoryFilter === 'general' ? 'primary' : 'default'}
+              variant={categoryFilter === 'general' ? 'filled' : 'outlined'}
+              size="small"
+            />
+            <Chip
+              label="📊 Monitoreos"
+              onClick={() => {
+                setCategoryFilter('monitoring');
+                setSubcategoryFilter('all');
+              }}
+              color={categoryFilter === 'monitoring' ? 'primary' : 'default'}
+              variant={categoryFilter === 'monitoring' ? 'filled' : 'outlined'}
+              size="small"
+            />
+            <Chip
+              label="📚 Wiki"
+              onClick={() => {
+                setCategoryFilter('wiki');
+                setSubcategoryFilter('all');
+              }}
+              color={categoryFilter === 'wiki' ? 'primary' : 'default'}
+              variant={categoryFilter === 'wiki' ? 'filled' : 'outlined'}
+              size="small"
+            />
           </Box>
         </Box>
+
+        {/* ✨ NUEVO: Filtro por subcategoría (cuando hay categoría seleccionada) */}
+        {categoryFilter === 'wiki' && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              Tipo de Wiki:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip label="Todos" onClick={() => setSubcategoryFilter('all')} 
+                color={subcategoryFilter === 'all' ? 'primary' : 'default'} size="small" />
+              <Chip label="👤 Personas" onClick={() => setSubcategoryFilter('wiki_person')} 
+                color={subcategoryFilter === 'wiki_person' ? 'primary' : 'default'} size="small" />
+              <Chip label="🏢 Organizaciones" onClick={() => setSubcategoryFilter('wiki_organization')} 
+                color={subcategoryFilter === 'wiki_organization' ? 'primary' : 'default'} size="small" />
+              <Chip label="📍 Lugares" onClick={() => setSubcategoryFilter('wiki_location')} 
+                color={subcategoryFilter === 'wiki_location' ? 'primary' : 'default'} size="small" />
+              <Chip label="📅 Eventos" onClick={() => setSubcategoryFilter('wiki_event')} 
+                color={subcategoryFilter === 'wiki_event' ? 'primary' : 'default'} size="small" />
+              <Chip label="💡 Conceptos" onClick={() => setSubcategoryFilter('wiki_concept')} 
+                color={subcategoryFilter === 'wiki_concept' ? 'primary' : 'default'} size="small" />
+            </Box>
+          </Box>
+        )}
+
+        {categoryFilter === 'monitoring' && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              Tipo de Monitoreo:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip label="Todos" onClick={() => setSubcategoryFilter('all')} 
+                color={subcategoryFilter === 'all' ? 'primary' : 'default'} size="small" />
+              <Chip label="📌 Posts Guardados" onClick={() => setSubcategoryFilter('bookmark')} 
+                color={subcategoryFilter === 'bookmark' ? 'primary' : 'default'} size="small" />
+              <Chip label="📈 Actividad" onClick={() => setSubcategoryFilter('activity')} 
+                color={subcategoryFilter === 'activity' ? 'primary' : 'default'} size="small" />
+            </Box>
+          </Box>
+        )}
+
+        {categoryFilter === 'general' && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              Tipo de Archivo:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip label="Todos" onClick={() => setSubcategoryFilter('all')} 
+                color={subcategoryFilter === 'all' ? 'primary' : 'default'} size="small" />
+              <Chip label="📄 Documentos" onClick={() => setSubcategoryFilter('document')} 
+                color={subcategoryFilter === 'document' ? 'primary' : 'default'} size="small" />
+              <Chip label="🎤 Audios" onClick={() => setSubcategoryFilter('audio')} 
+                color={subcategoryFilter === 'audio' ? 'primary' : 'default'} size="small" />
+              <Chip label="🎬 Videos" onClick={() => setSubcategoryFilter('video')} 
+                color={subcategoryFilter === 'video' ? 'primary' : 'default'} size="small" />
+              <Chip label="📊 Spreadsheets" onClick={() => setSubcategoryFilter('external_spreadsheet')} 
+                color={subcategoryFilter === 'external_spreadsheet' ? 'primary' : 'default'} size="small" />
+            </Box>
+          </Box>
+        )}
         
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <Button
@@ -512,29 +650,37 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
                               onChange={() => handleToggleItem(`codex_${item.id}`)}
                               size="small"
                               sx={{ mt: -0.5 }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            
-                            {getTypeIcon(item.tipo)}
-                            
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography 
-                                variant="subtitle2" 
-                                sx={{ 
-                                  fontWeight: 600,
-                                  mb: 0.5,
-                                  lineHeight: 1.3
-                                }}
-                              >
-                                {item.titulo}
-                                {item.part_number && (
-                                  <Chip 
-                                    label={`Parte ${item.part_number}/${item.total_parts}`}
-                                    size="small"
-                                    sx={{ ml: 1, fontSize: '0.7rem' }}
-                                  />
-                                )}
-                              </Typography>
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          
+                          {getTypeIcon(item)}
+                          
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography 
+                              variant="subtitle2" 
+                              sx={{ 
+                                fontWeight: 600,
+                                mb: 0.5,
+                                lineHeight: 1.3
+                              }}
+                            >
+                              {item.titulo}
+                              {item.part_number && (
+                                <Chip 
+                                  label={`Parte ${item.part_number}/${item.total_parts}`}
+                                  size="small"
+                                  sx={{ ml: 1, fontSize: '0.7rem' }}
+                                />
+                              )}
+                              {/* ✨ Badge de categoría */}
+                              {item.category && (
+                                <Chip
+                                  label={item.category === 'wiki' ? '📚' : item.category === 'monitoring' ? '📊' : '📁'}
+                                  size="small"
+                                  sx={{ ml: 1, height: 18, fontSize: '0.7rem' }}
+                                />
+                              )}
+                            </Typography>
                               
                               {item.descripcion && (
                                 <Typography 
@@ -550,6 +696,63 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
                                 >
                                   {item.descripcion}
                                 </Typography>
+                              )}
+
+                              {/* ✨ Información adicional para Wiki items */}
+                              {item.category === 'wiki' && item.metadata && (
+                                <Box sx={{ mb: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  {item.metadata.relevance_score && (
+                                    <Chip
+                                      label={`⭐ ${item.metadata.relevance_score}/100`}
+                                      size="small"
+                                      color="warning"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {item.metadata.political_party && (
+                                    <Chip
+                                      label={item.metadata.political_party}
+                                      size="small"
+                                      color="info"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {item.metadata.related_items && item.metadata.related_items.length > 0 && (
+                                    <Chip
+                                      label={`🔗 ${item.metadata.related_items.length} relacionados`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Box>
+                              )}
+
+                              {/* ✨ Información adicional para Monitoring items */}
+                              {item.category === 'monitoring' && item.metadata && (
+                                <Box sx={{ mb: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  {item.metadata.platform && (
+                                    <Chip
+                                      label={item.metadata.platform}
+                                      size="small"
+                                      color="info"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {item.metadata.sentiment && (
+                                    <Chip
+                                      label={`${item.metadata.sentiment === 'positive' ? '😊' : item.metadata.sentiment === 'negative' ? '😔' : '😐'} ${item.metadata.sentiment}`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {item.metadata.tweet_count && (
+                                    <Chip
+                                      label={`${item.metadata.tweet_count} tweets`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Box>
                               )}
                               
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 1 }}>
