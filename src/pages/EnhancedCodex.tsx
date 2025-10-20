@@ -69,7 +69,7 @@ import {
 // URL dinámico del backend ExtractorW y ExtractorT
 import { EXTRACTORW_API_URL, EXTRACTORT_API_URL } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
-// import MonitoreoCard from "../components/ui/MonitoreoCard";
+import MonitoringCard from "../components/codex/monitoring/MonitoringCard";
 import MiniModal, { MiniModalLink } from "@/components/ui/MiniModal";
 
 // Iconos temporales que pueden recibir props
