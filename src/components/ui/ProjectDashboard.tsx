@@ -37,6 +37,8 @@ import { ProjectActivityCard } from './ProjectActivityCard';
 import { DecisionTimeline } from './DecisionTimeline';
 import { LatestDecisions } from './LatestDecisions';
 import { DecisionChronology } from './DecisionChronology';
+import EnhancedProjectCard from './EnhancedProjectCard';
+import SimplifiedProjectDetail from './SimplifiedProjectDetail';
 
 import ProjectSuggestions from './ProjectSuggestions';
 import { cn } from '../../lib/utils';
