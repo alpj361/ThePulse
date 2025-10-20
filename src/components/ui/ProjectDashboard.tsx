@@ -622,63 +622,44 @@ export function ProjectDashboard({
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="flex gap-6">
-          <div className="w-80 space-y-6">
-            <ProjectActivityCard
-              category="Project Metrics"
-              title="Current Status"
-              metrics={metrics}
-              dailyGoals={goals}
-              onAddGoal={() => console.log('Add goal')}
-              onToggleGoal={handleToggleGoal}
-              onViewDetails={() => setActiveTab('overview')}
-              onCreateProject={handleCreateProject}
-            />
-          </div>
-
-          <div className={cn("flex-1 min-w-0")}>
-            <div className="mb-6">
-              <div className="flex items-center gap-1 p-1 bg-white dark:bg-gray-800 rounded-lg w-fit border border-gray-200 dark:border-gray-700">
+        <div className={cn("w-full max-w-7xl mx-auto")}>
+          {/* Simplified Tab Navigation - Only show when not in details view */}
+          {!projectForDetails && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-gray-800 rounded-xl w-fit border-2 border-gray-200 dark:border-gray-700 shadow-sm">
                 {(['overview', 'projects'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={cn(
-                      "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                      "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200",
                       activeTab === tab
-                        ? "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     )}
                   >
-                    {t[tab]}
+                    {tab === 'overview' ? 'Resumen' : 'Proyectos'}
                   </button>
                 ))}
-                {projectForDetails && (
-                  <button
-                    onClick={() => setActiveTab('details')}
-                    className={cn(
-                      "px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
-                      activeTab === 'details'
-                        ? "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    )}
-                  >
-                    <FiEye className="w-4 h-4" />
-                    {t.details}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setProjectForDetails(null);
-                        setActiveTab('projects');
-                      }}
-                      className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
-                    >
-                      <FiX className="w-3 h-3" />
-                    </button>
-                  </button>
-                )}
               </div>
             </div>
+          )}
+          
+          {/* Show back button when in details view */}
+          {projectForDetails && (
+            <div className="mb-6">
+              <button
+                onClick={() => {
+                  setProjectForDetails(null);
+                  setActiveTab('projects');
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+              >
+                <FiArrowLeft className="w-4 h-4" />
+                <span className="font-medium">Volver a Proyectos</span>
+              </button>
+            </div>
+          )}
 
             <AnimatePresence mode="wait">
               {activeTab === 'overview' && (
