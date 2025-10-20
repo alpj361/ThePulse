@@ -164,7 +164,7 @@ export function ProjectDashboard({
 }: ProjectDashboardProps) {
   const { t, getPriorityText, getStatusText, getVisibilityText } = useTranslations();
   const { user, session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'decisions' | 'timeline' | 'details' | 'captured' | 'coverages'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'decisions' | 'timeline' | 'details' | 'captured' | 'coverages'>('projects');
   const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'decisions' | 'timeline' | 'assets' | 'insights'>('decisions');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
