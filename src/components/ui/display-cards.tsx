@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { FiBox } from "react-icons/fi";
 import React from "react";
 
 interface DisplayCardProps {
