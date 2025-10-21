@@ -142,6 +142,21 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
   const tweetCount = getTweetCount();
   const isCollection = tweetCount > 1;
 
+  // Debug: ver qué datos tenemos
+  useEffect(() => {
+    const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
+    console.log('📊 MonitoringCard Debug:', {
+      itemId: item.id,
+      titulo: item.titulo,
+      original_type: item.original_type,
+      hasScrapeData: !!scrapeData,
+      scrapeDataKeys: scrapeData ? Object.keys(scrapeData) : [],
+      hasTweets: !!scrapeData?.tweets,
+      tweetsLength: scrapeData?.tweets?.length,
+      tweetCount: tweetCount
+    });
+  }, [item.id]);
+
   // Cargar tweets cuando se expande
   useEffect(() => {
     const loadTweets = async () => {
