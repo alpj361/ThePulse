@@ -1911,3 +1911,4 @@ function helperFunction() { ... }
 **Prioridad:** Alta  
 **Estado:** Listo para implementar (Backend 100% funcional)
 
+
