@@ -2549,6 +2549,34 @@ export default function EnhancedCodex() {
             </p>
           </div>
 
+          {/* Category Filters */}
+          <div className="max-w-7xl mx-auto mb-6">
+            <CategoryFilters
+              selected={categoryFilter}
+              onSelect={setCategoryFilter}
+              counts={{
+                general: codexItems.filter(i => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(i.tipo)).length,
+                monitoring: codexItems.filter(i => i.tipo === 'monitoreos' || (i.tipo === 'item' && (i as any).original_type === 'monitor')).length,
+                wiki: wikiItems.length
+              }}
+            />
+            
+            {/* Wiki Subcategory Filters */}
+            {categoryFilter === 'wiki' && (
+              <SubcategoryChips
+                selected={wikiSubcategory}
+                onSelect={setWikiSubcategory}
+                counts={{
+                  person: wikiItems.filter(i => i.subcategory === 'person').length,
+                  organization: wikiItems.filter(i => i.subcategory === 'organization').length,
+                  location: wikiItems.filter(i => i.subcategory === 'location').length,
+                  event: wikiItems.filter(i => i.subcategory === 'event').length,
+                  concept: wikiItems.filter(i => i.subcategory === 'concept').length,
+                }}
+              />
+            )}
+          </div>
+
           {/* Maintenance Warning */}
           <div className="max-w-4xl mx-auto mb-8">
             <Card className="border-yellow-200 bg-yellow-50">
