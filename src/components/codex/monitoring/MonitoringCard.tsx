@@ -118,8 +118,12 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
   // Determinar cantidad de tweets
   const getTweetCount = () => {
     if (tweets.length > 0) return tweets.length;
-    if (item.recent_scrape?.tweet_count) return item.recent_scrape.tweet_count;
-    if (item.recent_scrape?.tweets?.length) return item.recent_scrape.tweets.length;
+    
+    // Verificar recent_scrapes (puede venir como recent_scrape o recent_scrapes)
+    const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
+    
+    if (scrapeData?.tweet_count) return scrapeData.tweet_count;
+    if (scrapeData?.tweets?.length) return scrapeData.tweets.length;
     
     const tweetCountTag = item.etiquetas?.find(tag => tag.includes('tweet'));
     if (tweetCountTag) {
