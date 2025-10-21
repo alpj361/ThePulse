@@ -298,21 +298,6 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
             </div>
           )}
 
-          {item.etiquetas && item.etiquetas.length > 0 && !isExpanded && (
-            <div className="flex flex-wrap gap-1">
-              {item.etiquetas.slice(0, 3).map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {item.etiquetas.length > 3 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{item.etiquetas.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-
           {/* Date */}
           {!isExpanded && (
             <div className="flex items-center gap-2 text-xs text-slate-400 pt-2 border-t border-slate-100">
