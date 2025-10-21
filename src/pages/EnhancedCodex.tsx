@@ -2629,7 +2629,17 @@ export default function EnhancedCodex() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            {categoryFilter === 'wiki' ? (
+              <Button
+                size="lg"
+                onClick={() => setShowCreateWikiModal(true)}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Crear Item de Wiki
+              </Button>
+            ) : (
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
                 <Button
                   size="lg"
