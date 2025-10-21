@@ -3651,7 +3651,22 @@ export default function EnhancedCodex() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {topLevelItems.map((item) => {
+                {categoryFilter === 'wiki' ? (
+                  // Render Wiki Items
+                  wikiItems
+                    .filter(item => !wikiSubcategory || item.subcategory === wikiSubcategory)
+                    .map((item) => (
+                      <WikiItemCard
+                        key={item.id}
+                        item={item}
+                        onView={handleViewWikiItem}
+                        onEdit={handleEditWikiItem}
+                        onDelete={handleDeleteWikiItem}
+                      />
+                    ))
+                ) : (
+                  // Render General and Monitoring Items
+                  topLevelItems.map((item) => {
                   if (item.is_group_parent) {
                     return <CodexFolderCard 
                       key={item.id} 
