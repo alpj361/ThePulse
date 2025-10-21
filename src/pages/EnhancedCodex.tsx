@@ -4386,6 +4386,24 @@ export default function EnhancedCodex() {
         </DialogContent>
       </Dialog>
 
+      {/* Wiki Modals */}
+      <CreateWikiModal
+        open={showCreateWikiModal}
+        onClose={() => setShowCreateWikiModal(false)}
+        userId={user?.id || ''}
+        onSuccess={handleCreateWikiSuccess}
+      />
+      
+      <EditWikiModal
+        open={showEditWikiModal}
+        onClose={() => {
+          setShowEditWikiModal(false);
+          setEditingWikiItem(null);
+        }}
+        item={editingWikiItem}
+        onSuccess={handleEditWikiSuccess}
+      />
+
     </div>
   )
 } 
