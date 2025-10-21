@@ -1,13 +1,19 @@
 import { supabase } from './supabase';
-import { EXTRACTORW_API_URL } from './api';
 
 // ===================================================================
 // VIZTA CHAT SERVICE
 // Servicio para conectar con el backend de Vizta Chat en ExtractorW
 // ===================================================================
 
-// Utilizar la misma lógica dinámica definida en api.ts para resolver la URL
-const EXTRACTOR_W_URL = EXTRACTORW_API_URL;
+// Función para obtener la URL del ExtractorW dinámicamente
+function getExtractorWUrl(): string {
+  // Si estamos en desarrollo, usar el puerto 3010 local
+  if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:3010/api';
+  }
+  // En producción, usar el servidor de producción
+  return 'https://server.standatpd.com/api';
+}
 
 // Tipos
 export interface ViztaChatMessage {
@@ -113,7 +119,9 @@ export async function sendViztaChatQuery(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${EXTRACTOR_W_URL}/vizta-chat/query`, {
+    const extractorWUrl = getExtractorWUrl();
+    console.log('🔧 [DEBUG] URL que se está usando:', `${extractorWUrl}/vizta-chat/query`);
+    const response = await fetch(`${extractorWUrl}/vizta-chat/query`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

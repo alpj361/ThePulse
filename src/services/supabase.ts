@@ -568,7 +568,7 @@ export async function createCodexGroup(
     console.log('🔄 Creando grupo vía backend ExtractorW:', groupData);
 
     // Usar el nuevo endpoint del backend
-    const response = await fetch('https://server.standatpd.com/api/codex-groups/create', {
+    const response = await fetch(`${EXTRACTORW_API_URL}/codex-groups/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -668,7 +668,7 @@ export async function createCodexGroupBulk(
       throw new Error('No se pudo obtener el token de autenticación');
     }
 
-    const endpoint = 'https://server.standatpd.com/api/codex-groups/create-bulk';
+    const endpoint = `${EXTRACTORW_API_URL}/codex-groups/create-bulk`;
     console.log('🌐 Endpoint:', endpoint);
 
     const requestBody = {
@@ -747,7 +747,7 @@ export async function addItemToGroup(
     console.log('🔄 Agregando item al grupo vía backend ExtractorW:', { itemId, groupId, partNumber });
 
     // Usar el nuevo endpoint del backend
-    const response = await fetch('https://server.standatpd.com/api/codex-groups/add-item', {
+    const response = await fetch(`${EXTRACTORW_API_URL}/codex-groups/add-item`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

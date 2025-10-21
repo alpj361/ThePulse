@@ -341,7 +341,7 @@ export const Trends = () => {
       console.log(`📡 Polling intento ${attempt}/${maxAttempts} para timestamp: ${timestamp}`);
       
       try {
-        const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL || 'https://server.standatpd.com/api'}/processingStatus/${encodeURIComponent(timestamp)}`);
+        const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL}/processingStatus/${encodeURIComponent(timestamp)}`);
         
         if (response.ok) {
           const statusData = await response.json();
@@ -435,7 +435,7 @@ export const Trends = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL || 'https://server.standatpd.com/api'}/processingStatus/${encodeURIComponent(lastProcessingTimestamp)}`);
+      const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL}/processingStatus/${encodeURIComponent(lastProcessingTimestamp)}`);
       if (response.ok) {
         const statusData = await response.json();
         if (statusData.status === 'complete' && statusData.has_about && statusData.has_statistics) {

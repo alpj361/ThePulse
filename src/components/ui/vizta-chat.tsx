@@ -356,7 +356,7 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
       
       // Send feedback to backend
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/vizta/feedback`, {
+        const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL}/vizta/feedback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

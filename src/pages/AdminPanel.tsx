@@ -4,6 +4,7 @@ import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { openAIService } from '../services/openai';
+import { EXTRACTORW_API_URL } from '../services/api';
 import {
   Box,
   Container,
@@ -1340,7 +1341,7 @@ export default function AdminPanel() {
       };
 
       // AQUÍ DEBES IMPLEMENTAR LA LLAMADA REAL A TU API
-      const response = await fetch('https://server.standatpd.com/api/test-email', {
+      const response = await fetch(`${EXTRACTORW_API_URL}/test-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testEmailData)
@@ -1555,7 +1556,7 @@ export default function AdminPanel() {
           console.log(`📤 Enviando a: ${email}`);
           
           // OPCIÓN 1: Llamada a tu API backend
-          const response = await fetch('https://server.standatpd.com/api/send-email', {
+          const response = await fetch(`${EXTRACTORW_API_URL}/send-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(emailData)
@@ -1722,7 +1723,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
 
     setLoadingCredits(true);
     try {
-      const response = await fetch('https://server.standatpd.com/api/admin/dashboard', {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1760,7 +1761,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
       params.append('order_direction', usersFilters.order_direction);
       params.append('limit', '50');
 
-      const response = await fetch(`https://server.standatpd.com/api/admin/users?${params}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/users?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1795,7 +1796,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
       params.append('days', logsFilters.days.toString());
       params.append('limit', '50');
 
-      const response = await fetch(`https://server.standatpd.com/api/admin/logs?${params.toString()}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/logs?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1828,7 +1829,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
     if (!token) return;
 
     try {
-      const response = await fetch('https://server.standatpd.com/api/credits/add', {
+      const response = await fetch(`${EXTRACTORW_API_URL}/credits/add`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1888,7 +1889,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
       if (layersRoleFilter) params.append('role', layersRoleFilter);
       params.append('limit', '100');
 
-      const response = await fetch(`https://server.standatpd.com/api/admin/users/layers-limits?${params}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/users/layers-limits?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1917,7 +1918,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
     if (!token) return;
 
     try {
-      const response = await fetch(`https://server.standatpd.com/api/admin/users/layers-limits/${userId}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/users/layers-limits/${userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -2140,7 +2141,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
     try {
       console.log('🔄 Iniciando re-análisis de tweets...', reanalysisOptions);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reanalyze-tweets`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/reanalyze-tweets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2192,7 +2193,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
       params.append('days', logsFiltersAdvanced.days.toString());
       params.append('log_type', 'user'); // Solo logs de usuario
 
-      const response = await fetch(`https://server.standatpd.com/api/admin/logs/stats?${params.toString()}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/logs/stats?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -2314,7 +2315,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
       params.append('limit', logsFiltersAdvanced.limit.toString());
       params.append('offset', logsFiltersAdvanced.offset.toString());
 
-      const response = await fetch(`https://server.standatpd.com/api/admin/logs?${params.toString()}`, {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/logs?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -2397,7 +2398,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
     if (!token) return;
 
     try {
-      const response = await fetch('https://server.standatpd.com/api/admin/users?limit=200', {
+      const response = await fetch(`${EXTRACTORW_API_URL}/admin/users?limit=200`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -4251,7 +4252,7 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
                   if (!token) return;
                   
                   try {
-                    const response = await fetch('https://server.standatpd.com/api/admin/test-logs', {
+                    const response = await fetch(`${EXTRACTORW_API_URL}/admin/test-logs`, {
                       headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
