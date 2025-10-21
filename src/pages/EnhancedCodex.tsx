@@ -606,6 +606,14 @@ export default function EnhancedCodex() {
   const [expandedMonitorId, setExpandedMonitorId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // ====== WIKI STATES ======
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'general' | 'monitoring' | 'wiki'>('all');
+  const [wikiSubcategory, setWikiSubcategory] = useState<'person' | 'organization' | 'location' | 'event' | 'concept' | null>(null);
+  const [wikiItems, setWikiItems] = useState<WikiItem[]>([]);
+  const [showCreateWikiModal, setShowCreateWikiModal] = useState(false);
+  const [showEditWikiModal, setShowEditWikiModal] = useState(false);
+  const [editingWikiItem, setEditingWikiItem] = useState<WikiItem | null>(null);
+
   // Handler to toggle selection of an item
   const toggleSelectItem = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
