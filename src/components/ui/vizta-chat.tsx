@@ -39,6 +39,7 @@ import { TypingIndicator } from "./typing-indicator";
 import { SkeletonLoader } from "./skeleton-loader";
 import { CopyButton } from "./copy-button";
 import CodexSelector from "./CodexSelector";  // ✨ NUEVO: Import CodexSelector
+import { useAuth } from '../../context/AuthContext';  // ✨ NUEVO: Import useAuth
 
 // Types
 interface Message {
@@ -678,6 +679,7 @@ AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
 const ViztaChatUI = () => {
+  const { user } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -696,6 +698,14 @@ const ViztaChatUI = () => {
     }
     return 440;
   });
+  
+  // ✨ NUEVO: Estado para funcionalidad @
+  const [showMentions, setShowMentions] = React.useState(false);
+  const [mentionQuery, setMentionQuery] = React.useState('');
+  const [mentionPosition, setMentionPosition] = React.useState(0);
+  const [availableCodexItems, setAvailableCodexItems] = React.useState<any[]>([]);
+  const [filteredCodexItems, setFilteredCodexItems] = React.useState<any[]>([]);
+  const [selectedMentionIndex, setSelectedMentionIndex] = React.useState(0);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const contextButtonRef = React.useRef<HTMLButtonElement>(null);
 
@@ -718,6 +728,101 @@ const ViztaChatUI = () => {
       scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [messages, isLoading]);
+
+  // ✨ NUEVO: Cargar elementos del codex disponibles para @
+  React.useEffect(() => {
+    const loadCodexItems = async () => {
+      if (!user?.id) {
+        console.warn('No hay usuario autenticado, no se pueden cargar elementos del codex');
+        setAvailableCodexItems([]);
+        return;
+      }
+
+      try {
+        console.log('🔍 [ViztaChat] Cargando elementos del codex para usuario:', user.id);
+        const { getCodexItems } = await import('../../services/codexService');
+        const items = await getCodexItems(user.id);
+        console.log('📚 [ViztaChat] Elementos cargados:', items.length);
+        setAvailableCodexItems(items);
+      } catch (error) {
+        console.error('❌ [ViztaChat] Error cargando elementos del codex:', error);
+        setAvailableCodexItems([]);
+      }
+    };
+    loadCodexItems();
+  }, [user?.id]); // ✨ NUEVO: Dependencia en user.id
+
+  // ✨ NUEVO: Filtrar elementos del codex cuando cambia la query
+  React.useEffect(() => {
+    if (mentionQuery.trim()) {
+      const filtered = availableCodexItems.filter(item => 
+        item.title?.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+        item.content?.toLowerCase().includes(mentionQuery.toLowerCase())
+      );
+      setFilteredCodexItems(filtered.slice(0, 5)); // Máximo 5 resultados
+    } else {
+      setFilteredCodexItems(availableCodexItems.slice(0, 5));
+    }
+    setSelectedMentionIndex(0);
+  }, [mentionQuery, availableCodexItems]);
+
+  // ✨ NUEVO: Manejar input con detección de @
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPosition = e.target.selectionStart;
+    
+    setInputValue(value);
+    
+    // Detectar si el usuario está escribiendo después de @
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (atMatch) {
+      setShowMentions(true);
+      setMentionQuery(atMatch[1]);
+      setMentionPosition(cursorPosition - atMatch[1].length - 1);
+    } else {
+      setShowMentions(false);
+      setMentionQuery('');
+    }
+  };
+
+  // ✨ NUEVO: Manejar selección de mención
+  const handleMentionSelect = (item: any) => {
+    const beforeAt = inputValue.substring(0, mentionPosition);
+    const afterAt = inputValue.substring(mentionPosition + 1 + mentionQuery.length);
+    const newValue = `${beforeAt}@${item.title}${afterAt}`;
+    
+    setInputValue(newValue);
+    setShowMentions(false);
+    setMentionQuery('');
+  };
+
+  // ✨ NUEVO: Manejar navegación con teclado en menciones
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentions && filteredCodexItems.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < filteredCodexItems.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : filteredCodexItems.length - 1
+        );
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleMentionSelect(filteredCodexItems[selectedMentionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowMentions(false);
+        setMentionQuery('');
+      }
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   const handleSend = async () => {
     if (!inputValue.trim()) return;
@@ -1075,9 +1180,24 @@ const ViztaChatUI = () => {
                     </p>
                     {selectedCodex.length > 0 && (
                       <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
-                        <p className="text-sm text-blue-800 font-medium">
-                          ✅ {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
-                        </p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                          <p className="text-sm text-blue-800 font-medium">
+                            {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          {selectedCodex.slice(0, 3).map((itemId, index) => (
+                            <div key={itemId} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                              {index + 1}. {itemId}
+                            </div>
+                          ))}
+                          {selectedCodex.length > 3 && (
+                            <div className="text-xs text-blue-600 italic">
+                              +{selectedCodex.length - 3} más...
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1193,16 +1313,6 @@ const ViztaChatUI = () => {
                           </p>
                         </button>
 
-                        {/* Información sobre Wiki */}
-                        <div className="px-3 py-2 rounded-md bg-blue-50 border border-blue-100">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Info className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-900">✨ Nuevo: Wiki</span>
-                          </div>
-                          <p className="text-xs text-blue-700">
-                            Selecciona perfiles de Wiki (👤 personas, 🏢 organizaciones, 📅 eventos) como contexto
-                          </p>
-                        </div>
                       </div>
 
                       {/* Dropdown Footer */}
@@ -1220,17 +1330,81 @@ const ViztaChatUI = () => {
             {/* Input Field */}
             <div className="flex-1 relative">
               <Textarea
-                placeholder="Escribe tu consulta sobre Guatemala..."
+                placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleInputChange}
                 className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400 text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
+                onKeyDown={handleKeyDown}
               />
+              
+              {/* ✨ NUEVO: Dropdown de menciones @ */}
+              {showMentions && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                  <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-2">
+                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                    <span>Elementos del Codex disponibles:</span>
+                    <span className="text-blue-600 font-medium">{filteredCodexItems.length} encontrados</span>
+                  </div>
+                  
+                  {filteredCodexItems.length > 0 ? (
+                    <>
+                      {filteredCodexItems.map((item, index) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleMentionSelect(item)}
+                          className={`w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3 ${
+                            index === selectedMentionIndex ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate flex items-center gap-2">
+                              <span className="text-blue-600">@</span>
+                              {item.title}
+                            </div>
+                            {item.content && (
+                              <div className="text-xs text-gray-500 truncate mt-1">
+                                {item.content.substring(0, 60)}...
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                              {item.type || 'documento'}
+                            </div>
+                            {index === selectedMentionIndex && (
+                              <div className="text-xs text-blue-600 font-medium">
+                                ← Seleccionado
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                      <div className="p-2 text-xs text-gray-400 border-t bg-gray-50">
+                        <div className="flex items-center gap-4">
+                          <span>↑↓ navegar</span>
+                          <span>Enter seleccionar</span>
+                          <span>Esc cancelar</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      <div className="text-sm">No se encontraron elementos</div>
+                      <div className="text-xs mt-1">
+                        {availableCodexItems.length === 0 
+                          ? "No hay elementos en tu Codex. Crea algunos documentos primero."
+                          : "Intenta con otro término de búsqueda"
+                        }
+                      </div>
+                      {availableCodexItems.length === 0 && (
+                        <div className="text-xs mt-2 text-blue-600">
+                          💡 Ve a "Conocimiento" para crear elementos del Codex
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Send Button */}

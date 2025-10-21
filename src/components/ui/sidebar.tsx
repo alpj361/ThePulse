@@ -28,6 +28,7 @@ import { Separator } from "./separator";
 import { LanguageContext } from "../../context/LanguageContext";
 import { useAdmin } from "../../hooks/useAdmin";
 import { useAuth } from "../../context/AuthContext";
+import { useUserType } from "../../hooks/useUserType";
 import { Tooltip } from "@mui/material";
 
 const sidebarVariants = {
@@ -132,6 +133,7 @@ export function SessionNavBar() {
   const { language, setLanguage } = useContext(LanguageContext);
   const { isAdmin } = useAdmin();
   const { user, signOut } = useAuth();
+  const { shouldHideProjectsAndActivity } = useUserType();
 
   const t = translations[language];
 
@@ -201,9 +203,32 @@ export function SessionNavBar() {
     }
   ];
 
-  // Build final sections; append admin-only section with Knowledge
+  // Build final sections; filter based on user type and append admin-only section
   const sections: NavSection[] = (() => {
-    const base = [...navSections];
+    let base = [...navSections];
+    
+    // Filter sections based on user type
+    if (shouldHideProjectsAndActivity) {
+      base = base.map(section => {
+        if (section.title === t.personalPulse) {
+          // Hide Activity (Actividad) for Beta users
+          return {
+            ...section,
+            items: section.items.filter(item => item.label !== t.actividad)
+          };
+        }
+        if (section.title === t.myPulse) {
+          // Hide Projects (Proyectos) for Beta users
+          return {
+            ...section,
+            items: section.items.filter(item => item.label !== t.proyectos)
+          };
+        }
+        return section;
+      }).filter(section => section.items.length > 0); // Remove empty sections
+    }
+    
+    // Add admin section if user is admin
     if (isAdmin) {
       base.push({
         title: 'Admin',
@@ -216,6 +241,7 @@ export function SessionNavBar() {
         ]
       });
     }
+    
     return base;
   })();
 
