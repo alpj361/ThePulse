@@ -71,6 +71,14 @@ import { EXTRACTORW_API_URL, EXTRACTORT_API_URL } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
 import MonitoringCard from "../components/codex/monitoring/MonitoringCard";
 import MiniModal, { MiniModalLink } from "@/components/ui/MiniModal";
+// Wiki imports
+import CategoryFilters from "../components/codex/CategoryFilters";
+import SubcategoryChips from "../components/codex/SubcategoryChips";
+import WikiItemCard from "../components/codex/wiki/WikiItemCard";
+import WikiStatsPanel from "../components/codex/wiki/WikiStatsPanel";
+import CreateWikiModal from "../components/codex/wiki/CreateWikiModal";
+import EditWikiModal from "../components/codex/wiki/EditWikiModal";
+import { getWikiItems, deleteWikiItem, type WikiItem } from "../services/wikiService";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
