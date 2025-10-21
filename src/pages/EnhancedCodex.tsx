@@ -648,6 +648,61 @@ export default function EnhancedCodex() {
     }
   };
 
+  // ====== WIKI FUNCTIONS ======
+  const loadWikiItems = async () => {
+    if (!user?.id) return;
+    try {
+      const items = await getWikiItems(user.id, wikiSubcategory || undefined);
+      setWikiItems(items);
+    } catch (error) {
+      console.error('Error loading wiki items:', error);
+    }
+  };
+
+  const handleCreateWikiSuccess = () => {
+    loadWikiItems();
+    setShowCreateWikiModal(false);
+  };
+
+  const handleEditWikiItem = (item: WikiItem) => {
+    setEditingWikiItem(item);
+    setShowEditWikiModal(true);
+  };
+
+  const handleEditWikiSuccess = () => {
+    loadWikiItems();
+    setShowEditWikiModal(false);
+    setEditingWikiItem(null);
+  };
+
+  const handleDeleteWikiItem = async (item: WikiItem) => {
+    if (!window.confirm(`¿Eliminar "${item.name}" del Wiki?`)) return;
+    
+    try {
+      const success = await deleteWikiItem(item.id);
+      if (success) {
+        loadWikiItems();
+      } else {
+        alert('Error al eliminar el item');
+      }
+    } catch (error) {
+      console.error('Error deleting wiki item:', error);
+      alert('Error al eliminar el item');
+    }
+  };
+
+  const handleViewWikiItem = (item: WikiItem) => {
+    // Por ahora solo abrir el modal de edición
+    handleEditWikiItem(item);
+  };
+
+  // Load wiki items when category or subcategory changes
+  useEffect(() => {
+    if (categoryFilter === 'wiki' && user?.id) {
+      loadWikiItems();
+    }
+  }, [categoryFilter, wikiSubcategory, user?.id]);
+
   /**
    * Asegura que tenemos un token válido de Google Drive.
    * Si ya lo tenemos, lo devuelve inmediatamente.
