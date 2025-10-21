@@ -379,7 +379,11 @@ export async function getCodexItemsByUser(user_id: string) {
         verified,
         sentimiento,
         location,
-        created_at
+        created_at,
+        tweets,
+        tweet_count,
+        total_engagement,
+        avg_engagement
       ),
       links_as_child:links!links_item_id_fkey ( parent_item_id )
     `)
