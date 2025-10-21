@@ -3918,6 +3918,7 @@ export default function EnhancedCodex() {
                 })}
               </div>
             )}
+            )}
 
             {/* Load More / Show Less Section */}
             {(topLevelItems.length > itemsToShow && !showAllItems) && (
