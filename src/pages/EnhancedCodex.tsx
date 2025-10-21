@@ -3464,6 +3464,7 @@ export default function EnhancedCodex() {
                 </div>
               </DialogContent>
             </Dialog>
+            )}
             <Button
               size="lg"
               variant="outline"
