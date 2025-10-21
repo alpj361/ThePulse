@@ -149,19 +149,25 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
       
       setLoadingTweets(true);
       try {
-        // Opción 1: Verificar si recent_scrape tiene tweets
-        if (item.recent_scrape?.tweets && Array.isArray(item.recent_scrape.tweets)) {
-          setTweets(item.recent_scrape.tweets);
+        // Verificar recent_scrapes (puede venir como recent_scrape o recent_scrapes)
+        const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
+        
+        // Opción 1: Verificar si recent_scrapes tiene tweets
+        if (scrapeData?.tweets && Array.isArray(scrapeData.tweets)) {
+          console.log('✅ Cargando tweets desde recent_scrapes:', scrapeData.tweets.length);
+          setTweets(scrapeData.tweets);
           setLoadingTweets(false);
           return;
         }
 
         // Opción 2: Cargar desde child links
         if (item.original_type === 'monitor') {
+          console.log('🔄 Intentando cargar desde child links...');
           const { getLinksForParentItem } = await import('@/services/supabase');
           const links = await getLinksForParentItem(item.id);
           
           if (links && links.length > 0) {
+            console.log('✅ Links encontrados:', links.length);
             const tweetData = links.map((link: any) => ({
               text: link.child?.descripcion || link.child?.transcripcion || '',
               url: link.child?.source_url || '',
@@ -173,17 +179,19 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
               replies: 0
             }));
             setTweets(tweetData);
+          } else {
+            console.log('❌ No se encontraron links');
           }
         }
       } catch (error) {
-        console.error('Error loading tweets:', error);
+        console.error('❌ Error loading tweets:', error);
       } finally {
         setLoadingTweets(false);
       }
     };
 
     loadTweets();
-  }, [isExpanded, item.id, item.original_type, item.recent_scrape, tweets.length]);
+  }, [isExpanded, item.id, item.original_type, tweets.length]);
 
   return (
     <Card className="relative bg-white shadow-md hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden flex flex-col">
