@@ -75,9 +75,12 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
 
   // Determinar la plataforma del contenido
   const getPlatform = (): 'x' | 'instagram' | 'other' => {
-    if (item.recent_scrape?.herramienta) {
-      if (item.recent_scrape.herramienta === 'instagram') return 'instagram';
-      if (item.recent_scrape.herramienta === 'twitter' || item.recent_scrape.herramienta === 'x') return 'x';
+    // Verificar recent_scrapes (puede venir como recent_scrape o recent_scrapes)
+    const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
+    
+    if (scrapeData?.herramienta) {
+      if (scrapeData.herramienta === 'instagram') return 'instagram';
+      if (scrapeData.herramienta === 'twitter' || scrapeData.herramienta === 'x') return 'x';
     }
     if (item.etiquetas?.includes('instagram')) return 'instagram';
     if (item.etiquetas?.includes('twitter') || item.etiquetas?.includes('x')) return 'x';
