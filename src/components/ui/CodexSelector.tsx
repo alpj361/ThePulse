@@ -83,7 +83,7 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
   const [filteredItems, setFilteredItems] = useState<CodexItem[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   // ✨ NUEVO: Filtros por categoría y subcategoría
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'general' | 'monitoring' | 'wiki'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'item' | 'monitoreos' | 'posts' | 'wiki'>('all');
   const [subcategoryFilter, setSubcategoryFilter] = useState<string>('all');
   const [groupedItems, setGroupedItems] = useState<Map<string, CodexItem[]>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -105,7 +105,20 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
 
     // ✨ NUEVO: Filtrar por categoría
     if (categoryFilter !== 'all') {
-      filtered = filtered.filter(item => item.category === categoryFilter);
+      switch (categoryFilter) {
+        case 'item':
+          filtered = filtered.filter(item => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(item.tipo));
+          break;
+        case 'monitoreos':
+          filtered = filtered.filter(item => item.tipo === 'monitoreos' || (item.tipo === 'item' && (item as any).original_type === 'monitor'));
+          break;
+        case 'posts':
+          filtered = filtered.filter(item => item.tipo === 'post' || item.tipo === 'posts');
+          break;
+        case 'wiki':
+          filtered = filtered.filter(item => item.tipo === 'wiki' || item.subcategory);
+          break;
+      }
     }
 
     // ✨ NUEVO: Filtrar por subcategoría
@@ -457,7 +470,7 @@ const CodexSelector: React.FC<CodexSelectorProps> = ({
           </Box>
         )}
 
-        {categoryFilter === 'general' && (
+        {categoryFilter === 'item' && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
               Tipo de Archivo:

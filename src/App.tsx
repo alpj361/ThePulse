@@ -21,6 +21,7 @@ import Pricing from './pages/Pricing';
 import TestHashtagCard from './components/test/TestHashtagCard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useUserProfile } from './hooks/useUserProfile';
+import { useUserType } from './hooks/useUserType';
 import { Box, CircularProgress } from '@mui/material';
 import { SpreadsheetProvider } from './context/SpreadsheetContext';
 import EnhancedCodex from './pages/EnhancedCodex';
@@ -110,6 +111,37 @@ export const VerifiedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Componente para rutas que requieren usuario Admin o Alpha
+export const AdminAlphaRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const { isAdmin, isAlpha, loading: userTypeLoading } = useUserType();
+  
+  if (loading || userTypeLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <CircularProgress color="primary" size={48} />
+      </Box>
+    );
+  }
+  
+  // Si no hay usuario, redirigir a login
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Si no es admin ni alpha, redirigir a dashboard
+  if (!isAdmin && !isAlpha) {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return <>{children}</>;
+};
+
 export function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -167,11 +199,11 @@ function App() {
             </VerifiedRoute>
           } />
           <Route path="/recent" element={
-            <VerifiedRoute>
+            <AdminAlphaRoute>
               <Layout>
                 <RecentActivity />
               </Layout>
-            </VerifiedRoute>
+            </AdminAlphaRoute>
           } />
           <Route path="/sources" element={
             <VerifiedRoute>
@@ -242,11 +274,11 @@ function App() {
             </VerifiedRoute>
           } />
           <Route path="/projects" element={
-            <VerifiedRoute>
+            <AdminAlphaRoute>
               <Layout>
                 <Projects />
               </Layout>
-            </VerifiedRoute>
+            </AdminAlphaRoute>
           } />
 
           <Route path="/timeline-demo" element={

@@ -28,6 +28,38 @@ export interface ViztaChatMessage {
   executionTime?: number;
 }
 
+export interface ViztaCapturedItem {
+  id: string;
+  type?: string;
+  title?: string;
+  entity?: string | null;
+  city?: string | null;
+  department?: string | null;
+  description?: string | null;
+  discovery?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  source?: string | null;
+  source_url?: string | null;
+  start_date?: string | null;
+  duration_days?: number | null;
+  counter?: number | null;
+  confidence?: number | null;
+  tool?: string | null;
+  vizta_metadata?: Record<string, any>;
+}
+
+export interface ViztaTermSuggestion {
+  id: string;
+  term: string;
+  category?: string;
+  confidence?: number | null;
+  reason?: string | null;
+  research_focus?: string | null;
+  type?: string;
+  created_at?: string;
+}
+
 export interface ViztaChatResponse {
   success?: boolean;
   response?: string | {
@@ -51,6 +83,15 @@ export interface ViztaChatResponse {
   timestamp?: string;
   sources?: Array<{ title: string; url: string; }>;
   steps?: Array<{ step: string; description: string; }>;
+  capturedItems?: ViztaCapturedItem[];
+  termSuggestions?: ViztaTermSuggestion[];
+  tabs?: Array<{
+    id: string;
+    title: string;
+    type: string;
+    items?: any[];
+    terms?: any[];
+  }>;
   metadata?: {
     processingTime?: number;
     [key: string]: any;

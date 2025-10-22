@@ -2,14 +2,15 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Activity, BookOpen, Layers } from 'lucide-react';
 
-type Category = 'all' | 'general' | 'monitoring' | 'wiki';
+type Category = 'all' | 'item' | 'monitoreos' | 'posts' | 'wiki';
 
 interface CategoryFiltersProps {
   selected: Category;
   onSelect: (category: Category) => void;
   counts?: {
-    general: number;
-    monitoring: number;
+    item: number;
+    monitoreos: number;
+    posts: number;
     wiki: number;
   };
 }
@@ -17,8 +18,9 @@ interface CategoryFiltersProps {
 const CategoryFilters: React.FC<CategoryFiltersProps> = ({ selected, onSelect, counts }) => {
   const categories = [
     { id: 'all' as Category, label: 'Todos', icon: Layers },
-    { id: 'general' as Category, label: 'General', icon: FileText },
-    { id: 'monitoring' as Category, label: 'Monitoreo', icon: Activity },
+    { id: 'item' as Category, label: 'Items', icon: FileText },
+    { id: 'monitoreos' as Category, label: 'Monitoreos', icon: Activity },
+    { id: 'posts' as Category, label: 'Posts', icon: FileText },
     { id: 'wiki' as Category, label: 'Wiki', icon: BookOpen },
   ];
 

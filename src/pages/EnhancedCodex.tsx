@@ -607,7 +607,7 @@ export default function EnhancedCodex() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // ====== WIKI STATES ======
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'general' | 'monitoring' | 'wiki'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'item' | 'monitoreos' | 'posts' | 'wiki'>('all');
   const [wikiSubcategory, setWikiSubcategory] = useState<'person' | 'organization' | 'location' | 'event' | 'concept' | null>(null);
   const [wikiItems, setWikiItems] = useState<WikiItem[]>([]);
   const [showCreateWikiModal, setShowCreateWikiModal] = useState(false);
@@ -1089,9 +1089,29 @@ export default function EnhancedCodex() {
           item.etiquetas?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
           (item.is_group_parent && item.group_name?.toLowerCase().includes(searchQuery.toLowerCase())) // Search group names
         
+        // Aplicar filtro por categoría
+        let categoryMatch = true;
+        if (categoryFilter !== 'all') {
+          switch (categoryFilter) {
+            case 'item':
+              categoryMatch = ['documento', 'audio', 'video', 'enlace', 'nota'].includes(item.tipo);
+              break;
+            case 'monitoreos':
+              categoryMatch = item.tipo === 'monitoreos' || (item.tipo === 'item' && (item as any).original_type === 'monitor');
+              break;
+            case 'posts':
+              categoryMatch = item.tipo === 'post' || item.tipo === 'posts';
+              break;
+            case 'wiki':
+              categoryMatch = item.tipo === 'wiki' || item.subcategory;
+              break;
+          }
+        }
+        
+        // Aplicar filtro por tipo de archivo (solo cuando categoría es 'item')
         const typeMatch = selectedType === "all" || item.tipo === selectedType
         
-        return queryMatch && typeMatch
+        return queryMatch && categoryMatch && typeMatch
       })
 
     // Ocultar enlaces hijos en la grilla principal
@@ -1107,7 +1127,7 @@ export default function EnhancedCodex() {
     })
 
     setTopLevelItems(topLevel)
-  }, [codexItems, searchQuery, selectedType])
+  }, [codexItems, searchQuery, selectedType, categoryFilter])
 
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este elemento?')) return
@@ -2513,7 +2533,6 @@ export default function EnhancedCodex() {
     { label: "Audios", count: stats.audios, icon: Headphones, color: "bg-purple-500", type: "audio" },
     { label: "Videos", count: stats.videos, icon: Video, color: "bg-green-500", type: "video" },
     { label: "Enlaces", count: stats.enlaces, icon: Link, color: "bg-orange-500", type: "enlace" },
-    { label: "Monitoreos", count: stats.monitoreos || 0, icon: Search, color: "bg-cyan-500", type: "monitoreos" },
     { label: "Notas", count: stats.notas, icon: StickyNote, color: "bg-pink-500", type: "nota" },
   ]
 
@@ -2555,8 +2574,9 @@ export default function EnhancedCodex() {
               selected={categoryFilter}
               onSelect={setCategoryFilter}
               counts={{
-                general: codexItems.filter(i => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(i.tipo)).length,
-                monitoring: codexItems.filter(i => i.tipo === 'monitoreos' || (i.tipo === 'item' && (i as any).original_type === 'monitor')).length,
+                item: codexItems.filter(i => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(i.tipo)).length,
+                monitoreos: codexItems.filter(i => i.tipo === 'monitoreos' || (i.tipo === 'item' && (i as any).original_type === 'monitor')).length,
+                posts: codexItems.filter(i => i.tipo === 'post' || i.tipo === 'posts').length,
                 wiki: wikiItems.length
               }}
             />
@@ -2597,32 +2617,34 @@ export default function EnhancedCodex() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            {statsConfig.map((stat, index) => {
-              const IconComponent = stat.icon
-              return (
-                <Card
-                  key={index}
-                  className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
-                  onClick={() => setSelectedType(stat.type)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 mb-1">{stat.label}</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-3xl font-bold text-slate-900">{stat.count}</p>
+          {categoryFilter === 'item' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+              {statsConfig.map((stat, index) => {
+                const IconComponent = stat.icon
+                return (
+                  <Card
+                    key={index}
+                    className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                    onClick={() => setSelectedType(stat.type)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-600 mb-1">{stat.label}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-3xl font-bold text-slate-900">{stat.count}</p>
+                          </div>
+                        </div>
+                        <div className={`${stat.color} p-3 rounded-xl`}>
+                          <IconComponent className="h-6 w-6 text-white" />
                         </div>
                       </div>
-                      <div className={`${stat.color} p-3 rounded-xl`}>
-                        <IconComponent className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
 
           {/* Banner de Enlaces Pendientes */}
 
@@ -3538,20 +3560,21 @@ export default function EnhancedCodex() {
                 />
               </div>
               <div className="flex gap-3">
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="w-48 h-12 border-slate-200">
-                    <SelectValue placeholder="Tipo de fuente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los tipos</SelectItem>
-                    <SelectItem value="documento">Documentos</SelectItem>
-                    <SelectItem value="audio">Audios</SelectItem>
-                    <SelectItem value="video">Videos</SelectItem>
-                    <SelectItem value="enlace">Enlaces</SelectItem>
-                    <SelectItem value="monitoreos">Monitoreos</SelectItem>
-                    <SelectItem value="nota">Notas</SelectItem>
-                  </SelectContent>
-                </Select>
+                {categoryFilter === 'item' && (
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="w-48 h-12 border-slate-200">
+                      <SelectValue placeholder="Tipo de fuente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los tipos</SelectItem>
+                      <SelectItem value="documento">Documentos</SelectItem>
+                      <SelectItem value="audio">Audios</SelectItem>
+                      <SelectItem value="video">Videos</SelectItem>
+                      <SelectItem value="enlace">Enlaces</SelectItem>
+                      <SelectItem value="nota">Notas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-48 h-12 border-slate-200">
                     <SelectValue placeholder="Estado" />

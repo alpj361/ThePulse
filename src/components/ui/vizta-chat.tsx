@@ -21,7 +21,12 @@ import {
   Maximize2,
   Folder,
   Activity,
-  FileUp
+  FileUp,
+  Sparkles,
+  BookmarkPlus,
+  BookOpen,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -40,6 +45,24 @@ import { SkeletonLoader } from "./skeleton-loader";
 import { CopyButton } from "./copy-button";
 import CodexSelector from "./CodexSelector";  // ✨ NUEVO: Import CodexSelector
 import { useAuth } from '../../context/AuthContext';  // ✨ NUEVO: Import useAuth
+import ProjectSelectorDialog from "./ProjectSelectorDialog";
+import { supabase } from "../../services/supabase";
+import type { Project } from "../../types/projects";
+import type { ViztaCapturedItem, ViztaTermSuggestion } from "../../services/viztaChat";
+import CreateWikiModal from "../codex/wiki/CreateWikiModal";
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+type CapturedInsight = ViztaCapturedItem & {
+  messageId: string;
+  savedProjectId?: string;
+  savedProjectTitle?: string;
+};
+
+type TermInsight = ViztaTermSuggestion & {
+  messageId: string;
+  savedToWiki?: boolean;
+};
 
 // Types
 interface Message {
@@ -56,6 +79,8 @@ interface Message {
   feedbackScore?: number; // User's rating 1-5
   c1Response?: string; // For Thesys Generative UI
   hasUIComponents?: boolean; // Indicates if message has UI components
+  capturedItems?: CapturedInsight[];
+  termSuggestions?: TermInsight[];
 }
 
 // Components
@@ -331,10 +356,14 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
 interface AssistantMessageProps {
   message: Message;
   onFeedback?: (messageId: string, score: number) => void;
+  onRequestProjectSave?: (item: CapturedInsight) => void;
+  onSaveTermToWiki?: (term: TermInsight) => void;
+  capturedSaveStatus?: Record<string, SaveStatus>;
+  termSaveStatus?: Record<string, SaveStatus>;
 }
 
 const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>(
-  function AssistantMessage({ message, onFeedback }, ref) {
+  function AssistantMessage({ message, onFeedback, onRequestProjectSave, onSaveTermToWiki, capturedSaveStatus, termSaveStatus }, ref) {
     const [activeTab, setActiveTab] = React.useState("answer");
     const [isExpanded, setIsExpanded] = React.useState(true);
     const [showSources, setShowSources] = React.useState(false);
@@ -344,7 +373,9 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
     // Check if we have sources or steps
     const hasSources = message.sources && message.sources.length > 0;
     const hasSteps = message.steps && message.steps.length > 0;
-    const showTabs = hasSources || hasSteps;
+    const hasInsights = (message.capturedItems && message.capturedItems.length > 0) ||
+      (message.termSuggestions && message.termSuggestions.length > 0);
+    const showTabs = hasSources || hasSteps || hasInsights;
 
     const handleFeedback = async (score: number) => {
       if (!message.queryLogId || feedbackGiven) return;
@@ -418,6 +449,12 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
                 <TabsTrigger value="steps" className="text-xs gap-1.5">
                   <BarChart3 className="h-3 w-3" />
                   Pasos
+                </TabsTrigger>
+              )}
+              {hasInsights && (
+                <TabsTrigger value="insights" className="text-xs gap-1.5">
+                  <Sparkles className="h-3 w-3" />
+                  Hallazgos
                 </TabsTrigger>
               )}
             </TabsList>
@@ -544,6 +581,157 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
                     </div>
                   </motion.div>
                 ))}
+              </TabsContent>
+            )}
+
+            {/* Insights Tab */}
+            {hasInsights && (
+              <TabsContent value="insights" className="space-y-4">
+                {message.capturedItems && message.capturedItems.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <BookmarkPlus className="h-3 w-3" />
+                      <span>Datos detectados</span>
+                    </div>
+                    {message.capturedItems.map((item) => {
+                      const status = capturedSaveStatus?.[item.id] || (item.savedProjectId ? 'saved' as SaveStatus : 'idle');
+                      const amountText = item.amount !== undefined && item.amount !== null
+                        ? `${item.amount.toLocaleString()}${item.currency ? ` ${item.currency}` : ''}`
+                        : null;
+                      const geoText = [item.city, item.department].filter(Boolean).join(', ');
+                      return (
+                        <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <h4 className="text-base font-semibold text-gray-900">
+                                {item.title || item.discovery || item.description || 'Dato detectado'}
+                              </h4>
+                              {item.entity && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium text-gray-700">Entidad:</span> {item.entity}
+                                </div>
+                              )}
+                              {amountText && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Monto:</span> {amountText}
+                                </div>
+                              )}
+                              {geoText && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Ubicación:</span> {geoText}
+                                </div>
+                              )}
+                              {item.discovery && (
+                                <p className="text-sm text-gray-700 leading-relaxed">{item.discovery}</p>
+                              )}
+                              {item.description && item.description !== item.discovery && (
+                                <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                              )}
+                              {item.source_url && (
+                                <a
+                                  href={item.source_url}
+                                  className="text-xs text-[#1e40af] hover:underline"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Ver fuente
+                                </a>
+                              )}
+                              {item.confidence !== undefined && item.confidence !== null && (
+                                <div className="text-xs text-gray-500">
+                                  Confianza estimada: {(item.confidence * 100).toFixed(0)}%
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onRequestProjectSave?.(item)}
+                                disabled={status === 'saving' || status === 'saved'}
+                              >
+                                {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en proyecto'}
+                              </Button>
+                              {status === 'error' && (
+                                <div className="flex items-center gap-1 text-xs text-red-600">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Error al guardar
+                                </div>
+                              )}
+                              {status === 'saved' && (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <Check className="h-3 w-3" />
+                                  {item.savedProjectTitle ? `En ${item.savedProjectTitle}` : 'Guardado'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {message.termSuggestions && message.termSuggestions.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <BookOpen className="h-3 w-3" />
+                      <span>Términos sugeridos</span>
+                    </div>
+                    {message.termSuggestions.map((term) => {
+                      const status = termSaveStatus?.[term.id] || (term.savedToWiki ? 'saved' as SaveStatus : 'idle');
+                      return (
+                        <div key={term.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <h4 className="text-base font-semibold text-gray-900">{term.term}</h4>
+                              {term.category && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Categoría:</span> {term.category}
+                                </div>
+                              )}
+                              {term.confidence !== undefined && term.confidence !== null && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Confianza:</span> {(term.confidence * 100).toFixed(0)}%
+                                </div>
+                              )}
+                              {term.reason && (
+                                <p className="text-sm text-gray-700 leading-relaxed">{term.reason}</p>
+                              )}
+                              {term.research_focus && (
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                  <span className="font-medium text-gray-600">Investigar:</span> {term.research_focus}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onSaveTermToWiki?.(term)}
+                                disabled={status === 'saving' || status === 'saved'}
+                              >
+                                {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en wiki'}
+                              </Button>
+                              {status === 'error' && (
+                                <div className="flex items-center gap-1 text-xs text-red-600">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Error al guardar
+                                </div>
+                              )}
+                              {status === 'saved' && (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <Check className="h-3 w-3" />
+                                  Guardado en la wiki
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </TabsContent>
             )}
           </Tabs>
@@ -679,7 +867,7 @@ AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
 const ViztaChatUI = () => {
-  const { user } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado
+  const { user, session } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -698,6 +886,12 @@ const ViztaChatUI = () => {
     }
     return 440;
   });
+  const [capturedSaveStatus, setCapturedSaveStatus] = React.useState<Record<string, SaveStatus>>({});
+  const [termSaveStatus, setTermSaveStatus] = React.useState<Record<string, SaveStatus>>({});
+  const [isProjectSelectorOpen, setIsProjectSelectorOpen] = React.useState(false);
+  const [pendingCapturedItem, setPendingCapturedItem] = React.useState<CapturedInsight | null>(null);
+  const [isWikiModalOpen, setIsWikiModalOpen] = React.useState(false);
+  const [pendingTerm, setPendingTerm] = React.useState<TermInsight | null>(null);
   
   // ✨ NUEVO: Estado para funcionalidad @
   const [showMentions, setShowMentions] = React.useState(false);
@@ -824,6 +1018,88 @@ const ViztaChatUI = () => {
     }
   };
 
+  const handleRequestProjectSave = React.useCallback((item: CapturedInsight) => {
+    if (!user) {
+      console.warn('Debes iniciar sesión para guardar hallazgos.');
+      return;
+    }
+    setPendingCapturedItem(item);
+    setIsProjectSelectorOpen(true);
+  }, [user]);
+
+  const handleProjectSelected = React.useCallback(async (project: Project) => {
+    if (!pendingCapturedItem || !session?.access_token) {
+      setIsProjectSelectorOpen(false);
+      return;
+    }
+
+    const itemId = pendingCapturedItem.id;
+    setCapturedSaveStatus(prev => ({ ...prev, [itemId]: 'saving' }));
+
+    try {
+      const payload: Record<string, any> = {
+        entity: pendingCapturedItem.entity ?? undefined,
+        city: pendingCapturedItem.city ?? undefined,
+        department: pendingCapturedItem.department ?? undefined,
+        description: pendingCapturedItem.description || pendingCapturedItem.discovery || pendingCapturedItem.title || 'Dato detectado por Vizta',
+        discovery: pendingCapturedItem.discovery || pendingCapturedItem.title || pendingCapturedItem.description || null,
+        amount: pendingCapturedItem.amount ?? undefined,
+        currency: pendingCapturedItem.currency ?? undefined,
+        source: pendingCapturedItem.source_url ?? undefined,
+        start_date: pendingCapturedItem.start_date ?? undefined,
+        duration_days: pendingCapturedItem.duration_days ?? undefined,
+        counter: pendingCapturedItem.counter ?? undefined
+      };
+
+      const { createCapturadoCard } = await import('../../services/capturados');
+      await createCapturadoCard(project.id, payload, session.access_token);
+
+      setCapturedSaveStatus(prev => ({ ...prev, [itemId]: 'saved' }));
+      setMessages(prev => prev.map(msg => {
+        if (msg.id !== pendingCapturedItem.messageId) return msg;
+        const updated = msg.capturedItems?.map(ci =>
+          ci.id === pendingCapturedItem.id
+            ? { ...ci, savedProjectId: project.id, savedProjectTitle: project.title }
+            : ci
+        ) as CapturedInsight[] | undefined;
+        return { ...msg, capturedItems: updated };
+      }));
+    } catch (saveError) {
+      console.error('Error guardando en proyecto:', saveError);
+      setCapturedSaveStatus(prev => ({ ...prev, [itemId]: 'error' }));
+    } finally {
+      setIsProjectSelectorOpen(false);
+      setPendingCapturedItem(null);
+    }
+  }, [pendingCapturedItem, session?.access_token, setMessages]);
+
+  const mapTermCategoryToKnowledge = React.useCallback((category?: string) => {
+    switch ((category || '').toLowerCase()) {
+      case 'political':
+        return 'political_context';
+      case 'social':
+        return 'social_context';
+      case 'economic':
+        return 'economic_context';
+      case 'cultural':
+        return 'cultural_context';
+      case 'technical':
+        return 'technical_term';
+      default:
+        return 'concept_definition';
+    }
+  }, []);
+
+  // Open Wiki modal prefilled from term
+  const handleSaveTermToWiki = React.useCallback((term: TermInsight) => {
+    if (!user) {
+      console.warn('Debes iniciar sesión para crear un item de Wiki.');
+      return;
+    }
+    setPendingTerm(term);
+    setIsWikiModalOpen(true);
+  }, [user]);
+
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -916,8 +1192,38 @@ const ViztaChatUI = () => {
           }
         }
         
+        const assistantId = (Date.now() + 1).toString();
+
+        const capturedTabItems = Array.isArray(response.capturedItems)
+          ? response.capturedItems
+          : Array.isArray(response.tabs)
+            ? (response.tabs.find((tab: any) => tab.type === 'captured')?.items || [])
+            : [];
+
+        const termTabItems = Array.isArray(response.termSuggestions)
+          ? response.termSuggestions
+          : Array.isArray(response.tabs)
+            ? (response.tabs.find((tab: any) => tab.type === 'captured')?.terms || [])
+            : [];
+
+        const capturedItems = capturedTabItems
+          .filter(Boolean)
+          .map((item: ViztaCapturedItem, idx: number) => ({
+            ...item,
+            id: item.id || `vizta_captured_${assistantId}_${idx}`,
+            messageId: assistantId
+          }));
+
+        const termSuggestions = termTabItems
+          .filter(Boolean)
+          .map((term: ViztaTermSuggestion, idx: number) => ({
+            ...term,
+            id: term.id || `vizta_term_${assistantId}_${idx}`,
+            messageId: assistantId
+          }));
+
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantId,
           content: messageContent,
           sender: "assistant",
           timestamp: new Date(messageTimestamp),
@@ -934,10 +1240,35 @@ const ViztaChatUI = () => {
             : undefined,
           hasUIComponents: response.response && typeof response.response === 'object' && 'hasUIComponents' in response.response
             ? response.response.hasUIComponents
-            : false
+            : false,
+          capturedItems: capturedItems.length > 0 ? capturedItems as CapturedInsight[] : undefined,
+          termSuggestions: termSuggestions.length > 0 ? termSuggestions as TermInsight[] : undefined
         };
-        
-        
+
+        if (capturedItems.length > 0) {
+          setCapturedSaveStatus((prev) => {
+            const next = { ...prev };
+            capturedItems.forEach((item) => {
+              if (!(item.id in next)) {
+                next[item.id] = 'idle';
+              }
+            });
+            return next;
+          });
+        }
+
+        if (termSuggestions.length > 0) {
+          setTermSaveStatus((prev) => {
+            const next = { ...prev };
+            termSuggestions.forEach((term) => {
+              if (!(term.id in next)) {
+                next[term.id] = 'idle';
+              }
+            });
+            return next;
+          });
+        }
+
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
         throw new Error(response.error || 'Error en la respuesta');
@@ -1105,7 +1436,14 @@ const ViztaChatUI = () => {
                     </Avatar>
                   </motion.div>
                 ) : (
-                  <AssistantMessage key={message.id} message={message} />
+                  <AssistantMessage
+                    key={message.id}
+                    message={message}
+                    onRequestProjectSave={handleRequestProjectSave}
+                    onSaveTermToWiki={handleSaveTermToWiki}
+                    capturedSaveStatus={capturedSaveStatus}
+                    termSaveStatus={termSaveStatus}
+                  />
                 )
               ))}
             </AnimatePresence>
@@ -1419,8 +1757,42 @@ const ViztaChatUI = () => {
             </Button>
           </div>
         </div>
-      </ViztaChatContent>
-    </ViztaChat>
+        </ViztaChatContent>
+        <ProjectSelectorDialog
+          open={isProjectSelectorOpen}
+          onClose={() => {
+            setIsProjectSelectorOpen(false);
+            setPendingCapturedItem(null);
+          }}
+          onSelect={handleProjectSelected}
+          title="Selecciona un proyecto"
+        />
+      </ViztaChat>
+      {/* Create Wiki Modal */}
+      <CreateWikiModal
+        open={isWikiModalOpen}
+        onClose={() => { setIsWikiModalOpen(false); setPendingTerm(null); }}
+        userId={user?.id || ''}
+        onSuccess={() => {
+          if (!pendingTerm) return;
+          const termId = pendingTerm.id;
+          setTermSaveStatus(prev => ({ ...prev, [termId]: 'saved' }));
+          setMessages(prev => prev.map(msg => {
+            if (msg.id !== pendingTerm.messageId) return msg;
+            const updated = msg.termSuggestions?.map(ts =>
+              ts.id === termId ? { ...ts, savedToWiki: true } : ts
+            ) as TermInsight[] | undefined;
+            return { ...msg, termSuggestions: updated };
+          }));
+          setIsWikiModalOpen(false);
+          setPendingTerm(null);
+        }}
+        initialName={pendingTerm?.term}
+        initialType={(pendingTerm?.category && ['person','organization','location','event','concept'].includes(pendingTerm.category)) ? (pendingTerm!.category as any) : 'concept'}
+        initialDescription={pendingTerm?.reason || pendingTerm?.research_focus || ''}
+        initialTags={pendingTerm?.category ? [pendingTerm.category, 'vizta_chat'] : ['vizta_chat']}
+        initialMetadata={{ source: 'vizta_chat', confidence: pendingTerm?.confidence ?? null }}
+      />
     </ThemeProvider>
   );
 };

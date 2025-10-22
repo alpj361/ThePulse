@@ -14,18 +14,34 @@ interface CreateWikiModalProps {
   onClose: () => void;
   userId: string;
   onSuccess?: () => void;
+  // Prefill options
+  initialName?: string;
+  initialType?: 'person' | 'organization' | 'location' | 'event' | 'concept';
+  initialDescription?: string;
+  initialTags?: string[];
+  initialMetadata?: Record<string, any>;
 }
 
 type WikiType = 'person' | 'organization' | 'location' | 'event' | 'concept';
 
-const CreateWikiModal: React.FC<CreateWikiModalProps> = ({ open, onClose, userId, onSuccess }) => {
-  const [selectedType, setSelectedType] = useState<WikiType>('person');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
+  open,
+  onClose,
+  userId,
+  onSuccess,
+  initialName,
+  initialType,
+  initialDescription,
+  initialTags,
+  initialMetadata
+}) => {
+  const [selectedType, setSelectedType] = useState<WikiType>(initialType || 'person');
+  const [name, setName] = useState(initialName || '');
+  const [description, setDescription] = useState(initialDescription || '');
   const [relevance, setRelevance] = useState(50);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(initialTags || []);
   const [tagInput, setTagInput] = useState('');
-  const [metadata, setMetadata] = useState<Record<string, any>>({});
+  const [metadata, setMetadata] = useState<Record<string, any>>(initialMetadata || {});
   const [saving, setSaving] = useState(false);
 
   const types = [
@@ -42,6 +58,19 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({ open, onClose, userId
       setTagInput('');
     }
   };
+
+  // Reset/prefill state when modal opens
+  React.useEffect(() => {
+    if (open) {
+      setSelectedType(initialType || 'person');
+      setName(initialName || '');
+      setDescription(initialDescription || '');
+      setTags(initialTags || []);
+      setMetadata(initialMetadata || {});
+      setRelevance(50);
+      setTagInput('');
+    }
+  }, [open, initialName, initialType, initialDescription, initialTags, initialMetadata]);
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
