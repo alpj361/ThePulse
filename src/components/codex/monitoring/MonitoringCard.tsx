@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import {
-  MoreVertical,
-  ExternalLink,
-  Eye,
-  Edit,
+import { 
+  MoreVertical, 
+  ExternalLink, 
+  Eye, 
+  Edit, 
   Trash2,
   Calendar,
   Folder,
@@ -46,6 +46,7 @@ interface CodexItem {
   content?: string;
   recent_scrape?: any;
   recent_scrape_id?: string;
+  url?: string;
 }
 
 interface MonitoringCardProps {
@@ -74,16 +75,53 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
   const [loadingTweets, setLoadingTweets] = useState(false);
 
   // Determinar la plataforma del contenido
-  const getPlatform = (): 'x' | 'instagram' | 'other' => {
+  const getPlatform = (): 'x' | 'instagram' | 'facebook' | 'tiktok' | 'youtube' | 'other' => {
     // Verificar recent_scrapes (puede venir como recent_scrape o recent_scrapes)
     const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
     
+    // 1. Verificar herramienta en recent_scrapes
     if (scrapeData?.herramienta) {
       if (scrapeData.herramienta === 'instagram') return 'instagram';
       if (scrapeData.herramienta === 'twitter' || scrapeData.herramienta === 'x') return 'x';
     }
+    
+    // 2. Verificar etiquetas
     if (item.etiquetas?.includes('instagram')) return 'instagram';
     if (item.etiquetas?.includes('twitter') || item.etiquetas?.includes('x')) return 'x';
+    if (item.etiquetas?.includes('facebook')) return 'facebook';
+    if (item.etiquetas?.includes('tiktok')) return 'tiktok';
+    if (item.etiquetas?.includes('youtube')) return 'youtube';
+    
+    // 3. Analizar URL si existe
+    if (item.url) {
+      if (item.url.includes('instagram.com')) return 'instagram';
+      if (item.url.includes('twitter.com') || item.url.includes('x.com')) return 'x';
+      if (item.url.includes('facebook.com')) return 'facebook';
+      if (item.url.includes('tiktok.com')) return 'tiktok';
+      if (item.url.includes('youtube.com') || item.url.includes('youtu.be')) return 'youtube';
+    }
+    
+    // 4. Analizar contenido del post para detectar patrones de redes sociales
+    const content = item.content || item.descripcion || item.titulo || '';
+    const contentLower = content.toLowerCase();
+    
+    // Patrones específicos de cada red social
+    if (contentLower.includes('@') && (contentLower.includes('retweet') || contentLower.includes('rt'))) return 'x';
+    if (contentLower.includes('#') && contentLower.includes('story')) return 'instagram';
+    if (contentLower.includes('reel') || contentLower.includes('ig story')) return 'instagram';
+    if (contentLower.includes('facebook') || contentLower.includes('fb.com')) return 'facebook';
+    if (contentLower.includes('tiktok') || contentLower.includes('douyin')) return 'tiktok';
+    if (contentLower.includes('youtube') || contentLower.includes('youtu.be')) return 'youtube';
+    
+    // 5. Verificar source_url si existe
+    if (item.source_url) {
+      if (item.source_url.includes('instagram.com')) return 'instagram';
+      if (item.source_url.includes('twitter.com') || item.source_url.includes('x.com')) return 'x';
+      if (item.source_url.includes('facebook.com')) return 'facebook';
+      if (item.source_url.includes('tiktok.com')) return 'tiktok';
+      if (item.source_url.includes('youtube.com') || item.source_url.includes('youtu.be')) return 'youtube';
+    }
+    
     return 'other';
   };
 
@@ -91,13 +129,19 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
 
   // Obtener logo de plataforma
   const PlatformLogo = () => {
-    const iconClass = platform === 'x' || platform === 'instagram' ? 'h-5 w-5 text-white' : 'h-5 w-5 text-slate-500';
+    const iconClass = platform !== 'other' ? 'h-5 w-5 text-white' : 'h-5 w-5 text-slate-500';
     
     switch (platform) {
       case 'x':
         return <XLogo className={iconClass} />;
       case 'instagram':
         return <InstagramLogo className={iconClass} />;
+      case 'facebook':
+        return <span className="text-white text-lg">📘</span>;
+      case 'tiktok':
+        return <span className="text-white text-lg">🎵</span>;
+      case 'youtube':
+        return <span className="text-white text-lg">📺</span>;
       default:
         return <ExternalLink className={iconClass} />;
     }
@@ -225,6 +269,9 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
             <div className={`p-2.5 rounded-xl flex-shrink-0 mt-1 ${
               platform === 'x' ? 'bg-slate-900' :
               platform === 'instagram' ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400' :
+              platform === 'facebook' ? 'bg-blue-600' :
+              platform === 'tiktok' ? 'bg-black' :
+              platform === 'youtube' ? 'bg-red-600' :
               'bg-slate-100'
             }`}>
               <PlatformLogo />
@@ -234,27 +281,7 @@ const MonitoringCard: React.FC<MonitoringCardProps> = ({
                 {item.titulo}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs font-medium ${
-                    platform === 'x' ? 'bg-slate-900 text-white hover:bg-slate-800' :
-                    platform === 'instagram' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600' :
-                    'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {isCollection ? `${tweetCount} posts` : 'Post individual'}
-                </Badge>
-                {platform !== 'other' && (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs capitalize border-2 ${
-                      platform === 'x' ? 'border-slate-900 text-slate-900' :
-                      'border-pink-500 text-pink-600'
-                    }`}
-                  >
-                    {platform === 'x' ? '𝕏 Twitter' : '📷 Instagram'}
-                  </Badge>
-                )}
+                {/* Solo el icono, sin badge */}
               </div>
             </div>
           </div>

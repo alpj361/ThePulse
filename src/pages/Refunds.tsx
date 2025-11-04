@@ -8,8 +8,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Alert,
 } from '@mui/material';
-import { ExpandMore, ArrowBack } from '@mui/icons-material';
+import { ExpandMore, ArrowBack, CheckCircle } from '@mui/icons-material';
 import Logo from '../components/common/Logo';
 
 export default function Refunds() {
@@ -20,46 +21,115 @@ export default function Refunds() {
       title: '1. Alcance',
       content: (
         <Typography paragraph color="#666">
-          Esta política aplica a suscripciones pagadas del plan Alpha "Supporter/Soporte". 
-          Los pagos son procesados por Paddle (Merchant of Record).
+          Esta política aplica a todas las compras realizadas en Pulse Journal, incluyendo el Plan Soporte 
+          y la compra de créditos adicionales. Los pagos son procesados por Paddle (Merchant of Record).
         </Typography>
       ),
     },
     {
-      title: '2. Fase experimental',
-      content: (
-        <Typography paragraph color="#666">
-          Debido a la naturaleza experimental del proyecto y a que el acceso Alpha es principalmente 
-          para pruebas y soporte al desarrollo, <strong>no se ofrecen reembolsos durante esta fase</strong>.
-        </Typography>
-      ),
-    },
-    {
-      title: '3. Cancelaciones',
+      title: '2. Plazo de Garantía - 14 Días',
       content: (
         <Box>
           <Typography paragraph color="#666">
-            La cancelación se gestiona a través de Paddle y surte efecto al final del ciclo 
-            de facturación vigente. Podrás seguir usando el servicio hasta el final del período que ya pagaste.
+            El Usuario tiene derecho a solicitar reembolso total dentro de los primeros <strong>catorce (14) días calendario</strong> desde 
+            la fecha de compra inicial, siempre que:
+          </Typography>
+          <Box sx={{ pl: 2, mt: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
+              <CheckCircle sx={{ color: '#3b82f6', fontSize: 20, mt: 0.3 }} />
+              <Typography variant="body2" color="#666">
+                Sea la primera adquisición del Usuario en la herramienta específica
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
+              <CheckCircle sx={{ color: '#3b82f6', fontSize: 20, mt: 0.3 }} />
+              <Typography variant="body2" color="#666">
+                La solicitud se presente dentro del plazo de 14 días establecido
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <CheckCircle sx={{ color: '#3b82f6', fontSize: 20, mt: 0.3 }} />
+              <Typography variant="body2" color="#666">
+                No exista violación a los Términos y Condiciones por parte del Usuario
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      title: '3. Procedimiento de Solicitud',
+      content: (
+        <Box>
+          <Typography paragraph color="#666">
+            Las solicitudes de reembolso deben dirigirse a{' '}
+            <a href="mailto:contacto@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+              contacto@standatpd.com
+            </a>
+            , incluyendo la siguiente información:
+          </Typography>
+          <Box sx={{ pl: 2, mt: 2 }}>
+            <Typography variant="body2" color="#666" sx={{ mb: 1 }}>
+              • Nombre del Usuario y correo electrónico registrado
+            </Typography>
+            <Typography variant="body2" color="#666" sx={{ mb: 1 }}>
+              • Fecha de compra
+            </Typography>
+            <Typography variant="body2" color="#666" sx={{ mb: 1 }}>
+              • Herramienta o servicio contratado (Plan Soporte o Créditos)
+            </Typography>
+            <Typography variant="body2" color="#666">
+              • Motivo de la solicitud
+            </Typography>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      title: '4. Procesamiento del Reembolso',
+      content: (
+        <Typography paragraph color="#666">
+          Los reembolsos autorizados se procesan a través de Paddle en un plazo de <strong>cinco (5) a diez (10) días hábiles</strong>. 
+          El tiempo puede variar según el método de pago utilizado.
+        </Typography>
+      ),
+    },
+    {
+      title: '5. Exclusión de Reembolsos',
+      content: (
+        <Box>
+          <Typography paragraph color="#666">
+            Transcurrido el plazo de catorce (14) días desde la compra, <strong>no procederán reembolsos</strong>, 
+            salvo disposición legal en contrario o decisión discrecional de StandAtPD.
+          </Typography>
+          <Typography variant="body2" color="#666" sx={{ mt: 2 }}>
+            <strong>Nota:</strong> Los créditos comprados no son reembolsables después del período de 14 días, 
+            pero tampoco expiran y permanecen disponibles en tu cuenta.
           </Typography>
         </Box>
       ),
     },
     {
-      title: '4. Consideraciones legales',
+      title: '6. Cancelaciones de Suscripción',
       content: (
-        <Typography paragraph color="#666">
-          Si la legislación aplicable requiere reembolsos en circunstancias específicas, 
-          evaluaremos cada situación de manera individual a través de Paddle.
-        </Typography>
+        <Box>
+          <Typography paragraph color="#666">
+            La cancelación del Plan Soporte se gestiona a través de Paddle y surte efecto al final del ciclo 
+            de facturación vigente. Podrás seguir usando el servicio hasta el final del período que ya pagaste.
+          </Typography>
+          <Typography variant="body2" color="#666" sx={{ mt: 2 }}>
+            La cancelación no genera reembolso del período en curso, pero los 50 créditos mensuales incluidos 
+            permanecerán disponibles en tu cuenta.
+          </Typography>
+        </Box>
       ),
     },
     {
-      title: '5. Disputas de pago',
+      title: '7. Disputas de Pago',
       content: (
         <Typography paragraph color="#666">
           Las disputas y contracargos se tramitan conforme a los procedimientos de Paddle 
-          y de los emisores de pago correspondientes.
+          y de los emisores de pago correspondientes. Podemos solicitar información adicional para su evaluación.
         </Typography>
       ),
     },
@@ -106,9 +176,17 @@ export default function Refunds() {
             Política de Reembolsos
           </Typography>
           <Typography variant="body1" color="#666">
-            Versión Alpha · Última actualización: 18 de octubre de 2025
+            Última actualización: Noviembre 2025
           </Typography>
         </Box>
+
+        {/* Alert destacado */}
+        <Alert severity="info" sx={{ mb: 4 }}>
+          <Typography variant="body2">
+            <strong>Garantía de 14 días:</strong> Ofrecemos reembolso completo dentro de los primeros 14 días 
+            calendario desde tu compra inicial.
+          </Typography>
+        </Alert>
 
         <Box sx={{ bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
           {sections.map((section, index) => (
@@ -140,21 +218,30 @@ export default function Refunds() {
           ))}
         </Box>
 
-        <Box sx={{ mt: 6, p: 4, bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+        {/* Recordatorio importante */}
+        <Box sx={{ mt: 6, p: 4, bgcolor: '#fff3cd', borderRadius: 2, border: '1px solid #ffc107' }}>
           <Typography variant="h6" fontWeight="600" color="#1a1a1a" gutterBottom>
-            Gracias por apoyar Pulse Journal
+            Recordatorio Importante
+          </Typography>
+          <Typography variant="body2" color="#666" paragraph>
+            • Los reembolsos solo están disponibles dentro de los primeros <strong>14 días</strong> de tu compra inicial
+          </Typography>
+          <Typography variant="body2" color="#666" paragraph>
+            • Los créditos no expiran y permanecen en tu cuenta incluso si cancelas tu suscripción
           </Typography>
           <Typography variant="body2" color="#666">
-            Tu aporte como "Supporter" ayuda al desarrollo continuo del proyecto. 
-            Reconoces que el servicio está en fase experimental y puede presentar inestabilidades.
+            • Para solicitar un reembolso, contáctanos a{' '}
+            <a href="mailto:contacto@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+              contacto@standatpd.com
+            </a>
           </Typography>
         </Box>
 
         <Box sx={{ mt: 6, textAlign: 'center' }}>
           <Typography variant="body2" color="#999">
             ¿Preguntas? Contáctanos en{' '}
-            <a href="mailto:soporte@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
-              soporte@standatpd.com
+            <a href="mailto:contacto@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+              contacto@standatpd.com
             </a>
           </Typography>
         </Box>
@@ -173,7 +260,7 @@ export default function Refunds() {
       >
         <Container maxWidth="lg">
           <Typography variant="body2" color="#999" textAlign="center">
-            © {new Date().getFullYear()} Pulse Journal · Todos los derechos reservados
+            © {new Date().getFullYear()} StandAtPD · Todos los derechos reservados
           </Typography>
         </Container>
       </Box>

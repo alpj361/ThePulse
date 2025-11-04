@@ -21,8 +21,8 @@ export default function Privacy() {
       content: (
         <Box>
           <Typography paragraph color="#666">
-            <strong>Proyecto:</strong> Stand At Platform Development<br />
-            <strong>Contacto:</strong> soporte@standatpd.com<br />
+            <strong>Entidad Legal:</strong> StandAtPD (Stand At Platform Development)<br />
+            <strong>Contacto:</strong> contacto@standatpd.com<br />
             <strong>Ámbito:</strong> Centroamérica, con foco en Guatemala
           </Typography>
         </Box>
@@ -102,7 +102,7 @@ export default function Privacy() {
       content: (
         <Typography paragraph color="#666">
           Tienes derecho a acceso, rectificación, eliminación, oposición y portabilidad. 
-          Solicitudes: soporte@standatpd.com
+          Solicitudes: contacto@standatpd.com
         </Typography>
       ),
     },
@@ -195,8 +195,8 @@ export default function Privacy() {
         <Box sx={{ mt: 6, textAlign: 'center' }}>
           <Typography variant="body2" color="#999">
             ¿Preguntas? Contáctanos en{' '}
-            <a href="mailto:soporte@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
-              soporte@standatpd.com
+            <a href="mailto:contacto@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
+              contacto@standatpd.com
             </a>
           </Typography>
         </Box>
@@ -215,7 +215,7 @@ export default function Privacy() {
       >
         <Container maxWidth="lg">
           <Typography variant="body2" color="#999" textAlign="center">
-            © {new Date().getFullYear()} Pulse Journal · Todos los derechos reservados
+            © {new Date().getFullYear()} StandAtPD · Todos los derechos reservados
           </Typography>
         </Container>
       </Box>

@@ -397,13 +397,19 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
           {isLoading ? <p className="text-center p-4 text-slate-500">Cargando elementos...</p> : (
             <div className="space-y-2">
               {children.length > 0 ? children.map(child => {
-                const IconComponent = getTypeIcon(child.tipo);
+                const IconComponent = getTypeIcon(child.tipo, child);
                 const hasAudioTranscription = !!child.audio_transcription;
                 const hasTextTranscription = !!(child as any).transcripcion;
                 return (
                   <div key={child.id} className="flex items-center justify-between p-2 pl-4 rounded-md bg-white hover:bg-slate-100 border border-slate-200">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <IconComponent className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                      {(() => {
+                        const platform = getSocialPlatform(child);
+                        if (platform !== 'other') {
+                          return <IconComponent />;
+                        }
+                        return <IconComponent className="h-5 w-5 text-slate-500 flex-shrink-0" />;
+                      })()}
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-slate-700 truncate block" title={child.titulo}>{child.titulo}</span>
                         {(hasAudioTranscription || hasTextTranscription) && (
@@ -439,6 +445,53 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
       )}
     </Card>
   );
+};
+
+// Función para detectar la plataforma de redes sociales
+const getSocialPlatform = (item: CodexItem): 'x' | 'instagram' | 'facebook' | 'tiktok' | 'youtube' | 'other' => {
+  // 1. Verificar recent_scrapes
+  const scrapeData = (item as any).recent_scrapes || item.recent_scrape;
+  if (scrapeData?.herramienta) {
+    if (scrapeData.herramienta === 'instagram') return 'instagram';
+    if (scrapeData.herramienta === 'twitter' || scrapeData.herramienta === 'x') return 'x';
+  }
+  
+  // 2. Verificar etiquetas
+  if (item.etiquetas?.includes('instagram')) return 'instagram';
+  if (item.etiquetas?.includes('twitter') || item.etiquetas?.includes('x')) return 'x';
+  if (item.etiquetas?.includes('facebook')) return 'facebook';
+  if (item.etiquetas?.includes('tiktok')) return 'tiktok';
+  if (item.etiquetas?.includes('youtube')) return 'youtube';
+  
+  // 3. Analizar URL
+  if (item.url) {
+    if (item.url.includes('instagram.com')) return 'instagram';
+    if (item.url.includes('twitter.com') || item.url.includes('x.com')) return 'x';
+    if (item.url.includes('facebook.com')) return 'facebook';
+    if (item.url.includes('tiktok.com')) return 'tiktok';
+    if (item.url.includes('youtube.com') || item.url.includes('youtu.be')) return 'youtube';
+  }
+  
+  // 4. Analizar contenido
+  const content = item.content || item.descripcion || item.titulo || '';
+  const contentLower = content.toLowerCase();
+  
+  if (contentLower.includes('@') && (contentLower.includes('retweet') || contentLower.includes('rt'))) return 'x';
+  if (contentLower.includes('reel') || contentLower.includes('ig story')) return 'instagram';
+  if (contentLower.includes('facebook') || contentLower.includes('fb.com')) return 'facebook';
+  if (contentLower.includes('tiktok') || contentLower.includes('douyin')) return 'tiktok';
+  if (contentLower.includes('youtube') || contentLower.includes('youtu.be')) return 'youtube';
+  
+  // 5. Verificar source_url
+  if (item.source_url) {
+    if (item.source_url.includes('instagram.com')) return 'instagram';
+    if (item.source_url.includes('twitter.com') || item.source_url.includes('x.com')) return 'x';
+    if (item.source_url.includes('facebook.com')) return 'facebook';
+    if (item.source_url.includes('tiktok.com')) return 'tiktok';
+    if (item.source_url.includes('youtube.com') || item.source_url.includes('youtu.be')) return 'youtube';
+  }
+  
+  return 'other';
 };
 
 export default function EnhancedCodex() {
@@ -1035,7 +1088,48 @@ export default function EnhancedCodex() {
     }
   }
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string, item?: CodexItem) => {
+    // Si tenemos el item, detectar la red social
+    if (item) {
+      const platform = getSocialPlatform(item);
+      if (platform !== 'other') {
+        // Retornar componentes de redes sociales
+        switch (platform) {
+          case 'x':
+            return () => (
+              <div className="w-5 h-5 bg-slate-900 rounded flex items-center justify-center">
+                <span className="text-white text-xs font-bold">𝕏</span>
+              </div>
+            );
+          case 'instagram':
+            return () => (
+              <div className="w-5 h-5 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded flex items-center justify-center">
+                <span className="text-white text-xs">📷</span>
+              </div>
+            );
+          case 'facebook':
+            return () => (
+              <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
+                <span className="text-white text-xs">📘</span>
+              </div>
+            );
+          case 'tiktok':
+            return () => (
+              <div className="w-5 h-5 bg-black rounded flex items-center justify-center">
+                <span className="text-white text-xs">🎵</span>
+              </div>
+            );
+          case 'youtube':
+            return () => (
+              <div className="w-5 h-5 bg-red-600 rounded flex items-center justify-center">
+                <span className="text-white text-xs">📺</span>
+              </div>
+            );
+        }
+      }
+    }
+    
+    // Fallback a iconos por tipo
     switch (type) {
       case "audio":
         return Headphones
@@ -3286,7 +3380,11 @@ export default function EnhancedCodex() {
                                                   className="flex-1 text-sm cursor-pointer flex items-center gap-2"
                                                 >
                                                   {(() => {
-                                                    const IconComponent = getTypeIcon(item.tipo)
+                                                    const IconComponent = getTypeIcon(item.tipo, item)
+                                                    const platform = getSocialPlatform(item);
+                                                    if (platform !== 'other') {
+                                                      return <IconComponent />;
+                                                    }
                                                     return <IconComponent className="h-3 w-3 text-slate-500" />
                                                   })()}
                                                   <span className="truncate">{item.titulo}</span>
@@ -3735,7 +3833,7 @@ export default function EnhancedCodex() {
                       )
                     } else {
                       // Card normal para otros tipos (audio, video, documento, enlace, nota)
-                      const IconComponent = getTypeIcon(item.tipo)
+                      const IconComponent = getTypeIcon(item.tipo, item)
                       return (
                         <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
                           {selectionMode && (
@@ -3830,9 +3928,17 @@ export default function EnhancedCodex() {
                             </div>
                             {/* Icon and file size below title */}
                             <div className="flex items-center gap-2 mt-2">
-                              <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
-                                <IconComponent className="h-5 w-5 text-slate-600" />
-                              </div>
+                              {(() => {
+                                const platform = getSocialPlatform(item);
+                                if (platform !== 'other') {
+                                  return <IconComponent />;
+                                }
+                                return (
+                                  <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
+                                    <IconComponent className="h-5 w-5 text-slate-600" />
+                                  </div>
+                                );
+                              })()}
                               <CardDescription className="text-sm text-slate-500">
                                 {formatFileSize(item.tamano)}
                               </CardDescription>
@@ -3868,16 +3974,22 @@ export default function EnhancedCodex() {
                                   📝 Texto
                                 </Badge>
                               )}
-                              {(item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && (
-                                <Badge variant="secondary" className="text-xs bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200">
-                                  📱 Instagram
-                                </Badge>
-                              )}
+                              {/* Solo el icono, sin badge */}
                             </div>
 
-                            {/* NUEVO: Mostrar métricas de engagement para Instagram items */}
-                            {(item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && (
-                              <div className="flex items-center gap-4 text-sm text-slate-600 bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-lg border border-blue-200">
+                            {/* NUEVO: Mostrar métricas de engagement para todas las redes sociales */}
+                            {(() => {
+                              const platform = getSocialPlatform(item);
+                              if (platform !== 'other' && (item.likes || item.comments || item.shares || item.views)) {
+                                return (
+                                  <div className={`flex items-center gap-4 text-sm text-slate-600 p-3 rounded-lg border ${
+                                    platform === 'x' ? 'bg-slate-50 border-slate-200' :
+                                    platform === 'instagram' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
+                                    platform === 'facebook' ? 'bg-blue-50 border-blue-200' :
+                                    platform === 'tiktok' ? 'bg-gray-50 border-gray-200' :
+                                    platform === 'youtube' ? 'bg-red-50 border-red-200' :
+                                    'bg-slate-50 border-slate-200'
+                                  }`}>
                                 <div className="flex items-center gap-1">
                                   <span className="text-red-500">❤️</span>
                                   <span className="font-medium">{item.likes || 0}</span>
@@ -3898,8 +4010,11 @@ export default function EnhancedCodex() {
                                     <span className="font-medium">{item.shares}</span>
                                   </div>
                                 )}
-                              </div>
-                            )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
 
                             {item.proyecto && (
                               <div className="flex items-center gap-2 text-sm text-slate-500">
