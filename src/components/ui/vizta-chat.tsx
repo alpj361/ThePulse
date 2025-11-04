@@ -1671,7 +1671,8 @@ const ViztaChatUI = () => {
                 placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
                 value={inputValue}
                 onChange={handleInputChange}
-                className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400 text-sm"
+                className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400 text-base"
+                style={{ fontSize: 16 }}
                 onKeyDown={handleKeyDown}
               />
               
