@@ -307,56 +307,6 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
-      {/* Apoyo Voluntario */}
-      <Box sx={{ py: 8, px: 4, bgcolor: '#fafafa' }}>
-        <Container maxWidth="sm">
-          <Card sx={{ border: '1px solid #e0e0e0', boxShadow: 'none' }}>
-            <CardContent sx={{ p: 4 }}>
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Typography variant="h5" fontWeight="600" color="#1a1a1a" gutterBottom>
-                  Apoyo Voluntario
-                </Typography>
-                <Typography variant="body2" color="#666" sx={{ mb: 3 }}>
-                  ¿Quieres hacer una contribución única? Puedes apoyarnos con un café ☕
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  onClick={() => window.open('https://buymeacoffee.com/pulsejornal', '_blank')}
-                  variant="contained"
-                  size="large"
-                  sx={{
-                    py: 2,
-                    px: 4,
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    bgcolor: '#FFDD00',
-                    color: '#000000',
-                    border: '2px solid #000000',
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor: '#FFE066',
-                      boxShadow: 'none',
-                      transform: 'translateY(-2px)',
-                      transition: 'all 0.2s'
-                    }
-                  }}
-                >
-                  ☕ Buy me a coffee
-                </Button>
-              </Box>
-
-              <Typography variant="caption" color="#999" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
-                Cualquier monto ayuda a mantener Pulse Journal activo
-              </Typography>
-            </CardContent>
-          </Card>
-        </Container>
-      </Box>
-
       {/* Footer */}
       <Box 
         component="footer" 
