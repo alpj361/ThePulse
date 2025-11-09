@@ -421,6 +421,48 @@ interface InvitationCodeWithLayers extends InvitationCode {
   layerslimit?: number;
 }
 
+// 🚩 Interfaces para Logs de Errores de Extracción
+interface ExtractionErrorLog {
+  id: string;
+  created_at: string;
+  error_type: string;
+  error_message: string;
+  error_stack?: string;
+  platform: string;
+  post_url: string;
+  extraction_step?: string;
+  grok_response_raw?: string;
+  grok_response_truncated?: boolean;
+  processing_duration_ms?: number;
+  retry_count: number;
+  user_email?: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'investigating' | 'resolved' | 'wont_fix';
+  resolved_at?: string;
+  resolved_by?: string;
+  resolution_notes?: string;
+  full_logs?: any;
+}
+
+interface ExtractionErrorsStats {
+  total_errors: number;
+  by_platform: Record<string, number>;
+  by_error_type: Record<string, number>;
+  by_severity: Record<string, number>;
+  by_status: Record<string, number>;
+  recent_24h: number;
+  recent_7d: number;
+}
+
+interface ExtractionErrorsFilters {
+  platform: string;
+  error_type: string;
+  severity: string;
+  status: string;
+  days: number;
+  limit: number;
+}
+
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -595,6 +637,21 @@ export default function AdminPanel() {
   const [selectedLogForDetails, setSelectedLogForDetails] = useState<EnhancedLog | null>(null);
   const [openLogDetailsDialog, setOpenLogDetailsDialog] = useState(false);
 
+  // 🚩 Estados para Logs de Errores de Extracción
+  const [extractionErrors, setExtractionErrors] = useState<ExtractionErrorLog[]>([]);
+  const [extractionErrorsStats, setExtractionErrorsStats] = useState<ExtractionErrorsStats | null>(null);
+  const [loadingExtractionErrors, setLoadingExtractionErrors] = useState(false);
+  const [extractionErrorsFilters, setExtractionErrorsFilters] = useState<ExtractionErrorsFilters>({
+    platform: 'all',
+    error_type: 'all',
+    severity: 'all',
+    status: 'all',
+    days: 7,
+    limit: 50
+  });
+  const [selectedExtractionError, setSelectedExtractionError] = useState<ExtractionErrorLog | null>(null);
+  const [openExtractionErrorDialog, setOpenExtractionErrorDialog] = useState(false);
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
@@ -624,6 +681,7 @@ export default function AdminPanel() {
       }
     } else if (activeTab === 4) { // Sistema de Logs
       loadSystemLogsDashboard();
+      loadExtractionErrors(); // 🚩 Cargar errores de extracción
     } else if (activeTab === 5) { // Logs Avanzados
       // Cargar con un pequeño retraso para asegurar que todo esté inicializado
       setTimeout(() => {
@@ -2019,6 +2077,151 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
     setUserSubTab(newValue);
     if (newValue === 1) { // Límites de capas
       loadLayersLimits();
+    }
+  };
+
+  // 🚩 Funciones para Logs de Errores de Extracción
+  const loadExtractionErrors = async () => {
+    setLoadingExtractionErrors(true);
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseClient = createClient(
+        'https://qqshdccpmypelhmyqnut.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxc2hkY2NwbXlwZWxobXlxbnV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjAzNjcxMSwiZXhwIjoyMDYxNjEyNzExfQ.BaJ_z3Gp2pUnmYEDpfNTCIxpHloSjmxi43aKwm-93ZI'
+      );
+
+      // Calcular fecha de inicio
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - extractionErrorsFilters.days);
+
+      // Construir query con filtros
+      let query = supabaseClient
+        .from('extraction_error_logs')
+        .select('*')
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(extractionErrorsFilters.limit);
+
+      // Aplicar filtros
+      if (extractionErrorsFilters.platform !== 'all') {
+        query = query.eq('platform', extractionErrorsFilters.platform);
+      }
+      if (extractionErrorsFilters.error_type !== 'all') {
+        query = query.eq('error_type', extractionErrorsFilters.error_type);
+      }
+      if (extractionErrorsFilters.severity !== 'all') {
+        query = query.eq('severity', extractionErrorsFilters.severity);
+      }
+      if (extractionErrorsFilters.status !== 'all') {
+        query = query.eq('status', extractionErrorsFilters.status);
+      }
+
+      const { data: errors, error: errorsError } = await query;
+
+      if (errorsError) throw errorsError;
+
+      setExtractionErrors(errors || []);
+
+      // Calcular estadísticas
+      const stats: ExtractionErrorsStats = {
+        total_errors: errors?.length || 0,
+        by_platform: {},
+        by_error_type: {},
+        by_severity: {},
+        by_status: {},
+        recent_24h: 0,
+        recent_7d: 0
+      };
+
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      errors?.forEach(err => {
+        // By platform
+        stats.by_platform[err.platform] = (stats.by_platform[err.platform] || 0) + 1;
+        // By error type
+        stats.by_error_type[err.error_type] = (stats.by_error_type[err.error_type] || 0) + 1;
+        // By severity
+        stats.by_severity[err.severity] = (stats.by_severity[err.severity] || 0) + 1;
+        // By status
+        stats.by_status[err.status] = (stats.by_status[err.status] || 0) + 1;
+
+        // Time-based
+        const errorTime = new Date(err.created_at).getTime();
+        if (now - errorTime < day) stats.recent_24h++;
+        if (now - errorTime < 7 * day) stats.recent_7d++;
+      });
+
+      setExtractionErrorsStats(stats);
+
+    } catch (error: any) {
+      console.error('Error cargando logs de errores de extracción:', error);
+      setError('Error cargando logs de errores: ' + error.message);
+    } finally {
+      setLoadingExtractionErrors(false);
+    }
+  };
+
+  const handleExtractionErrorClick = (error: ExtractionErrorLog) => {
+    setSelectedExtractionError(error);
+    setOpenExtractionErrorDialog(true);
+  };
+
+  const updateExtractionErrorStatus = async (errorId: string, newStatus: string, notes?: string) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseClient = createClient(
+        'https://qqshdccpmypelhmyqnut.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxc2hkY2NwbXlwZWxobXlxbnV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjAzNjcxMSwiZXhwIjoyMDYxNjEyNzExfQ.BaJ_z3Gp2pUnmYEDpfNTCIxpHloSjmxi43aKwm-93ZI'
+      );
+
+      const updateData: any = {
+        status: newStatus,
+      };
+
+      if (newStatus === 'resolved' || newStatus === 'wont_fix') {
+        updateData.resolved_at = new Date().toISOString();
+        updateData.resolved_by = session?.user?.email || 'admin';
+      }
+
+      if (notes) {
+        updateData.resolution_notes = notes;
+      }
+
+      const { error } = await supabaseClient
+        .from('extraction_error_logs')
+        .update(updateData)
+        .eq('id', errorId);
+
+      if (error) throw error;
+
+      setSuccess('✅ Estado actualizado correctamente');
+      loadExtractionErrors();
+      setOpenExtractionErrorDialog(false);
+
+    } catch (error: any) {
+      console.error('Error actualizando estado:', error);
+      setError('Error actualizando estado: ' + error.message);
+    }
+  };
+
+  const getSeverityColor = (severity: string): 'error' | 'warning' | 'info' | 'default' => {
+    switch (severity) {
+      case 'critical': return 'error';
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      case 'low': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
+    switch (status) {
+      case 'resolved': return 'success';
+      case 'investigating': return 'info';
+      case 'pending': return 'warning';
+      case 'wont_fix': return 'default';
+      default: return 'default';
     }
   };
 
@@ -4229,6 +4432,238 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
                     </Paper>
                   </Grid>
                 </Grid>
+
+                {/* 🚩 Sección de Errores de Extracción */}
+                <Divider sx={{ my: 4 }} />
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BugReportIcon color="error" />
+                    Errores de Extracción
+                  </Typography>
+
+                  {loadingExtractionErrors ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <>
+                      {/* Estadísticas de Errores */}
+                      {extractionErrorsStats && (
+                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Card>
+                              <CardContent>
+                                <Typography color="text.secondary" variant="caption">Total Errores</Typography>
+                                <Typography variant="h6">{extractionErrorsStats.total_errors}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Card>
+                              <CardContent>
+                                <Typography color="text.secondary" variant="caption">Últimas 24h</Typography>
+                                <Typography variant="h6">{extractionErrorsStats.recent_24h}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Card>
+                              <CardContent>
+                                <Typography color="text.secondary" variant="caption">Últimos 7 días</Typography>
+                                <Typography variant="h6">{extractionErrorsStats.recent_7d}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Card>
+                              <CardContent>
+                                <Typography color="text.secondary" variant="caption">Pendientes</Typography>
+                                <Typography variant="h6">{extractionErrorsStats.by_status.pending || 0}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        </Grid>
+                      )}
+
+                      {/* Filtros */}
+                      <Paper sx={{ p: 2, mb: 2 }}>
+                        <Grid container spacing={2} alignItems="center">
+                          <Grid item xs={12} sm={6} md={2}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Plataforma</InputLabel>
+                              <Select
+                                value={extractionErrorsFilters.platform}
+                                label="Plataforma"
+                                onChange={(e) => setExtractionErrorsFilters(prev => ({ ...prev, platform: e.target.value }))}
+                              >
+                                <MenuItem value="all">Todas</MenuItem>
+                                <MenuItem value="x">X (Twitter)</MenuItem>
+                                <MenuItem value="instagram">Instagram</MenuItem>
+                                <MenuItem value="tiktok">TikTok</MenuItem>
+                                <MenuItem value="youtube">YouTube</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={2}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Tipo Error</InputLabel>
+                              <Select
+                                value={extractionErrorsFilters.error_type}
+                                label="Tipo Error"
+                                onChange={(e) => setExtractionErrorsFilters(prev => ({ ...prev, error_type: e.target.value }))}
+                              >
+                                <MenuItem value="all">Todos</MenuItem>
+                                <MenuItem value="json_parse_error">JSON Parse</MenuItem>
+                                <MenuItem value="api_error">API Error</MenuItem>
+                                <MenuItem value="timeout">Timeout</MenuItem>
+                                <MenuItem value="user_reported">Reportado por Usuario</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={2}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Severidad</InputLabel>
+                              <Select
+                                value={extractionErrorsFilters.severity}
+                                label="Severidad"
+                                onChange={(e) => setExtractionErrorsFilters(prev => ({ ...prev, severity: e.target.value }))}
+                              >
+                                <MenuItem value="all">Todas</MenuItem>
+                                <MenuItem value="critical">Crítica</MenuItem>
+                                <MenuItem value="high">Alta</MenuItem>
+                                <MenuItem value="medium">Media</MenuItem>
+                                <MenuItem value="low">Baja</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={2}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Estado</InputLabel>
+                              <Select
+                                value={extractionErrorsFilters.status}
+                                label="Estado"
+                                onChange={(e) => setExtractionErrorsFilters(prev => ({ ...prev, status: e.target.value }))}
+                              >
+                                <MenuItem value="all">Todos</MenuItem>
+                                <MenuItem value="pending">Pendiente</MenuItem>
+                                <MenuItem value="investigating">Investigando</MenuItem>
+                                <MenuItem value="resolved">Resuelto</MenuItem>
+                                <MenuItem value="wont_fix">No se arreglará</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={2}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Días</InputLabel>
+                              <Select
+                                value={extractionErrorsFilters.days}
+                                label="Días"
+                                onChange={(e) => setExtractionErrorsFilters(prev => ({ ...prev, days: Number(e.target.value) }))}
+                              >
+                                <MenuItem value={1}>Últimas 24h</MenuItem>
+                                <MenuItem value={7}>Últimos 7 días</MenuItem>
+                                <MenuItem value={30}>Últimos 30 días</MenuItem>
+                                <MenuItem value={90}>Últimos 90 días</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={2}>
+                            <Button
+                              variant="contained"
+                              onClick={loadExtractionErrors}
+                              startIcon={<RefreshIcon />}
+                              fullWidth
+                            >
+                              Filtrar
+                            </Button>
+                          </Grid>
+                        </Grid>
+                      </Paper>
+
+                      {/* Tabla de Errores */}
+                      <Paper>
+                        <Box sx={{ p: 2 }}>
+                          <Typography variant="h6">
+                            Errores Registrados ({extractionErrors.length})
+                          </Typography>
+                        </Box>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Fecha</TableCell>
+                                <TableCell>Plataforma</TableCell>
+                                <TableCell>Tipo Error</TableCell>
+                                <TableCell>URL Post</TableCell>
+                                <TableCell>Usuario</TableCell>
+                                <TableCell>Severidad</TableCell>
+                                <TableCell>Estado</TableCell>
+                                <TableCell align="center">Acciones</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {extractionErrors.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={8} align="center">
+                                    No se encontraron errores con los filtros seleccionados
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                extractionErrors.map((error) => (
+                                  <TableRow key={error.id}>
+                                    <TableCell>
+                                      <Typography variant="caption">
+                                        {new Date(error.created_at).toLocaleString('es-ES')}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip label={error.platform.toUpperCase()} size="small" variant="outlined" />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="caption">{error.error_type}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Tooltip title={error.post_url}>
+                                        <Typography variant="caption" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {error.post_url.substring(0, 40)}...
+                                        </Typography>
+                                      </Tooltip>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="caption">{error.user_email || '-'}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        label={error.severity.toUpperCase()}
+                                        size="small"
+                                        color={getSeverityColor(error.severity)}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        label={error.status}
+                                        size="small"
+                                        color={getStatusColor(error.status)}
+                                      />
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleExtractionErrorClick(error)}
+                                      >
+                                        <VisibilityIcon fontSize="small" />
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    </>
+                  )}
+                </Box>
               </>
             ) : (
               <Alert severity="info" sx={{ mb: 2 }}>
@@ -5219,6 +5654,187 @@ Este contenido ha sido optimizado para mejor claridad y profesionalismo.`;
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenExecutionDialog(false)}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🚩 Dialog de Detalles de Error de Extracción */}
+      <Dialog
+        open={openExtractionErrorDialog}
+        onClose={() => setOpenExtractionErrorDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BugReportIcon color="error" />
+            Detalles del Error de Extracción
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedExtractionError && (
+            <Box sx={{ pt: 2 }}>
+              {/* Información General */}
+              <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                  Información General
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Plataforma</Typography>
+                    <Typography variant="body2">
+                      <Chip label={selectedExtractionError.platform.toUpperCase()} size="small" />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Tipo de Error</Typography>
+                    <Typography variant="body2">{selectedExtractionError.error_type}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Severidad</Typography>
+                    <Typography variant="body2">
+                      <Chip
+                        label={selectedExtractionError.severity.toUpperCase()}
+                        size="small"
+                        color={getSeverityColor(selectedExtractionError.severity)}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Estado</Typography>
+                    <Typography variant="body2">
+                      <Chip
+                        label={selectedExtractionError.status}
+                        size="small"
+                        color={getStatusColor(selectedExtractionError.status)}
+                      />
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary">URL del Post</Typography>
+                    <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                      <a href={selectedExtractionError.post_url} target="_blank" rel="noopener noreferrer">
+                        {selectedExtractionError.post_url}
+                      </a>
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Usuario</Typography>
+                    <Typography variant="body2">{selectedExtractionError.user_email || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Fecha</Typography>
+                    <Typography variant="body2">
+                      {new Date(selectedExtractionError.created_at).toLocaleString('es-ES')}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Mensaje de Error */}
+              <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                  Mensaje de Error
+                </Typography>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedExtractionError.error_message}
+                </Typography>
+              </Paper>
+
+              {/* Respuesta Raw de Grok (si existe) */}
+              {selectedExtractionError.grok_response_raw && (
+                <Paper sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                    Respuesta Raw de Grok {selectedExtractionError.grok_response_truncated && '(Truncada)'}
+                  </Typography>
+                  <Box sx={{ maxHeight: 300, overflow: 'auto', bgcolor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                    <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                      {selectedExtractionError.grok_response_raw.substring(0, 2000)}
+                      {selectedExtractionError.grok_response_raw.length > 2000 && '\n\n... (respuesta muy larga, mostrando primeros 2000 caracteres)'}
+                    </Typography>
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Metadatos Adicionales */}
+              <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                  Metadatos
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Paso de Extracción</Typography>
+                    <Typography variant="body2">{selectedExtractionError.extraction_step || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Duración (ms)</Typography>
+                    <Typography variant="body2">{selectedExtractionError.processing_duration_ms || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">Intentos</Typography>
+                    <Typography variant="body2">{selectedExtractionError.retry_count}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Actualizar Estado */}
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                  Actualizar Estado
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="info"
+                      onClick={() => updateExtractionErrorStatus(selectedExtractionError.id, 'investigating')}
+                      disabled={selectedExtractionError.status === 'investigating'}
+                    >
+                      Marcar como Investigando
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="success"
+                      onClick={() => updateExtractionErrorStatus(selectedExtractionError.id, 'resolved')}
+                      disabled={selectedExtractionError.status === 'resolved'}
+                    >
+                      Marcar como Resuelto
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="default"
+                      onClick={() => updateExtractionErrorStatus(selectedExtractionError.id, 'wont_fix')}
+                      disabled={selectedExtractionError.status === 'wont_fix'}
+                    >
+                      No se Arreglará
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="warning"
+                      onClick={() => updateExtractionErrorStatus(selectedExtractionError.id, 'pending')}
+                      disabled={selectedExtractionError.status === 'pending'}
+                    >
+                      Marcar como Pendiente
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenExtractionErrorDialog(false)}>
             Cerrar
           </Button>
         </DialogActions>
