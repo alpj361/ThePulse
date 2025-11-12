@@ -41,6 +41,7 @@ import { LatestDecisions } from './LatestDecisions';
 import { DecisionChronology } from './DecisionChronology';
 import EnhancedProjectCard from './EnhancedProjectCard';
 import SimplifiedProjectDetail from './SimplifiedProjectDetail';
+import ProjectCarousel from './ProjectCarousel';
 
 import ProjectSuggestions from './ProjectSuggestions';
 import { cn } from '../../lib/utils';
