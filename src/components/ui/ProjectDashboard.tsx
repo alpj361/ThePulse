@@ -881,21 +881,30 @@ export function ProjectDashboard({
                     </div>
                   </motion.div>
 
-                  {/* Search and Filter Bar */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 relative">
-                      <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  {/* Search and Filter Bar - Glassmorphism Style */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="flex items-center justify-between gap-6"
+                  >
+                    <div className="flex-1 relative group">
+                      <FiSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-500 dark:text-blue-400 transition-all group-focus-within:scale-110" />
                       <input
                         type="text"
                         placeholder="Buscar proyectos por nombre, descripción o categoría..."
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full pl-14 pr-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl text-base text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 focus:shadow-xl transition-all duration-300"
                       />
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <FiFilter className="w-5 h-5" />
-                      <span className="font-medium">Filtros</span>
-                    </button>
-                  </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex items-center gap-3 px-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl hover:bg-blue-500/10 dark:hover:bg-blue-500/20 hover:border-blue-500/50 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      <FiFilter className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">Filtros</span>
+                    </motion.button>
+                  </motion.div>
 
                   {/* Projects Carousel */}
                   {(projects && projects.length > 0) ? (
