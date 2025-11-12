@@ -917,22 +917,57 @@ export function ProjectDashboard({
                       findingsCount={(projectId) => 0}
                     />
                   ) : (
-                    <div className="text-center py-20">
-                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/20 mb-4">
-                        <FiDatabase className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.8 }}
+                      className="relative overflow-hidden text-center py-24 backdrop-blur-xl bg-white/40 dark:bg-gray-800/40 border-2 border-white/40 dark:border-gray-700/40 rounded-3xl shadow-2xl"
+                    >
+                      {/* Animated background gradient */}
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          rotate: [0, 180, 0],
+                        }}
+                        transition={{
+                          duration: 20,
+                          repeat: Infinity,
+                          ease: "linear"
+                        }}
+                        className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 blur-3xl"
+                      />
+                      
+                      <div className="relative z-10">
+                        <motion.div
+                          animate={{
+                            y: [0, -10, 0],
+                          }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 shadow-2xl mb-6"
+                        >
+                          <FiDatabase className="w-12 h-12 text-white" />
+                        </motion.div>
+                        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                          No hay proyectos aún
+                        </h3>
+                        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+                          Comienza creando tu primer proyecto para organizar y gestionar tus investigaciones y campañas.
+                        </p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleCreateProject}
+                          className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg"
+                        >
+                          <FiPlus className="w-6 h-6" />
+                          Crear Primer Proyecto
+                        </motion.button>
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No hay proyectos aún</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                        Comienza creando tu primer proyecto para organizar y gestionar tus investigaciones y campañas.
-                      </p>
-                      <button 
-                        onClick={handleCreateProject}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-200 font-semibold"
-                      >
-                        <FiPlus className="w-5 h-5" />
-                        Crear Primer Proyecto
-                      </button>
-                    </div>
+                    </motion.div>
                   )}
                 </motion.div>
               )}
