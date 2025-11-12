@@ -753,72 +753,133 @@ export function ProjectDashboard({
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-8"
                 >
-                  {/* Modern Header with Stats */}
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-2xl p-8 border-2 border-blue-100 dark:border-blue-900/30">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Mis Proyectos</h2>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          Gestiona y organiza todos tus proyectos en un solo lugar
-                        </p>
+                  {/* Modern Header with Stats - Glassmorphism Style */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="relative overflow-hidden rounded-3xl p-8 backdrop-blur-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 dark:from-blue-900/20 dark:via-cyan-900/20 dark:to-teal-900/20 border-2 border-white/20 dark:border-white/10 shadow-2xl"
+                  >
+                    {/* Animated background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-cyan-400/20 to-teal-400/20 dark:from-blue-600/20 dark:via-cyan-600/20 dark:to-teal-600/20 opacity-50" />
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 90, 0],
+                      }}
+                      transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear"
+                      }}
+                      className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl"
+                    />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-8">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+                            Mis Proyectos
+                          </h2>
+                          <p className="text-lg text-gray-600 dark:text-gray-300">
+                            Gestiona y organiza todos tus proyectos en un solo lugar
+                          </p>
+                        </motion.div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleCreateProject}
+                          className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg backdrop-blur-xl"
+                        >
+                          <FiPlus className="w-6 h-6" />
+                          Crear Proyecto
+                        </motion.button>
                       </div>
-                      <button 
-                        onClick={handleCreateProject}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-200 font-semibold"
-                      >
-                        <FiPlus className="w-5 h-5" />
-                        Crear Proyecto
-                      </button>
-                    </div>
 
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                            <FiDatabase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      {/* Quick Stats with Glassmorphism */}
+                      <div className="grid grid-cols-4 gap-6">
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                          whileHover={{ scale: 1.05, y: -4 }}
+                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative z-10 flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+                              <FiDatabase className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total</p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{projects?.length || 0}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{projects?.length || 0}</p>
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.4 }}
+                          whileHover={{ scale: 1.05, y: -4 }}
+                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative z-10 flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 shadow-lg">
+                              <FiCheckCircle className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Activos</p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{activeProjects.length}</p>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
-                            <FiCheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5 }}
+                          whileHover={{ scale: 1.05, y: -4 }}
+                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative z-10 flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg">
+                              <FiTarget className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Completados</p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedProjects.length}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Activos</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeProjects.length}</p>
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6 }}
+                          whileHover={{ scale: 1.05, y: -4 }}
+                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative z-10 flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
+                              <FiClock className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pausados</p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{pausedProjects.length}</p>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                            <FiTarget className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Completados</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{completedProjects.length}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
-                            <FiClock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Pausados</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{pausedProjects.length}</p>
-                          </div>
-                        </div>
+                        </motion.div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Search and Filter Bar */}
                   <div className="flex items-center justify-between gap-4">
