@@ -836,22 +836,16 @@ export function ProjectDashboard({
                     </button>
                   </div>
 
-                  {/* Projects Grid */}
+                  {/* Projects Carousel */}
                   {(projects && projects.length > 0) ? (
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {projects.map((project) => (
-                        <EnhancedProjectCard
-                          key={project.id}
-                          project={project}
-                          onView={handleViewProjectDetails}
-                          onDelete={handleDeleteProject}
-                          decisionsCount={0}
-                          assetsCount={0}
-                          findingsCount={0}
-                          progress={project.status === 'completed' ? 100 : 0}
-                        />
-                      ))}
-                    </div>
+                    <ProjectCarousel
+                      projects={projects}
+                      onView={handleViewProjectDetails}
+                      onDelete={handleDeleteProject}
+                      decisionsCount={(projectId) => 0}
+                      assetsCount={(projectId) => 0}
+                      findingsCount={(projectId) => 0}
+                    />
                   ) : (
                     <div className="text-center py-20">
                       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/20 mb-4">
