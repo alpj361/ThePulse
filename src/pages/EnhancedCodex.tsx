@@ -47,6 +47,8 @@ import LinkIcon from 'lucide-react/dist/esm/icons/link';
 import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
 import Zap from 'lucide-react/dist/esm/icons/zap';
 import Search from 'lucide-react/dist/esm/icons/search';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import Save from 'lucide-react/dist/esm/icons/save';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../context/AuthContext"
 import { useGoogleDrive } from "../hooks/useGoogleDrive"
@@ -79,6 +81,7 @@ import WikiStatsPanel from "../components/codex/wiki/WikiStatsPanel";
 import CreateWikiModal from "../components/codex/wiki/CreateWikiModal";
 import EditWikiModal from "../components/codex/wiki/EditWikiModal";
 import { getWikiItems, deleteWikiItem, type WikiItem } from "../services/wikiService";
+import RichTextEditor from "../components/ui/RichTextEditor";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
@@ -196,7 +199,7 @@ const MonitorAccordionCard: React.FC<{
           </div>
         </div>
       </CardHeader>
-      <div ref={contentRef} style={{ maxHeight: maxHeight, transition: 'max-height 300ms ease-in-out, opacity 200ms ease-in-out', opacity: expanded ? 1 : 0 }} className="overflow-hidden"> 
+      <div ref={contentRef} style={{ maxHeight: maxHeight, transition: 'max-height 300ms ease-in-out, opacity 200ms ease-in-out', opacity: expanded ? 1 : 0 }} className="overflow-hidden">
         <CardContent className="p-3">
           {loading ? (
             <div className="flex items-center gap-2 text-slate-500"><RefreshCw className="h-4 w-4 animate-spin" /> Cargando enlaces…</div>
@@ -288,7 +291,7 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
     };
     return iconMap[type] || iconMap.default;
   };
-  
+
   const groupUuid = item.group_id || item.id
 
   const fetchGroupData = async () => {
@@ -302,9 +305,9 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
       setChildren(groupItems);
       const fallbackCount = groupItems.length;
       const fallbackSize = groupItems.reduce((acc, curr) => acc + (curr.tamano || 0), 0);
-      setStats({ 
-        count: (groupStats?.item_count ?? 0) > 0 ? groupStats.item_count : fallbackCount, 
-        size: (groupStats?.total_size ?? 0) > 0 ? groupStats.total_size : fallbackSize 
+      setStats({
+        count: (groupStats?.item_count ?? 0) > 0 ? groupStats.item_count : fallbackCount,
+        size: (groupStats?.total_size ?? 0) > 0 ? groupStats.total_size : fallbackSize
       });
     } catch (error) {
       console.error("Error fetching group data:", error);
@@ -320,7 +323,7 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
       fetchGroupData();
     }
   };
-  
+
   useEffect(() => {
     if (!groupUuid) return;
     (async () => {
@@ -330,7 +333,7 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
           setStats({ count: gs.item_count, size: gs.total_size });
         } else {
           const items = await getGroupItems(groupUuid, item.user_id);
-          setStats({ count: items.length, size: items.reduce((acc, curr)=>acc+(curr.tamano||0),0) });
+          setStats({ count: items.length, size: items.reduce((acc, curr) => acc + (curr.tamano || 0), 0) });
         }
       } catch (error) {
         console.error("Error loading group stats:", error);
@@ -351,7 +354,7 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
     const supportedAudio = ['mp3', 'wav', 'aac', 'ogg', 'flac', 'm4a'];
     const supportedVideo = ['mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v'];
     const extension = item.nombre_archivo?.split('.').pop()?.toLowerCase() || '';
-    return item.tipo === 'audio' || item.tipo === 'video' 
+    return item.tipo === 'audio' || item.tipo === 'video'
       ? [...supportedAudio, ...supportedVideo].includes(extension)
       : false;
   };
@@ -368,11 +371,11 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
       )}
       <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-row items-center justify-between">
         <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={toggleExpansion}>
-            <Folder className="h-8 w-8 text-blue-600" />
-            <div className="flex-1">
-              <CardTitle className="text-lg font-bold text-slate-800">{item.group_name || "Grupo sin nombre"}</CardTitle>
-              <CardDescription className="text-sm text-slate-500 mt-1">{item.group_description || "Sin descripción."}</CardDescription>
-            </div>
+          <Folder className="h-8 w-8 text-blue-600" />
+          <div className="flex-1">
+            <CardTitle className="text-lg font-bold text-slate-800">{item.group_name || "Grupo sin nombre"}</CardTitle>
+            <CardDescription className="text-sm text-slate-500 mt-1">{item.group_description || "Sin descripción."}</CardDescription>
+          </div>
         </div>
         <div className="flex items-center gap-4 ml-4">
           <Badge variant="secondary" className="hidden sm:inline-flex">{stats.count} elementos</Badge>
@@ -429,12 +432,12 @@ const CodexFolderCard: React.FC<FolderCardProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {hasAudioTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'audio')} title="Ver Transcripción de Audio" className="text-blue-600"><Mic className="h-4 w-4"/></Button>}
-                      {hasTextTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'text')} title="Ver Transcripción de Texto" className="text-green-600"><FileText className="h-4 w-4"/></Button>}
-                      {canTranscribe(child) && !child.audio_transcription && <Button variant="ghost" size="icon" onClick={() => onTranscribeItem(child)} title="Transcribir"><Mic className="h-4 w-4"/></Button>}
-                      {child.storage_path && <Button variant="ghost" size="icon" onClick={() => onDownloadItem(child)} title="Descargar"><Download className="h-4 w-4"/></Button>}
-                      <Button variant="ghost" size="icon" onClick={() => onViewItem(child)} title="Ver Detalles"><Eye className="h-4 w-4"/></Button>
-                      <Button variant="ghost" size="icon" onClick={() => onEditItem(child)} title="Editar"><Edit className="h-4 w-4"/></Button>
+                      {hasAudioTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'audio')} title="Ver Transcripción de Audio" className="text-blue-600"><Mic className="h-4 w-4" /></Button>}
+                      {hasTextTranscription && <Button variant="ghost" size="icon" onClick={() => onShowTranscription(child, 'text')} title="Ver Transcripción de Texto" className="text-green-600"><FileText className="h-4 w-4" /></Button>}
+                      {canTranscribe(child) && !child.audio_transcription && <Button variant="ghost" size="icon" onClick={() => onTranscribeItem(child)} title="Transcribir"><Mic className="h-4 w-4" /></Button>}
+                      {child.storage_path && <Button variant="ghost" size="icon" onClick={() => onDownloadItem(child)} title="Descargar"><Download className="h-4 w-4" /></Button>}
+                      <Button variant="ghost" size="icon" onClick={() => onViewItem(child)} title="Ver Detalles"><Eye className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => onEditItem(child)} title="Editar"><Edit className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 )
@@ -455,14 +458,14 @@ const getSocialPlatform = (item: CodexItem): 'x' | 'instagram' | 'facebook' | 't
     if (scrapeData.herramienta === 'instagram') return 'instagram';
     if (scrapeData.herramienta === 'twitter' || scrapeData.herramienta === 'x') return 'x';
   }
-  
+
   // 2. Verificar etiquetas
   if (item.etiquetas?.includes('instagram')) return 'instagram';
   if (item.etiquetas?.includes('twitter') || item.etiquetas?.includes('x')) return 'x';
   if (item.etiquetas?.includes('facebook')) return 'facebook';
   if (item.etiquetas?.includes('tiktok')) return 'tiktok';
   if (item.etiquetas?.includes('youtube')) return 'youtube';
-  
+
   // 3. Analizar URL
   if (item.url) {
     if (item.url.includes('instagram.com')) return 'instagram';
@@ -471,17 +474,17 @@ const getSocialPlatform = (item: CodexItem): 'x' | 'instagram' | 'facebook' | 't
     if (item.url.includes('tiktok.com')) return 'tiktok';
     if (item.url.includes('youtube.com') || item.url.includes('youtu.be')) return 'youtube';
   }
-  
+
   // 4. Analizar contenido
   const content = item.content || item.descripcion || item.titulo || '';
   const contentLower = content.toLowerCase();
-  
+
   if (contentLower.includes('@') && (contentLower.includes('retweet') || contentLower.includes('rt'))) return 'x';
   if (contentLower.includes('reel') || contentLower.includes('ig story')) return 'instagram';
   if (contentLower.includes('facebook') || contentLower.includes('fb.com')) return 'facebook';
   if (contentLower.includes('tiktok') || contentLower.includes('douyin')) return 'tiktok';
   if (contentLower.includes('youtube') || contentLower.includes('youtu.be')) return 'youtube';
-  
+
   // 5. Verificar source_url
   if (item.source_url) {
     if (item.source_url.includes('instagram.com')) return 'instagram';
@@ -490,7 +493,7 @@ const getSocialPlatform = (item: CodexItem): 'x' | 'instagram' | 'facebook' | 't
     if (item.source_url.includes('tiktok.com')) return 'tiktok';
     if (item.source_url.includes('youtube.com') || item.source_url.includes('youtu.be')) return 'youtube';
   }
-  
+
   return 'other';
 };
 
@@ -512,52 +515,52 @@ export default function EnhancedCodex() {
     enlaces: 0,
     notas: 0
   })
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSourceType, setSelectedSourceType] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // Optional metadata toggle states
   const [showUploadMetadata, setShowUploadMetadata] = useState(false)
   const [showDriveMetadata, setShowDriveMetadata] = useState(false)
   const [showNoteMetadata, setShowNoteMetadata] = useState(false)
-  
+
   // Form states
   const [noteTitle, setNoteTitle] = useState("")
   const [noteContent, setNoteContent] = useState("")
   const [noteTags, setNoteTags] = useState("")
   const [selectedProject, setSelectedProject] = useState("")
-  
+
   // New content type field for all options
   const [contentType, setContentType] = useState("")
-  
+
   // Relations for notes
   const [selectedRelatedItems, setSelectedRelatedItems] = useState<string[]>([])
   const [showRelationSelector, setShowRelationSelector] = useState(false)
-  
+
   // Additional form states for upload and drive
   const [uploadTitle, setUploadTitle] = useState("")
   const [uploadDescription, setUploadDescription] = useState("")
   const [uploadTags, setUploadTags] = useState("")
   const [uploadProject, setUploadProject] = useState("")
   const [isPartOfSeries, setIsPartOfSeries] = useState(false)
-  
+
   const [driveTitle, setDriveTitle] = useState("")
   const [driveDescription, setDriveDescription] = useState("")
   const [driveTags, setDriveTags] = useState("")
   const [driveProject, setDriveProject] = useState("")
-  
+
   // File upload states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [isUploading, setIsUploading] = useState(false)
-  
+
   // Google Drive states
   const [isDriveConnected, setIsDriveConnected] = useState(false)
   const [driveFiles, setDriveFiles] = useState<any[]>([])
   const [selectedDriveFile, setSelectedDriveFile] = useState<any>(null)
-  
+
   // Estados para edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<CodexItem | null>(null)
@@ -567,12 +570,12 @@ export default function EnhancedCodex() {
     etiquetas: '',
     proyecto: ''
   })
-  
+
   // Estados para transcripción
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [transcriptionProgress, setTranscriptionProgress] = useState(0)
   const [transcriptionModalItem, setTranscriptionModalItem] = useState<CodexItem | null>(null)
-  
+
   // Estados para el sistema de agrupamiento
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false)
   const [groupForm, setGroupForm] = useState({
@@ -586,7 +589,7 @@ export default function EnhancedCodex() {
   const [selectedGroup, setSelectedGroup] = useState('')
   const [partNumber, setPartNumber] = useState(1)
   const [showGroupDetails, setShowGroupDetails] = useState<string | null>(null)
-  
+
   // Estados para enlaces múltiples
   const [linksInput, setLinksInput] = useState("")
   const [detectedLinks, setDetectedLinks] = useState<string[]>([])
@@ -599,14 +602,14 @@ export default function EnhancedCodex() {
 
   // Estados para análisis automático de enlaces
   const [isAutoAnalyzing, setIsAutoAnalyzing] = useState(false)
-  
+
   // Estados para el modal de edición de grupo
   const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false)
   const [groupToEdit, setGroupToEdit] = useState<CodexItem | null>(null)
-  
+
   // NUEVO: Estado para los items que se mostrarán en el nivel superior (grupos y archivos no agrupados)
   const [topLevelItems, setTopLevelItems] = useState<CodexItem[]>([])
-  
+
   const { user, session } = useAuth()
   const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(null)
   const [pickerReady, setPickerReady] = useState(false)
@@ -631,17 +634,17 @@ export default function EnhancedCodex() {
   const toggleMonitorLink = (id: string) => {
     setMonitorLinks((prev) => prev.map(l => l.id === id ? { ...l, checked: !l.checked } : l))
   }
-  
+
   // Import del hook useGoogleDrive para mejorar UX
-  const { 
-    isGoogleUser, 
-    token: driveToken, 
-    loading: driveLoading, 
-    error: driveError, 
-    openPicker, 
+  const {
+    isGoogleUser,
+    token: driveToken,
+    loading: driveLoading,
+    error: driveError,
+    openPicker,
     autoOpenPickerIfTokenExists,
     hasValidToken,
-    canUseDrive 
+    canUseDrive
   } = useGoogleDrive()
 
   // ------------------------------
@@ -666,6 +669,16 @@ export default function EnhancedCodex() {
   const [showCreateWikiModal, setShowCreateWikiModal] = useState(false);
   const [showEditWikiModal, setShowEditWikiModal] = useState(false);
   const [editingWikiItem, setEditingWikiItem] = useState<WikiItem | null>(null);
+
+  // ====== DOCUMENT EDITOR STATES ======
+  const [showDocumentEditor, setShowDocumentEditor] = useState(false);
+  const [documentContent, setDocumentContent] = useState('');
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [documentTags, setDocumentTags] = useState('');
+  const [documentProject, setDocumentProject] = useState('');
+  const [isDocumentFullscreen, setIsDocumentFullscreen] = useState(false);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
 
   // Handler to toggle selection of an item
   const toggleSelectItem = (id: string) => {
@@ -730,7 +743,7 @@ export default function EnhancedCodex() {
 
   const handleDeleteWikiItem = async (item: WikiItem) => {
     if (!window.confirm(`¿Eliminar "${item.name}" del Wiki?`)) return;
-    
+
     try {
       const success = await deleteWikiItem(item.id);
       if (success) {
@@ -835,7 +848,7 @@ export default function EnhancedCodex() {
   // --------------------------------------------------
   const handleGoogleDriveAuth = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    const apiKey   = import.meta.env.VITE_GOOGLE_API_KEY
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
     if (!clientId || !apiKey) {
       setError('Google Drive no está configurado correctamente.')
       return
@@ -960,10 +973,10 @@ export default function EnhancedCodex() {
 
   const loadCodexData = async () => {
     if (!user?.id) return
-    
+
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const items = await getCodexItemsByUser(user.id)
       setCodexItems(items)
@@ -978,7 +991,7 @@ export default function EnhancedCodex() {
 
   const loadUserProjects = async () => {
     if (!user?.id) return
-    
+
     try {
       const projects = await getUserProjects()
       setUserProjects(projects)
@@ -992,7 +1005,7 @@ export default function EnhancedCodex() {
     if (!projectId || projectId === 'sin-proyecto') {
       return `${user?.id}/${fileName}`
     }
-    
+
     const project = userProjects.find(p => p.id === projectId)
     const projectFolder = project ? project.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() : 'proyecto_sin_nombre'
     return `${user?.id}/proyectos/${projectFolder}/${fileName}`
@@ -1016,7 +1029,7 @@ export default function EnhancedCodex() {
 
     try {
       console.log('🤖 Generando descripción con IA para:', url)
-      
+
       const response = await fetch(`${EXTRACTORW_API_URL}/ai/generate-description`, {
         method: 'POST',
         headers: {
@@ -1052,7 +1065,7 @@ export default function EnhancedCodex() {
 
     try {
       console.log('🔍 Ejecutando análisis automático de enlaces de X...')
-      
+
       const response = await fetch(`${EXTRACTORW_API_URL}/pending-analysis/analyze-pending-links`, {
         method: 'POST',
         headers: {
@@ -1075,7 +1088,7 @@ export default function EnhancedCodex() {
 
       const result = await response.json()
       console.log('✅ Análisis automático completado:', result)
-      
+
       // Recargar datos del codex para ver los cambios
       setTimeout(() => {
         loadCodexData()
@@ -1128,7 +1141,7 @@ export default function EnhancedCodex() {
         }
       }
     }
-    
+
     // Fallback a iconos por tipo
     switch (type) {
       case "audio":
@@ -1182,7 +1195,7 @@ export default function EnhancedCodex() {
           item.descripcion?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           item.etiquetas?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
           (item.is_group_parent && item.group_name?.toLowerCase().includes(searchQuery.toLowerCase())) // Search group names
-        
+
         // Aplicar filtro por categoría
         let categoryMatch = true;
         if (categoryFilter !== 'all') {
@@ -1201,10 +1214,10 @@ export default function EnhancedCodex() {
               break;
           }
         }
-        
+
         // Aplicar filtro por tipo de archivo (solo cuando categoría es 'item')
         const typeMatch = selectedType === "all" || item.tipo === selectedType
-        
+
         return queryMatch && categoryMatch && typeMatch
       })
 
@@ -1213,7 +1226,7 @@ export default function EnhancedCodex() {
 
     // Top-level: grupos y archivos no agrupados (y no enlaces hijos)
     const topLevel = hideChildLinks.filter(item => item.is_group_parent || !item.group_id)
-    
+
     topLevel.sort((a, b) => {
       if (a.is_group_parent && !b.is_group_parent) return -1
       if (!a.is_group_parent && b.is_group_parent) return 1
@@ -1225,7 +1238,7 @@ export default function EnhancedCodex() {
 
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este elemento?')) return
-    
+
     try {
       const { error } = await supabase
         .from('codex_items')
@@ -1252,11 +1265,11 @@ export default function EnhancedCodex() {
   const handleShowTranscription = (item: CodexItem, type: 'audio' | 'text' = 'audio') => {
     const hasAudioTranscription = item.audio_transcription && item.audio_transcription.trim().length > 0;
     const hasTextTranscription = (item as any).transcripcion && (item as any).transcripcion.trim().length > 0;
-    
+
     if (type === 'audio' && hasAudioTranscription) {
-      setTranscriptionModalItem({...item, transcriptionType: 'audio'} as any)
+      setTranscriptionModalItem({ ...item, transcriptionType: 'audio' } as any)
     } else if (type === 'text' && hasTextTranscription) {
-      setTranscriptionModalItem({...item, transcriptionType: 'text'} as any)
+      setTranscriptionModalItem({ ...item, transcriptionType: 'text' } as any)
     } else {
       setError('No hay transcripción disponible para este elemento')
     }
@@ -1272,8 +1285,14 @@ export default function EnhancedCodex() {
   }
 
   const handleEditItem = (item: CodexItem) => {
+    // Si es un documento creado con el editor interno, usar el editor rich text
+    if (item.tipo === 'documento' && item.etiquetas.includes('editor-interno')) {
+      handleEditDocument(item)
+      return
+    }
+
     setEditingItem(item);
-    
+
     // Si tiene project_id, usar ese; sino buscar por nombre del proyecto; sino usar "sin-proyecto"
     let projectValue = 'sin-proyecto';
     if (item.project_id) {
@@ -1283,7 +1302,7 @@ export default function EnhancedCodex() {
       const foundProject = userProjects.find(p => p.title === item.proyecto);
       projectValue = foundProject ? foundProject.id : 'sin-proyecto';
     }
-    
+
     setEditForm({
       titulo: item.titulo,
       descripcion: item.descripcion || '',
@@ -1296,13 +1315,13 @@ export default function EnhancedCodex() {
 
   const handleSaveEdit = async () => {
     if (!editingItem || !user?.id) return
-    
+
     setIsSubmitting(true)
     try {
       // Get project information
-      const selectedProjectData = (editForm.proyecto && editForm.proyecto !== 'sin-proyecto') ? 
+      const selectedProjectData = (editForm.proyecto && editForm.proyecto !== 'sin-proyecto') ?
         userProjects.find(p => p.id === editForm.proyecto) : null
-      
+
       const updatedData = {
         titulo: editForm.titulo.trim(),
         descripcion: editForm.descripcion.trim() || null,
@@ -1323,12 +1342,12 @@ export default function EnhancedCodex() {
       if (error) throw error
 
       // Actualizar el estado local
-      const updatedItems = codexItems.map(item => 
+      const updatedItems = codexItems.map(item =>
         item.id === editingItem.id ? { ...item, ...data } : item
       )
       setCodexItems(updatedItems)
       calculateStats(updatedItems)
-      
+
       setIsEditModalOpen(false)
       setEditingItem(null)
     } catch (err) {
@@ -1370,7 +1389,7 @@ export default function EnhancedCodex() {
   const handleDeleteItemConfirm = async (item: CodexItem) => {
     const confirmMessage = `¿Estás seguro de que quieres eliminar "${item.titulo}"?`
     if (!confirm(confirmMessage)) return
-    
+
     setIsSubmitting(true)
     try {
       // Si es un archivo subido, eliminarlo del storage también
@@ -1378,7 +1397,7 @@ export default function EnhancedCodex() {
         const { error: storageError } = await supabase.storage
           .from('digitalstorage')
           .remove([item.storage_path])
-        
+
         if (storageError) {
           console.warn('Error deleting file from storage:', storageError)
           // Continuar con la eliminación de la base de datos aunque falle el storage
@@ -1410,33 +1429,33 @@ export default function EnhancedCodex() {
   const canTranscribe = (item: CodexItem) => {
     // Verificar que el archivo tenga una fuente válida (storage o URL)
     if (!item.storage_path && !item.url) return false
-    
+
     // Formatos de audio soportados
     const audioFormats = ['.mp3', '.wav', '.aac', '.ogg', '.flac', '.m4a']
     // Formatos de video soportados
     const videoFormats = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v']
-    
+
     // Verificar por extensión de archivo si está disponible
     if (item.nombre_archivo) {
       const ext = item.nombre_archivo.toLowerCase()
-      const isAudioVideo = audioFormats.some(format => ext.endsWith(format)) || 
-                          videoFormats.some(format => ext.endsWith(format))
+      const isAudioVideo = audioFormats.some(format => ext.endsWith(format)) ||
+        videoFormats.some(format => ext.endsWith(format))
       if (isAudioVideo) return true
     }
-    
+
     // Verificar por tipo MIME para archivos de Drive
     if (item.is_drive && item.url) {
       return item.tipo === 'audio' || item.tipo === 'video'
     }
-    
+
     // NUEVO: Verificar si es un enlace de Instagram con contenido de video
     if ((item.tipo === 'enlace' || item.tipo === 'instagram') && item.url && (
-      item.original_type === 'instagram' || 
+      item.original_type === 'instagram' ||
       item.url.includes('instagram.com')
     )) {
       return true // Permitir transcripción para Instagram items
     }
-    
+
     // Fallback: verificar por tipo
     return item.tipo === 'audio' || item.tipo === 'video'
   }
@@ -1455,15 +1474,15 @@ export default function EnhancedCodex() {
       // NUEVO: Manejar Instagram items usando Enhanced Media Downloader
       if ((item.tipo === 'enlace' || item.tipo === 'instagram') && (item.original_type === 'instagram' || item.url?.includes('instagram.com')) && item.url) {
         setTranscriptionProgress(10)
-        
+
         // Obtener token de autenticación
         let accessToken = session?.access_token || localStorage.getItem('token') || ''
         if (!accessToken) {
           throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.')
         }
-        
+
         setTranscriptionProgress(20)
-        
+
         // Paso 1: Usar Enhanced Media Downloader para descargar y procesar Instagram
         console.log('🔗 Calling ExtractorT URL:', `${EXTRACTORT_API_URL}/enhanced-media/instagram/process`);
         const downloadResponse = await fetch(`${EXTRACTORT_API_URL}/enhanced-media/instagram/process`, {
@@ -1480,9 +1499,9 @@ export default function EnhancedCodex() {
             auth_token: accessToken
           })
         })
-        
+
         setTranscriptionProgress(40)
-        
+
         if (!downloadResponse.ok) {
           const errorData = await downloadResponse.text()
           console.error('❌ Error response from ExtractorT:', errorData)
@@ -1501,15 +1520,15 @@ export default function EnhancedCodex() {
           }
           throw new Error(errorMessage)
         }
-        
+
         const downloadResult = await downloadResponse.json()
         console.log('📊 ExtractorT Response:', downloadResult)
-        
+
         setTranscriptionProgress(60)
-        
+
         // Paso 2: Verificar si se obtuvo transcripción
         if (downloadResult.success && downloadResult.transcription) {
-          
+
           // Paso 3: Actualizar el item de Codex con la transcripción
           const transcriptionData = {
             text: downloadResult.transcription.text || downloadResult.transcription,
@@ -1524,13 +1543,13 @@ export default function EnhancedCodex() {
               duration: downloadResult.duration || null
             }
           }
-          
+
           setTranscriptionProgress(80)
-          
+
           // Actualizar directamente en Supabase (RLS policy ya incluye 'instagram' type)
           const { data, error } = await supabase
             .from('codex_items')
-            .update({ 
+            .update({
               audio_transcription: JSON.stringify(transcriptionData),
               analyzed: true,
               // Actualizar también los campos de engagement si están disponibles
@@ -1542,29 +1561,29 @@ export default function EnhancedCodex() {
             .eq('id', item.id)
             .select()
             .single()
-          
+
           if (error) {
             console.error('❌ Supabase update error:', error)
             throw new Error(`Error guardando transcripción en la base de datos: ${error.message}`)
           }
-          
+
           // Actualizar el estado local
-          setCodexItems(prev => prev.map(i => 
-            i.id === item.id 
-              ? { 
-                  ...i, 
-                  audio_transcription: JSON.stringify(transcriptionData), 
-                  analyzed: true,
-                  likes: downloadResult.content?.engagement?.likes || i.likes || 0,
-                  comments: downloadResult.content?.engagement?.comments || i.comments || 0,
-                  shares: downloadResult.content?.engagement?.shares || i.shares || 0,
-                  views: downloadResult.content?.engagement?.views || i.views || 0
-                }
+          setCodexItems(prev => prev.map(i =>
+            i.id === item.id
+              ? {
+                ...i,
+                audio_transcription: JSON.stringify(transcriptionData),
+                analyzed: true,
+                likes: downloadResult.content?.engagement?.likes || i.likes || 0,
+                comments: downloadResult.content?.engagement?.comments || i.comments || 0,
+                shares: downloadResult.content?.engagement?.shares || i.shares || 0,
+                views: downloadResult.content?.engagement?.views || i.views || 0
+              }
               : i
           ))
-          
+
           setTranscriptionProgress(100)
-          
+
         } else if (downloadResult.success && downloadResult.media_files && downloadResult.media_files.length > 0) {
           // Si se descargó el media pero no se pudo transcribir
           throw new Error('Media descargado pero no se pudo transcribir. El contenido podría no tener audio.')
@@ -1573,35 +1592,35 @@ export default function EnhancedCodex() {
           const mediaCount = downloadResult.media_files ? downloadResult.media_files.length : 0
           const hasContent = downloadResult.content ? 'Sí' : 'No'
           const platform = downloadResult.platform || 'desconocida'
-          
+
           let errorMessage = `Contenido procesado exitosamente pero no se encontró media para transcribir.\n`
           errorMessage += `- Plataforma: ${platform}\n`
           errorMessage += `- Contenido extraído: ${hasContent}\n`
           errorMessage += `- Archivos de media encontrados: ${mediaCount}\n`
-          
+
           if (downloadResult.content) {
             const postType = downloadResult.content.post_type || 'desconocido'
             const hasMedia = downloadResult.content.media_urls ? downloadResult.content.media_urls.length : 0
             errorMessage += `- Tipo de post: ${postType}\n`
             errorMessage += `- URLs de media: ${hasMedia}\n`
           }
-          
+
           if (downloadResult.media_files && downloadResult.media_files.length > 0) {
             errorMessage += `- Archivos descargados: ${downloadResult.media_files.map(f => f.filename || f.type).join(', ')}\n`
           }
-          
+
           throw new Error(errorMessage)
         } else {
           // Mostrar errores específicos si están disponibles
-          const errorMessage = downloadResult.errors && downloadResult.errors.length > 0 
+          const errorMessage = downloadResult.errors && downloadResult.errors.length > 0
             ? downloadResult.errors.join(', ')
             : 'No se pudo descargar o procesar el contenido de Instagram'
           throw new Error(errorMessage)
         }
-        
+
         return
       }
-      
+
       // Validar datos necesarios para Drive files
       if (item.is_drive && (!item.drive_file_id || !item.url)) {
         throw new Error('Archivo de Google Drive incompleto: falta ID o URL del archivo')
@@ -1635,7 +1654,7 @@ export default function EnhancedCodex() {
         // Google Drive API access token para acceder al archivo
         drive_access_token: item.is_drive ? driveToken : null,
         // Generar URL de descarga directa para Drive files (fallback)
-        download_url: item.is_drive && item.drive_file_id 
+        download_url: item.is_drive && item.drive_file_id
           ? `https://drive.google.com/uc?export=download&id=${item.drive_file_id}`
           : null,
         file_name: item.nombre_archivo || null,
@@ -1655,24 +1674,24 @@ export default function EnhancedCodex() {
       console.log('📂 Storage path:', item.storage_path)
       console.log('📄 Nombre archivo:', item.nombre_archivo)
       console.log('📊 Tipo archivo:', item.tipo)
-      
+
       // Usar el endpoint existente, pero el backend detectará si es Drive por is_drive flag
       const endpoint = '/api/transcription/from-codex'
-      
+
       console.log('🔗 URL del endpoint:', `${import.meta.env.VITE_EXTRACTORW_API_URL}${endpoint}`)
       console.log('📤 Datos a enviar:', transcriptionData)
       console.log('🗂️ Tipo de archivo:', item.is_drive ? 'Google Drive' : 'Supabase Storage')
-      
+
       setTranscriptionProgress(30)
 
       // Obtener token desde Supabase AuthContext o localStorage como respaldo
       let accessToken = session?.access_token || localStorage.getItem('token') || ''
-      
+
       // Si no hay token, forzar re-autenticación
       if (!accessToken) {
         throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.')
       }
-      
+
       // Usar siempre el token más fresco de la sesión
       if (session?.access_token) {
         accessToken = session.access_token
@@ -1720,13 +1739,13 @@ export default function EnhancedCodex() {
       if (!response.ok) {
         console.log(`❌ Response Status: ${response.status} ${response.statusText}`)
         console.log(`❌ Response Headers:`, Object.fromEntries(response.headers.entries()))
-        
+
         let errorMessage = `Error ${response.status}: ${response.statusText}${item.is_drive ? ' (archivo de Google Drive)' : ''}`
-        
+
         try {
           const responseText = await response.text()
           console.log(`❌ Response Body:`, responseText)
-          
+
           if (responseText.trim().startsWith('{')) {
             const errorData = JSON.parse(responseText)
             errorMessage = errorData.error || errorData.message || errorMessage
@@ -1736,22 +1755,22 @@ export default function EnhancedCodex() {
         } catch (parseError) {
           console.warn('❌ No se pudo parsear respuesta:', parseError)
         }
-        
+
         throw new Error(errorMessage)
       }
 
       const result = await response.json()
-      
+
       setTranscriptionProgress(90)
 
       if (result.success) {
         console.log('✅ Transcripción completada:', result.data.codexItem.id)
-        
+
         // Actualizar lista de items del codex
         await loadCodexData()
-        
+
         setTranscriptionProgress(100)
-        
+
         // Mostrar mensaje de éxito
         const sourceType = item.is_drive ? ' (Google Drive)' : ' (Archivo subido)'
         alert(`¡Transcripción completada${sourceType}! ${result.data.metadata.wordsCount} palabras procesadas. Créditos usados: ${result.data.creditsUsed}`)
@@ -1773,10 +1792,10 @@ export default function EnhancedCodex() {
         has_drive_token: !!googleDriveToken,
         drive_token_length: googleDriveToken?.length || 0
       })
-      
+
       const sourceType = item.is_drive ? ' archivo de Google Drive' : ' archivo subido'
       let errorMessage = `Error al transcribir${sourceType}: ${err.message}`
-      
+
       // Agregar sugerencias específicas para archivos de Drive
       if (item.is_drive) {
         if (!googleDriveToken) {
@@ -1785,7 +1804,7 @@ export default function EnhancedCodex() {
           errorMessage += '\n\nSugerencia: El backend ahora tiene acceso al token de Google Drive para descargar el archivo.'
         }
       }
-      
+
       setError(errorMessage)
     } finally {
       setIsTranscribing(false)
@@ -1804,13 +1823,13 @@ export default function EnhancedCodex() {
 
     try {
       const tagsArray = noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-      
+
       // Add content type to tags if specified
       const finalTags = contentType.trim() ? [...tagsArray, contentType.trim()] : tagsArray
-      
+
       // Obtener información del proyecto seleccionado
       const selectedProjectData = (selectedProject && selectedProject !== 'sin-proyecto') ? userProjects.find(p => p.id === selectedProject) : null
-      
+
       const noteItem = {
         user_id: user?.id,
         tipo: 'nota',
@@ -1847,6 +1866,129 @@ export default function EnhancedCodex() {
     }
   }
 
+  // ===================================================================
+  // FUNCIONES DEL EDITOR DE DOCUMENTOS
+  // ===================================================================
+
+  const handleSaveDocument = async () => {
+    if (!documentTitle.trim()) {
+      setError('El título del documento es requerido')
+      return
+    }
+
+    if (!documentContent.trim()) {
+      setError('El documento no puede estar vacío')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const tagsArray = documentTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      const finalTags = ['editor-interno', ...tagsArray] // Tag especial para identificar documentos del editor
+
+      const selectedProjectData = (documentProject && documentProject !== 'sin-proyecto') ?
+        userProjects.find(p => p.id === documentProject) : null
+
+      const documentItem = {
+        user_id: user?.id,
+        tipo: 'documento',
+        titulo: documentTitle.trim(),
+        descripcion: documentContent, // Contenido HTML del editor
+        etiquetas: finalTags,
+        proyecto: selectedProjectData ? selectedProjectData.title : 'Sin proyecto',
+        project_id: selectedProjectData ? documentProject : null,
+        fecha: new Date().toISOString()
+      }
+
+      if (editingDocumentId) {
+        // Actualizar documento existente
+        const { data, error } = await supabase
+          .from('codex_items')
+          .update(documentItem)
+          .eq('id', editingDocumentId)
+          .eq('user_id', user?.id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Actualizar el estado local
+        const updatedItems = codexItems.map(item =>
+          item.id === editingDocumentId ? { ...item, ...data } : item
+        )
+        setCodexItems(updatedItems)
+        calculateStats(updatedItems)
+      } else {
+        // Crear nuevo documento
+        const { data, error } = await supabase
+          .from('codex_items')
+          .insert([documentItem])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Actualizar el estado local
+        const updatedItems = [...codexItems, data]
+        setCodexItems(updatedItems)
+        calculateStats(updatedItems)
+      }
+
+      setLastSavedTime(new Date())
+
+      // Si no está en pantalla completa, cerrar el editor
+      if (!isDocumentFullscreen) {
+        clearDocumentEditor()
+      }
+
+    } catch (err) {
+      console.error('Error saving document:', err)
+      setError('Error al guardar el documento')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleEditDocument = (item: CodexItem) => {
+    setEditingDocumentId(item.id)
+    setDocumentTitle(item.titulo)
+    setDocumentContent(item.descripcion || '')
+    setDocumentTags(item.etiquetas.filter(tag => tag !== 'editor-interno').join(', '))
+
+    // Determinar el proyecto
+    let projectValue = 'sin-proyecto'
+    if (item.project_id) {
+      projectValue = item.project_id
+    } else if (item.proyecto && item.proyecto !== 'Sin proyecto') {
+      const foundProject = userProjects.find(p => p.title === item.proyecto)
+      projectValue = foundProject ? foundProject.id : 'sin-proyecto'
+    }
+    setDocumentProject(projectValue)
+
+    setShowDocumentEditor(true)
+    setSelectedSourceType('document')
+    setIsModalOpen(true)
+  }
+
+  const handleDocumentChange = (content: string) => {
+    setDocumentContent(content)
+  }
+
+  const clearDocumentEditor = () => {
+    setShowDocumentEditor(false)
+    setDocumentContent('')
+    setDocumentTitle('')
+    setDocumentTags('')
+    setDocumentProject('')
+    setEditingDocumentId(null)
+    setLastSavedTime(null)
+    setIsDocumentFullscreen(false)
+    setSelectedSourceType(null)
+    setIsModalOpen(false)
+  }
+
   const handleSaveLink = async (url: string, title: string, description: string, tags: string[], project: string) => {
     if (!url.trim() || !title.trim()) {
       setError('La URL y el título son requeridos')
@@ -1858,10 +2000,10 @@ export default function EnhancedCodex() {
 
     try {
       const finalTags = contentType.trim() ? [...tags, contentType.trim()] : tags
-      
+
       // Get project information
       const selectedProjectData = (project && project !== 'sin-proyecto') ? userProjects.find(p => p.id === project) : null
-      
+
       const newLink = {
         user_id: user?.id,
         tipo: 'enlace',
@@ -1911,8 +2053,8 @@ export default function EnhancedCodex() {
       /twitter\.com\/\w+\/status\/\d+/,
       /x\.com\/\w+\/status\/\d+/
     ]
-    
-    return links.some(link => 
+
+    return links.some(link =>
       twitterPatterns.some(pattern => pattern.test(link))
     )
   }
@@ -1942,9 +2084,9 @@ export default function EnhancedCodex() {
     try {
       const tagsArray = linkTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
       const finalTags = contentType.trim() ? [...tagsArray, contentType.trim()] : tagsArray
-      
+
       // Get project information
-      const selectedProjectData = (linkProject && linkProject !== 'sin-proyecto') ? 
+      const selectedProjectData = (linkProject && linkProject !== 'sin-proyecto') ?
         userProjects.find(p => p.id === linkProject) : null
 
       const savedLinks = []
@@ -1952,12 +2094,12 @@ export default function EnhancedCodex() {
       // Crear un elemento por cada enlace detectado
       for (let i = 0; i < detectedLinks.length; i++) {
         const url = detectedLinks[i]
-        const title = detectedLinks.length === 1 ? 
-          linkTitle.trim() : 
+        const title = detectedLinks.length === 1 ?
+          linkTitle.trim() :
           `${linkTitle.trim()} - Enlace ${i + 1}`
 
         let description = `${contentType.trim() ? `[${contentType.trim()}] ` : ''}${linkDescription.trim()}`
-        
+
         // Nota: La generación de descripción con IA ahora se hace automáticamente 
         // en el backend después de la transcripción cuando shouldGenerateDescription=true
 
@@ -1993,13 +2135,13 @@ export default function EnhancedCodex() {
         const linksToAnalyze = savedLinks
           .filter(link => hasTwitterLinks([link.url]))
           .map(link => link.id)
-        
+
         if (linksToAnalyze.length > 0) {
           console.log('🚀 Iniciando análisis automático para', linksToAnalyze.length, 'enlaces de X')
-          
+
           // Mensaje diferente dependiendo de si también se generará descripción
           alert(`✨ Análisis automático iniciado para ${linksToAnalyze.length} enlace(s) de X. El proceso se ejecutará en segundo plano.`)
-          
+
           // Ejecutar en segundo plano sin esperar, incluyendo el flag de descripción
           executeAutoAnalysis(linksToAnalyze, shouldGenerateDescription)
         }
@@ -2019,7 +2161,7 @@ export default function EnhancedCodex() {
   // Handle Save Drive File
   const handleSaveDriveFile = async (fileParam?: any) => {
     console.log('💾 Guardando archivo de Drive')
-    
+
     const driveFile = fileParam || selectedDriveFile
 
     if (!driveFile) {
@@ -2101,7 +2243,7 @@ export default function EnhancedCodex() {
       const tagsArray = driveTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
       const finalTags = contentType.trim() ? [...tagsArray, contentType.trim()] : tagsArray
 
-      const selectedProjectData = (driveProject && driveProject !== 'sin-proyecto') ? 
+      const selectedProjectData = (driveProject && driveProject !== 'sin-proyecto') ?
         userProjects.find(p => p.id === driveProject) : null
 
       const codexItem = {
@@ -2153,7 +2295,7 @@ export default function EnhancedCodex() {
     const maxSize = 100 * 1024 * 1024 // 100MB
     const allowedTypes = [
       'image/*',
-      'video/*', 
+      'video/*',
       'audio/*',
       'application/pdf',
       'application/msword',
@@ -2162,22 +2304,22 @@ export default function EnhancedCodex() {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/*'
     ]
-    
+
     if (file.size > maxSize) {
       return `El archivo ${file.name} es muy grande. Máximo 100MB.`
     }
-    
+
     const isValidType = allowedTypes.some(type => {
       if (type.endsWith('*')) {
         return file.type.startsWith(type.slice(0, -1))
       }
       return file.type === type
     })
-    
+
     if (!isValidType) {
       return `Tipo de archivo no permitido: ${file.type}`
     }
-    
+
     return null
   }
 
@@ -2186,7 +2328,7 @@ export default function EnhancedCodex() {
     const files = Array.from(event.target.files || [])
     const validFiles: File[] = []
     const errors: string[] = []
-    
+
     files.forEach(file => {
       const error = validateFile(file)
       if (error) {
@@ -2195,11 +2337,11 @@ export default function EnhancedCodex() {
         validFiles.push(file)
       }
     })
-    
+
     if (errors.length > 0) {
       setError(errors.join('\n'))
     }
-    
+
     setSelectedFiles(prev => [...prev, ...validFiles])
   }
 
@@ -2213,7 +2355,7 @@ export default function EnhancedCodex() {
     const files = Array.from(event.dataTransfer.files)
     const validFiles: File[] = []
     const errors: string[] = []
-    
+
     files.forEach(file => {
       const error = validateFile(file)
       if (error) {
@@ -2222,11 +2364,11 @@ export default function EnhancedCodex() {
         validFiles.push(file)
       }
     })
-    
+
     if (errors.length > 0) {
       setError(errors.join('\n'))
     }
-    
+
     setSelectedFiles(prev => [...prev, ...validFiles])
   }
 
@@ -2319,7 +2461,7 @@ export default function EnhancedCodex() {
       })
 
       const results = await Promise.all(uploadPromises)
-      
+
       // Update local state
       const updatedItems = [...codexItems, ...results]
       setCodexItems(updatedItems)
@@ -2332,7 +2474,7 @@ export default function EnhancedCodex() {
           // Limpiar formulario pero mantener modal principal abierto temporalmente
           setSelectedFiles([])
           setUploadProgress({})
-          
+
           // Abrir modal de grupo con el item recién subido
           setSelectedItemForGroup(uploadedItem)
           setGroupForm({
@@ -2341,13 +2483,13 @@ export default function EnhancedCodex() {
             parent_item_id: uploadedItem.id
           })
           setIsGroupModalOpen(true)
-          
+
           // Cerrar el modal principal después de un momento
           setTimeout(() => {
             setIsModalOpen(false)
             setSelectedSourceType(null)
           }, 500)
-          
+
           return // No limpiar completamente el formulario aún
         }
       }
@@ -2459,7 +2601,7 @@ export default function EnhancedCodex() {
       })
 
       // Actualizar el item en el estado local
-      const updatedItems = codexItems.map(i => 
+      const updatedItems = codexItems.map(i =>
         i.id === item.id ? { ...i, ...result } : i
       )
       setCodexItems(updatedItems)
@@ -2526,7 +2668,7 @@ export default function EnhancedCodex() {
       }
 
       await removeItemFromGroup(item.id, user.id)
-      
+
       // Recargar datos
       await loadCodexData()
 
@@ -2550,7 +2692,7 @@ export default function EnhancedCodex() {
 
       if (confirm('¿Estás seguro de que quieres eliminar todo el grupo? Esta acción no se puede deshacer.')) {
         await deleteGroup(groupId, user.id)
-        
+
         // Recargar datos
         await loadCodexData()
       }
@@ -2645,458 +2787,549 @@ export default function EnhancedCodex() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-2xl">
-                <Archive className="h-8 w-8 text-white" />
+    <>
+      {/* Full-Screen Document Editor */}
+      {showDocumentEditor && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* Header Bar */}
+          <div className="bg-white border-b border-slate-200 shadow-sm px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearDocumentEditor}
+                className="text-slate-600 hover:text-slate-900"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Volver al Codex
+              </Button>
+              <div className="flex-1 max-w-2xl">
+                <Input
+                  placeholder="Título del documento..."
+                  value={documentTitle}
+                  onChange={(e) => setDocumentTitle(e.target.value)}
+                  className="text-2xl font-bold border-0 focus:ring-0 px-0"
+                />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-3">Codex</h1>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Tu archivo personal de fuentes, documentos, audios, videos y enlaces. Conecta tu Google Drive para
-              comenzar a organizar y analizar tus materiales periodísticos.
-            </p>
+            <div className="flex items-center gap-3">
+              {lastSavedTime && (
+                <span className="text-xs text-green-600">
+                  ✓ Guardado {lastSavedTime.toLocaleTimeString()}
+                </span>
+              )}
+              <Button
+                onClick={handleSaveDocument}
+                disabled={isSubmitting || !documentTitle.trim() || !documentContent.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {editingDocumentId ? 'Actualizar' : 'Guardar'}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
-          {/* Category Filters */}
-          <div className="max-w-7xl mx-auto mb-6">
-            <CategoryFilters
-              selected={categoryFilter}
-              onSelect={setCategoryFilter}
-              counts={{
-                item: codexItems.filter(i => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(i.tipo)).length,
-                monitoreos: codexItems.filter(i => i.tipo === 'monitoreos' || (i.tipo === 'item' && (i as any).original_type === 'monitor')).length,
-                posts: codexItems.filter(i => i.tipo === 'post' || i.tipo === 'posts').length,
-                wiki: wikiItems.length
-              }}
-            />
-            
-            {/* Wiki Subcategory Filters */}
-            {categoryFilter === 'wiki' && (
-              <SubcategoryChips
-                selected={wikiSubcategory}
-                onSelect={setWikiSubcategory}
-                counts={{
-                  person: wikiItems.filter(i => i.subcategory === 'person').length,
-                  organization: wikiItems.filter(i => i.subcategory === 'organization').length,
-                  location: wikiItems.filter(i => i.subcategory === 'location').length,
-                  event: wikiItems.filter(i => i.subcategory === 'event').length,
-                  concept: wikiItems.filter(i => i.subcategory === 'concept').length,
-                }}
-              />
-            )}
-          </div>
+          {/* Editor Content */}
+          <div className="flex-1 overflow-hidden flex">
+            {/* Main Editor Area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-5xl mx-auto py-8">
+                <RichTextEditor
+                  content={documentContent}
+                  onChange={handleDocumentChange}
+                  onSave={handleSaveDocument}
+                  onExportPDF={() => { }}
+                  onExportWord={() => { }}
+                  placeholder="Comienza a escribir tu documento..."
+                  isFullscreen={false}
+                  autoSave={true}
+                  autoSaveInterval={30000}
+                  title={documentTitle || 'Documento'}
+                />
+              </div>
+            </div>
 
-          {/* Maintenance Warning */}
-          <div className="max-w-4xl mx-auto mb-8">
-            <Card className="border-yellow-200 bg-yellow-50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-yellow-200 p-2 rounded-lg">
-                    <AlertCircle className="h-6 w-6 text-yellow-700" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-yellow-800 mb-1">Mantenimiento</h3>
-                    <p className="text-yellow-700">
-                      Codex está en mantenimiento, volveremos con todas las funcionalidades pronto
-                    </p>
+            {/* Metadata Sidebar */}
+            <div className="w-80 border-l border-slate-200 bg-slate-50 overflow-y-auto p-6">
+              <h3 className="font-semibold text-slate-900 mb-4">Información del documento</h3>
+
+              {editingDocumentId && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm font-medium">Editando documento existente</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
 
-          {/* Stats Cards */}
-          {categoryFilter === 'item' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-              {statsConfig.map((stat, index) => {
-                const IconComponent = stat.icon
-                return (
-                  <Card
-                    key={index}
-                    className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
-                    onClick={() => setSelectedType(stat.type)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-600 mb-1">{stat.label}</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-3xl font-bold text-slate-900">{stat.count}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editor-tags">Etiquetas</Label>
+                  <Input
+                    id="editor-tags"
+                    placeholder="Ej: informe, investigación"
+                    value={documentTags}
+                    onChange={(e) => setDocumentTags(e.target.value)}
+                  />
+                  <p className="text-xs text-slate-500">Separadas por comas</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editor-project">Proyecto</Label>
+                  <Select value={documentProject} onValueChange={setDocumentProject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar proyecto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                      {userProjects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Codex View */}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-2xl">
+                  <Archive className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <h1 className="text-4xl font-bold text-slate-900 mb-3">Codex</h1>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Tu archivo personal de fuentes, documentos, audios, videos y enlaces. Conecta tu Google Drive para
+                comenzar a organizar y analizar tus materiales periodísticos.
+              </p>
+            </div>
+
+            {/* Category Filters */}
+            <div className="max-w-7xl mx-auto mb-6">
+              <CategoryFilters
+                selected={categoryFilter}
+                onSelect={setCategoryFilter}
+                counts={{
+                  item: codexItems.filter(i => ['documento', 'audio', 'video', 'enlace', 'nota'].includes(i.tipo)).length,
+                  monitoreos: codexItems.filter(i => i.tipo === 'monitoreos' || (i.tipo === 'item' && (i as any).original_type === 'monitor')).length,
+                  posts: codexItems.filter(i => i.tipo === 'post' || i.tipo === 'posts').length,
+                  wiki: wikiItems.length
+                }}
+              />
+
+              {/* Wiki Subcategory Filters */}
+              {categoryFilter === 'wiki' && (
+                <SubcategoryChips
+                  selected={wikiSubcategory}
+                  onSelect={setWikiSubcategory}
+                  counts={{
+                    person: wikiItems.filter(i => i.subcategory === 'person').length,
+                    organization: wikiItems.filter(i => i.subcategory === 'organization').length,
+                    location: wikiItems.filter(i => i.subcategory === 'location').length,
+                    event: wikiItems.filter(i => i.subcategory === 'event').length,
+                    concept: wikiItems.filter(i => i.subcategory === 'concept').length,
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Maintenance Warning */}
+            <div className="max-w-4xl mx-auto mb-8">
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-yellow-200 p-2 rounded-lg">
+                      <AlertCircle className="h-6 w-6 text-yellow-700" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-yellow-800 mb-1">Mantenimiento</h3>
+                      <p className="text-yellow-700">
+                        Codex está en mantenimiento, volveremos con todas las funcionalidades pronto
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Stats Cards */}
+            {categoryFilter === 'item' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                {statsConfig.map((stat, index) => {
+                  const IconComponent = stat.icon
+                  return (
+                    <Card
+                      key={index}
+                      className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                      onClick={() => setSelectedType(stat.type)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600 mb-1">{stat.label}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-3xl font-bold text-slate-900">{stat.count}</p>
+                            </div>
+                          </div>
+                          <div className={`${stat.color} p-3 rounded-xl`}>
+                            <IconComponent className="h-6 w-6 text-white" />
                           </div>
                         </div>
-                        <div className={`${stat.color} p-3 rounded-xl`}>
-                          <IconComponent className="h-6 w-6 text-white" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
 
-          {/* Banner de Enlaces Pendientes */}
+            {/* Banner de Enlaces Pendientes */}
 
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {categoryFilter === 'wiki' ? (
-              <Button
-                size="lg"
-                onClick={() => setShowCreateWikiModal(true)}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Crear Item de Wiki
-              </Button>
-            ) : (
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {categoryFilter === 'wiki' ? (
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  onClick={() => setShowCreateWikiModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Agregar Nueva Fuente
+                  Crear Item de Wiki
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md p-0">
-                <DialogHeader className="p-6 pb-4">
-                  <DialogTitle className="text-xl font-semibold text-slate-900">Agregar Nueva Fuente</DialogTitle>
-                  <DialogDescription className="text-slate-600">
-                    Selecciona cómo quieres agregar tu nueva fuente al Codex
-                  </DialogDescription>
-                </DialogHeader>
+              ) : (
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Agregar Nueva Fuente
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md p-0">
+                    <DialogHeader className="p-6 pb-4">
+                      <DialogTitle className="text-xl font-semibold text-slate-900">Agregar Nueva Fuente</DialogTitle>
+                      <DialogDescription className="text-slate-600">
+                        Selecciona cómo quieres agregar tu nueva fuente al Codex
+                      </DialogDescription>
+                    </DialogHeader>
 
-                <div className="px-6 py-4 max-h-[60vh] overflow-y-auto space-y-4">
-                  {!selectedSourceType ? (
-                    <div className="grid gap-4">
-                      {/* Upload from Computer */}
-                      <Card
-                        className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-blue-200"
-                        onClick={() => setSelectedSourceType("upload")}
-                      >
-                        <CardContent className="flex items-center gap-4 p-6">
-                          <div className="bg-blue-100 p-3 rounded-lg">
-                            <Upload className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-slate-900">Subir desde Computadora</h3>
-                            <p className="text-sm text-slate-600">
-                              Sube documentos, audios, videos desde tu dispositivo
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Connect Google Drive */}
-                      {DRIVE_ENABLED && (
-                        <Card
-                          className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-green-200"
-                          onClick={() => alert('Función Google Drive deshabilitada temporalmente')}
-                        >
-                          <CardContent className="flex items-center gap-4 p-6">
-                            <div className="bg-green-100 p-3 rounded-lg">
-                              <Cloud className="h-6 w-6 text-green-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-slate-900">Conectar Google Drive</h3>
-                              <p className="text-sm text-slate-600">Función deshabilitada temporalmente</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {NOTE_ENABLED && (
-                        <Card
-                          className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-purple-200"
-                          onClick={() => setSelectedSourceType("note")}
-                        >
-                          <CardContent className="flex items-center gap-4 p-6">
-                            <div className="bg-purple-100 p-3 rounded-lg">
-                              <StickyNote className="h-6 w-6 text-purple-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-slate-900">Agregar Nota o Término</h3>
-                              <p className="text-sm text-slate-600">Crea una nota de texto o define un término clave</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Add Multiple Links */}
-                      <Card
-                        className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-orange-200"
-                        onClick={() => setSelectedSourceType("links")}
-                      >
-                        <CardContent className="flex items-center gap-4 p-6">
-                          <div className="bg-orange-100 p-3 rounded-lg">
-                            <Link className="h-6 w-6 text-orange-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-slate-900">Agregar Enlaces</h3>
-                            <p className="text-sm text-slate-600">Agrega múltiples enlaces web con detección automática</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Back button */}
-                      <Button
-                        variant="ghost"
-                        onClick={() => setSelectedSourceType(null)}
-                        className="text-slate-600 hover:text-slate-900"
-                      >
-                        ← Volver
-                      </Button>
-
-                      {/* Upload Form */}
-                      {selectedSourceType === "upload" && (
-                        <div className="space-y-4">
-                          {/* Main Upload Area */}
-                          <div 
-                            className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
-                            onDragOver={handleDragOver}
-                            onDrop={handleDrop}
+                    <div className="px-6 py-4 max-h-[60vh] overflow-y-auto space-y-4">
+                      {!selectedSourceType ? (
+                        <div className="grid gap-4">
+                          {/* Upload from Computer */}
+                          <Card
+                            className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-blue-200"
+                            onClick={() => setSelectedSourceType("upload")}
                           >
-                            <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-600 mb-2">Arrastra y suelta tus archivos aquí</p>
-                            <p className="text-sm text-slate-500 mb-4">o</p>
-                            <input
-                              type="file"
-                              multiple
-                              onChange={handleFileSelect}
-                              className="hidden"
-                              id="file-upload"
-                              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                            />
-                            <Button 
-                              variant="outline" 
-                              onClick={() => document.getElementById('file-upload')?.click()}
-                            >
-                              Seleccionar Archivos
-                            </Button>
-                          </div>
+                            <CardContent className="flex items-center gap-4 p-6">
+                              <div className="bg-blue-100 p-3 rounded-lg">
+                                <Upload className="h-6 w-6 text-blue-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-slate-900">Subir desde Computadora</h3>
+                                <p className="text-sm text-slate-600">
+                                  Sube documentos, audios, videos desde tu dispositivo
+                                </p>
+                              </div>
+                            </CardContent>
+                          </Card>
 
-                          {/* Selected Files List */}
-                          {selectedFiles.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-slate-700">Archivos seleccionados:</h4>
-                              {selectedFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <FileText className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                      <p className="text-sm font-medium text-slate-700">{file.name}</p>
-                                      <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {uploadProgress[file.name] && (
-                                      <div className="w-16 bg-slate-200 rounded-full h-2">
-                                        <div 
-                                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                          style={{ width: `${uploadProgress[file.name]}%` }}
-                                        />
-                                      </div>
-                                    )}
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeSelectedFile(index)}
-                                      disabled={isUploading}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-red-500" />
-                                    </Button>
-                                  </div>
+                          {/* Connect Google Drive */}
+                          {DRIVE_ENABLED && (
+                            <Card
+                              className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-green-200"
+                              onClick={() => alert('Función Google Drive deshabilitada temporalmente')}
+                            >
+                              <CardContent className="flex items-center gap-4 p-6">
+                                <div className="bg-green-100 p-3 rounded-lg">
+                                  <Cloud className="h-6 w-6 text-green-600" />
                                 </div>
-                              ))}
+                                <div>
+                                  <h3 className="font-semibold text-slate-900">Conectar Google Drive</h3>
+                                  <p className="text-sm text-slate-600">Función deshabilitada temporalmente</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {NOTE_ENABLED && (
+                            <Card
+                              className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-purple-200"
+                              onClick={() => setSelectedSourceType("note")}
+                            >
+                              <CardContent className="flex items-center gap-4 p-6">
+                                <div className="bg-purple-100 p-3 rounded-lg">
+                                  <StickyNote className="h-6 w-6 text-purple-600" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-slate-900">Agregar Nota o Término</h3>
+                                  <p className="text-sm text-slate-600">Crea una nota de texto o define un término clave</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {/* Add Multiple Links */}
+                          <Card
+                            className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-orange-200"
+                            onClick={() => setSelectedSourceType("links")}
+                          >
+                            <CardContent className="flex items-center gap-4 p-6">
+                              <div className="bg-orange-100 p-3 rounded-lg">
+                                <Link className="h-6 w-6 text-orange-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-slate-900">Agregar Enlaces</h3>
+                                <p className="text-sm text-slate-600">Agrega múltiples enlaces web con detección automática</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Create Blank Document */}
+                          <Card
+                            className="cursor-pointer hover:shadow-md transition-all duration-200 border-2 hover:border-teal-200"
+                            onClick={() => {
+                              setIsModalOpen(false)
+                              setShowDocumentEditor(true)
+                            }}
+                          >
+                            <CardContent className="flex items-center gap-4 p-6">
+                              <div className="bg-teal-100 p-3 rounded-lg">
+                                <FileText className="h-6 w-6 text-teal-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-slate-900">Crear Documento en Blanco</h3>
+                                <p className="text-sm text-slate-600">Crea y edita documentos con formato avanzado tipo Word</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Back button */}
+                          <Button
+                            variant="ghost"
+                            onClick={() => setSelectedSourceType(null)}
+                            className="text-slate-600 hover:text-slate-900"
+                          >
+                            ← Volver
+                          </Button>
+
+                          {/* Upload Form */}
+                          {selectedSourceType === "upload" && (
+                            <div className="space-y-4">
+                              {/* Main Upload Area */}
+                              <div
+                                className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                              >
+                                <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                <p className="text-slate-600 mb-2">Arrastra y suelta tus archivos aquí</p>
+                                <p className="text-sm text-slate-500 mb-4">o</p>
+                                <input
+                                  type="file"
+                                  multiple
+                                  onChange={handleFileSelect}
+                                  className="hidden"
+                                  id="file-upload"
+                                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                                />
+                                <Button
+                                  variant="outline"
+                                  onClick={() => document.getElementById('file-upload')?.click()}
+                                >
+                                  Seleccionar Archivos
+                                </Button>
+                              </div>
+
+                              {/* Selected Files List */}
+                              {selectedFiles.length > 0 && (
+                                <div className="space-y-2">
+                                  <h4 className="font-medium text-slate-700">Archivos seleccionados:</h4>
+                                  {selectedFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                        <FileText className="h-4 w-4 text-slate-500" />
+                                        <div>
+                                          <p className="text-sm font-medium text-slate-700">{file.name}</p>
+                                          <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {uploadProgress[file.name] && (
+                                          <div className="w-16 bg-slate-200 rounded-full h-2">
+                                            <div
+                                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                              style={{ width: `${uploadProgress[file.name]}%` }}
+                                            />
+                                          </div>
+                                        )}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeSelectedFile(index)}
+                                          disabled={isUploading}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Optional Metadata Section */}
+                              <div className="border border-slate-200 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowUploadMetadata(!showUploadMetadata)}
+                                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-700">Información adicional</span>
+                                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                      Opcional
+                                    </Badge>
+                                  </div>
+                                  {showUploadMetadata ? (
+                                    <ChevronUp className="h-4 w-4 text-slate-500" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                  )}
+                                </button>
+
+                                {showUploadMetadata && (
+                                  <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="content-type">Tipo de Contenido</Label>
+                                      <Input
+                                        id="content-type"
+                                        placeholder="Ej: Conferencia de prensa, Entrevista, Documento legal..."
+                                        value={contentType}
+                                        onChange={(e) => setContentType(e.target.value)}
+                                        list="content-suggestions"
+                                      />
+                                      <datalist id="content-suggestions">
+                                        {contentTypeSuggestions.map((suggestion, index) => (
+                                          <option key={index} value={suggestion} />
+                                        ))}
+                                      </datalist>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="upload-title">Título personalizado</Label>
+                                      <Input
+                                        id="upload-title"
+                                        placeholder="Ej: Conferencia Ministro de Salud - COVID-19"
+                                        value={uploadTitle}
+                                        onChange={(e) => setUploadTitle(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="upload-description">Descripción</Label>
+                                      <Textarea
+                                        id="upload-description"
+                                        placeholder="Breve descripción del contenido y contexto..."
+                                        rows={3}
+                                        value={uploadDescription}
+                                        onChange={(e) => setUploadDescription(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="upload-tags">Etiquetas</Label>
+                                      <Input
+                                        id="upload-tags"
+                                        placeholder="Ej: salud, gobierno, covid, oficial"
+                                        value={uploadTags}
+                                        onChange={(e) => setUploadTags(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="upload-project">Proyecto</Label>
+                                      <Select value={uploadProject} onValueChange={setUploadProject}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Seleccionar proyecto" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                                          {userProjects.map((project) => (
+                                            <SelectItem key={project.id} value={project.id}>
+                                              {project.title}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Checkbox para agrupar en series */}
+                                    {selectedFiles.some(file =>
+                                      file.type.startsWith('audio/') || file.type.startsWith('video/')
+                                    ) && (
+                                        <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                          <Checkbox
+                                            checked={isPartOfSeries}
+                                            onChange={(e) => setIsPartOfSeries(e.target.checked)}
+                                            inputProps={{ 'aria-label': 'controlled' }}
+                                          />
+                                          <div>
+                                            <Label htmlFor="is-part-of-series" className="text-blue-900 font-medium cursor-pointer">
+                                              Es parte de una serie
+                                            </Label>
+                                            <p className="text-xs text-blue-700 mt-1">
+                                              Marcar si este audio/video forma parte de una serie o grupo (ej: entrevista en varias partes)
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
-                          
-                          {/* Optional Metadata Section */}
-                          <div className="border border-slate-200 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => setShowUploadMetadata(!showUploadMetadata)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">Información adicional</span>
-                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  Opcional
-                                </Badge>
-                              </div>
-                              {showUploadMetadata ? (
-                                <ChevronUp className="h-4 w-4 text-slate-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-slate-500" />
-                              )}
-                            </button>
-                            
-                            {showUploadMetadata && (
-                              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
-                                <div className="space-y-2">
-                                  <Label htmlFor="content-type">Tipo de Contenido</Label>
-                                  <Input
-                                    id="content-type"
-                                    placeholder="Ej: Conferencia de prensa, Entrevista, Documento legal..."
-                                    value={contentType}
-                                    onChange={(e) => setContentType(e.target.value)}
-                                    list="content-suggestions"
-                                  />
-                                  <datalist id="content-suggestions">
-                                    {contentTypeSuggestions.map((suggestion, index) => (
-                                      <option key={index} value={suggestion} />
-                                    ))}
-                                  </datalist>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="upload-title">Título personalizado</Label>
-                                  <Input
-                                    id="upload-title"
-                                    placeholder="Ej: Conferencia Ministro de Salud - COVID-19"
-                                    value={uploadTitle}
-                                    onChange={(e) => setUploadTitle(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="upload-description">Descripción</Label>
-                                  <Textarea
-                                    id="upload-description"
-                                    placeholder="Breve descripción del contenido y contexto..."
-                                    rows={3}
-                                    value={uploadDescription}
-                                    onChange={(e) => setUploadDescription(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="upload-tags">Etiquetas</Label>
-                                  <Input
-                                    id="upload-tags"
-                                    placeholder="Ej: salud, gobierno, covid, oficial"
-                                    value={uploadTags}
-                                    onChange={(e) => setUploadTags(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="upload-project">Proyecto</Label>
-                                  <Select value={uploadProject} onValueChange={setUploadProject}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar proyecto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
-                                      {userProjects.map((project) => (
-                                        <SelectItem key={project.id} value={project.id}>
-                                          {project.title}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                
-                                {/* Checkbox para agrupar en series */}
-                                {selectedFiles.some(file => 
-                                  file.type.startsWith('audio/') || file.type.startsWith('video/')
-                                ) && (
-                                  <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                    <Checkbox
-                                      checked={isPartOfSeries}
-                                      onChange={(e) => setIsPartOfSeries(e.target.checked)}
-                                      inputProps={{ 'aria-label': 'controlled' }}
-                                    />
-                                    <div>
-                                      <Label htmlFor="is-part-of-series" className="text-blue-900 font-medium cursor-pointer">
-                                        Es parte de una serie
-                                      </Label>
-                                      <p className="text-xs text-blue-700 mt-1">
-                                        Marcar si este audio/video forma parte de una serie o grupo (ej: entrevista en varias partes)
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Google Drive Form */}
-                      {selectedSourceType === "drive" && (
-                        <div className="space-y-4">
-                          {/* Main Drive Connection */}
-                          {!hasValidToken ? (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                              <Cloud className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                              <h3 className="font-semibold text-green-900 mb-2">Conectar con Google Drive</h3>
-                              <p className="text-green-700 mb-4">
-                                Autoriza el acceso para vincular archivos desde tu Drive
-                              </p>
-                              {driveError && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                                  <p className="text-red-700 text-sm">{driveError}</p>
-                                </div>
-                              )}
-                              <Button 
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                onClick={() => {
-                                  openPicker((file) => {
-                                    const pickedFile = {
-                                      id: file.id,
-                                      name: file.name,
-                                      mimeType: file.mimeType,
-                                      size: 0,
-                                      webViewLink: file.url,
-                                      thumbnailLink: ''
-                                    };
-                                    setSelectedDriveFile(pickedFile);
-                                    setDriveTitle(file.name);
-                                    setDriveFiles([pickedFile]);
-                                    setIsDriveConnected(true);
-                                    
-                                    // Guardar automáticamente el archivo en el Codex tras la selección
-                                    setTimeout(() => {
-                                      handleSaveDriveFile(pickedFile);
-                                    }, 0);
-                                  });
-                                }}
-                                disabled={driveLoading || !canUseDrive}
-                              >
-                                {driveLoading ? (
-                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Cloud className="h-4 w-4 mr-2" />
-                                )}
-                                {driveLoading ? 'Conectando...' : 'Conectar Google Drive'}
-                              </Button>
-                              {!canUseDrive && (
-                                <p className="text-orange-600 text-sm mt-2">
-                                  Necesitas iniciar sesión con Google para usar esta función
-                                </p>
-                              )}
-                            </div>
-                          ) : (
+                          {/* Google Drive Form */}
+                          {selectedSourceType === "drive" && (
                             <div className="space-y-4">
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 text-green-700">
-                                    <Cloud className="h-5 w-5" />
-                                    <span className="font-medium">Google Drive conectado</span>
-                                  </div>
+                              {/* Main Drive Connection */}
+                              {!hasValidToken ? (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                                  <Cloud className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                                  <h3 className="font-semibold text-green-900 mb-2">Conectar con Google Drive</h3>
+                                  <p className="text-green-700 mb-4">
+                                    Autoriza el acceso para vincular archivos desde tu Drive
+                                  </p>
+                                  {driveError && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                                      <p className="text-red-700 text-sm">{driveError}</p>
+                                    </div>
+                                  )}
                                   <Button
-                                    variant="outline"
-                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
                                     onClick={() => {
                                       openPicker((file) => {
                                         const pickedFile = {
@@ -3110,294 +3343,343 @@ export default function EnhancedCodex() {
                                         setSelectedDriveFile(pickedFile);
                                         setDriveTitle(file.name);
                                         setDriveFiles([pickedFile]);
-                                        
+                                        setIsDriveConnected(true);
+
                                         // Guardar automáticamente el archivo en el Codex tras la selección
                                         setTimeout(() => {
                                           handleSaveDriveFile(pickedFile);
                                         }, 0);
                                       });
                                     }}
-                                    disabled={driveLoading}
+                                    disabled={driveLoading || !canUseDrive}
                                   >
                                     {driveLoading ? (
                                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
-                                      <Plus className="h-4 w-4 mr-2" />
+                                      <Cloud className="h-4 w-4 mr-2" />
                                     )}
-                                    Seleccionar otro archivo
+                                    {driveLoading ? 'Conectando...' : 'Conectar Google Drive'}
                                   </Button>
+                                  {!canUseDrive && (
+                                    <p className="text-orange-600 text-sm mt-2">
+                                      Necesitas iniciar sesión con Google para usar esta función
+                                    </p>
+                                  )}
                                 </div>
-                              </div>
-
-                              {/* Drive Files List */}
-                              {driveFiles.length > 0 && (
-                                <div className="border border-slate-200 rounded-lg max-h-60 overflow-y-auto">
-                                  <div className="p-3 border-b border-slate-100 bg-slate-50">
-                                    <h4 className="font-medium text-slate-700">Archivo seleccionado:</h4>
-                                  </div>
-                                  <div className="p-2">
-                                    {driveFiles.map((file) => (
-                                      <div
-                                        key={file.id}
-                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200"
-                                      >
-                                        <FileText className="h-4 w-4 text-slate-500" />
-                                        <div className="flex-1 text-left">
-                                          <p className="text-sm font-medium text-slate-700">{file.name}</p>
-                                          <p className="text-xs text-slate-500">
-                                            {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Tamaño desconocido'} • 
-                                            {file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString() : 'Fecha desconocida'}
-                                          </p>
-                                        </div>
-                                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                          ✓ Seleccionado
-                                        </Badge>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Optional Metadata Section */}
-                          <div className="border border-slate-200 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => setShowDriveMetadata(!showDriveMetadata)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">Información adicional</span>
-                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  Opcional
-                                </Badge>
-                              </div>
-                              {showDriveMetadata ? (
-                                <ChevronUp className="h-4 w-4 text-slate-500" />
                               ) : (
-                                <ChevronDown className="h-4 w-4 text-slate-500" />
-                              )}
-                            </button>
-                            
-                            {showDriveMetadata && (
-                              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
-                                <p className="text-sm text-slate-600">
-                                  Completa la información del archivo una vez conectado:
-                                </p>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="drive-content-type">Tipo de Contenido</Label>
-                                  <Input
-                                    id="drive-content-type"
-                                    placeholder="Ej: Conferencia de prensa, Entrevista, Documento legal..."
-                                    value={contentType}
-                                    onChange={(e) => setContentType(e.target.value)}
-                                    list="content-suggestions"
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="drive-title">Título personalizado</Label>
-                                  <Input
-                                    id="drive-title"
-                                    placeholder="Ej: Conferencia Ministro de Salud - COVID-19"
-                                    value={driveTitle}
-                                    onChange={(e) => setDriveTitle(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="drive-description">Descripción</Label>
-                                  <Textarea
-                                    id="drive-description"
-                                    placeholder="Breve descripción del contenido y contexto..."
-                                    rows={3}
-                                    value={driveDescription}
-                                    onChange={(e) => setDriveDescription(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="drive-tags">Etiquetas</Label>
-                                  <Input
-                                    id="drive-tags"
-                                    placeholder="Ej: salud, gobierno, covid, oficial"
-                                    value={driveTags}
-                                    onChange={(e) => setDriveTags(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="drive-project">Proyecto</Label>
-                                  <Select value={driveProject} onValueChange={setDriveProject}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar proyecto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
-                                      {userProjects.map((project) => (
-                                        <SelectItem key={project.id} value={project.id}>
-                                          {project.title}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Note/Term Form */}
-                      {selectedSourceType === "note" && (
-                        <div className="space-y-4">
-                          {/* Required Note Fields */}
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="note-title">Título *</Label>
-                              <Input 
-                                id="note-title" 
-                                placeholder="Ej: Término clave sobre corrupción municipal"
-                                value={noteTitle}
-                                onChange={(e) => setNoteTitle(e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="note-content">Contenido *</Label>
-                              <Textarea
-                                id="note-content"
-                                placeholder="Escribe tu nota, definición o término clave aquí..."
-                                rows={6}
-                                value={noteContent}
-                                onChange={(e) => setNoteContent(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* Optional Metadata Section */}
-                          <div className="border border-slate-200 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => setShowNoteMetadata(!showNoteMetadata)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">Información adicional</span>
-                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  Opcional
-                                </Badge>
-                              </div>
-                              {showNoteMetadata ? (
-                                <ChevronUp className="h-4 w-4 text-slate-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-slate-500" />
-                              )}
-                            </button>
-                            
-                            {showNoteMetadata && (
-                              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
-                                <div className="space-y-2">
-                                  <Label htmlFor="note-content-type">Tipo de Contenido</Label>
-                                  <Input
-                                    id="note-content-type"
-                                    placeholder="Ej: Testimonio, Transcripción, Definición legal..."
-                                    value={contentType}
-                                    onChange={(e) => setContentType(e.target.value)}
-                                    list="content-suggestions"
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="note-tags">Etiquetas</Label>
-                                  <Input 
-                                    id="note-tags" 
-                                    placeholder="Ej: definición, corrupción, legal"
-                                    value={noteTags}
-                                    onChange={(e) => setNoteTags(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="project-select">Proyecto</Label>
-                                  <Select value={selectedProject} onValueChange={setSelectedProject}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar proyecto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
-                                      {userProjects.map((project) => (
-                                        <SelectItem key={project.id} value={project.id}>
-                                          {project.title}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {/* Relations Section */}
-                                {RELATIONS_ENABLED && (
-                                  <div className="space-y-2 border-t border-slate-200 pt-4">
+                                <div className="space-y-4">
+                                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                                     <div className="flex items-center justify-between">
-                                      <Label>Relacionar con archivos</Label>
-                                      <Button 
-                                        type="button"
-                                        variant="outline" 
+                                      <div className="flex items-center gap-2 text-green-700">
+                                        <Cloud className="h-5 w-5" />
+                                        <span className="font-medium">Google Drive conectado</span>
+                                      </div>
+                                      <Button
+                                        variant="outline"
                                         size="sm"
-                                        onClick={() => setShowRelationSelector(!showRelationSelector)}
-                                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                        onClick={() => {
+                                          openPicker((file) => {
+                                            const pickedFile = {
+                                              id: file.id,
+                                              name: file.name,
+                                              mimeType: file.mimeType,
+                                              size: 0,
+                                              webViewLink: file.url,
+                                              thumbnailLink: ''
+                                            };
+                                            setSelectedDriveFile(pickedFile);
+                                            setDriveTitle(file.name);
+                                            setDriveFiles([pickedFile]);
+
+                                            // Guardar automáticamente el archivo en el Codex tras la selección
+                                            setTimeout(() => {
+                                              handleSaveDriveFile(pickedFile);
+                                            }, 0);
+                                          });
+                                        }}
+                                        disabled={driveLoading}
                                       >
-                                        <Link className="h-4 w-4 mr-1" />
-                                        Relacionar
+                                        {driveLoading ? (
+                                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                          <Plus className="h-4 w-4 mr-2" />
+                                        )}
+                                        Seleccionar otro archivo
                                       </Button>
                                     </div>
-                                    
-                                    {showRelationSelector && (
-                                      <div className="space-y-3 bg-slate-50 p-3 rounded-lg">
-                                        <p className="text-sm text-slate-600">
-                                          Selecciona archivos de tu Codex para relacionar con esta nota:
-                                        </p>
-                                        <div className="max-h-40 overflow-y-auto space-y-2">
-                                          {codexItems
-                                            .filter(item => item.tipo !== 'nota' && item.id)
-                                            .slice(0, 10)
-                                            .map((item) => (
-                                              <div key={item.id} className="flex items-center gap-2">
-                                                <Checkbox
-                                                  checked={selectedRelatedItems.includes(item.id)}
-                                                  onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                      setSelectedRelatedItems([...selectedRelatedItems, item.id])
-                                                    } else {
-                                                      setSelectedRelatedItems(selectedRelatedItems.filter(id => id !== item.id))
-                                                    }
-                                                  }}
-                                                  inputProps={{ 'aria-label': item.id }}
-                                                />
-                                                <label 
-                                                  htmlFor={`relation-${item.id}`}
-                                                  className="flex-1 text-sm cursor-pointer flex items-center gap-2"
-                                                >
-                                                  {(() => {
-                                                    const IconComponent = getTypeIcon(item.tipo, item)
-                                                    const platform = getSocialPlatform(item);
-                                                    if (platform !== 'other') {
-                                                      return <IconComponent />;
-                                                    }
-                                                    return <IconComponent className="h-3 w-3 text-slate-500" />
-                                                  })()}
-                                                  <span className="truncate">{item.titulo}</span>
-                                                  <span className="text-xs text-slate-400 uppercase">
-                                                    {item.tipo}
-                                                  </span>
-                                                </label>
-                                              </div>
-                                            ))}
+                                  </div>
+
+                                  {/* Drive Files List */}
+                                  {driveFiles.length > 0 && (
+                                    <div className="border border-slate-200 rounded-lg max-h-60 overflow-y-auto">
+                                      <div className="p-3 border-b border-slate-100 bg-slate-50">
+                                        <h4 className="font-medium text-slate-700">Archivo seleccionado:</h4>
+                                      </div>
+                                      <div className="p-2">
+                                        {driveFiles.map((file) => (
+                                          <div
+                                            key={file.id}
+                                            className="w-full flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200"
+                                          >
+                                            <FileText className="h-4 w-4 text-slate-500" />
+                                            <div className="flex-1 text-left">
+                                              <p className="text-sm font-medium text-slate-700">{file.name}</p>
+                                              <p className="text-xs text-slate-500">
+                                                {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Tamaño desconocido'} •
+                                                {file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString() : 'Fecha desconocida'}
+                                              </p>
+                                            </div>
+                                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                              ✓ Seleccionado
+                                            </Badge>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Optional Metadata Section */}
+                              <div className="border border-slate-200 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDriveMetadata(!showDriveMetadata)}
+                                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-700">Información adicional</span>
+                                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                      Opcional
+                                    </Badge>
+                                  </div>
+                                  {showDriveMetadata ? (
+                                    <ChevronUp className="h-4 w-4 text-slate-500" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                  )}
+                                </button>
+
+                                {showDriveMetadata && (
+                                  <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                                    <p className="text-sm text-slate-600">
+                                      Completa la información del archivo una vez conectado:
+                                    </p>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="drive-content-type">Tipo de Contenido</Label>
+                                      <Input
+                                        id="drive-content-type"
+                                        placeholder="Ej: Conferencia de prensa, Entrevista, Documento legal..."
+                                        value={contentType}
+                                        onChange={(e) => setContentType(e.target.value)}
+                                        list="content-suggestions"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="drive-title">Título personalizado</Label>
+                                      <Input
+                                        id="drive-title"
+                                        placeholder="Ej: Conferencia Ministro de Salud - COVID-19"
+                                        value={driveTitle}
+                                        onChange={(e) => setDriveTitle(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="drive-description">Descripción</Label>
+                                      <Textarea
+                                        id="drive-description"
+                                        placeholder="Breve descripción del contenido y contexto..."
+                                        rows={3}
+                                        value={driveDescription}
+                                        onChange={(e) => setDriveDescription(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="drive-tags">Etiquetas</Label>
+                                      <Input
+                                        id="drive-tags"
+                                        placeholder="Ej: salud, gobierno, covid, oficial"
+                                        value={driveTags}
+                                        onChange={(e) => setDriveTags(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="drive-project">Proyecto</Label>
+                                      <Select value={driveProject} onValueChange={setDriveProject}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Seleccionar proyecto" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                                          {userProjects.map((project) => (
+                                            <SelectItem key={project.id} value={project.id}>
+                                              {project.title}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Note/Term Form */}
+                          {selectedSourceType === "note" && (
+                            <div className="space-y-4">
+                              {/* Required Note Fields */}
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="note-title">Título *</Label>
+                                  <Input
+                                    id="note-title"
+                                    placeholder="Ej: Término clave sobre corrupción municipal"
+                                    value={noteTitle}
+                                    onChange={(e) => setNoteTitle(e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="note-content">Contenido *</Label>
+                                  <Textarea
+                                    id="note-content"
+                                    placeholder="Escribe tu nota, definición o término clave aquí..."
+                                    rows={6}
+                                    value={noteContent}
+                                    onChange={(e) => setNoteContent(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Optional Metadata Section */}
+                              <div className="border border-slate-200 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowNoteMetadata(!showNoteMetadata)}
+                                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-700">Información adicional</span>
+                                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                      Opcional
+                                    </Badge>
+                                  </div>
+                                  {showNoteMetadata ? (
+                                    <ChevronUp className="h-4 w-4 text-slate-500" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                  )}
+                                </button>
+
+                                {showNoteMetadata && (
+                                  <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="note-content-type">Tipo de Contenido</Label>
+                                      <Input
+                                        id="note-content-type"
+                                        placeholder="Ej: Testimonio, Transcripción, Definición legal..."
+                                        value={contentType}
+                                        onChange={(e) => setContentType(e.target.value)}
+                                        list="content-suggestions"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="note-tags">Etiquetas</Label>
+                                      <Input
+                                        id="note-tags"
+                                        placeholder="Ej: definición, corrupción, legal"
+                                        value={noteTags}
+                                        onChange={(e) => setNoteTags(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="project-select">Proyecto</Label>
+                                      <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Seleccionar proyecto" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                                          {userProjects.map((project) => (
+                                            <SelectItem key={project.id} value={project.id}>
+                                              {project.title}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Relations Section */}
+                                    {RELATIONS_ENABLED && (
+                                      <div className="space-y-2 border-t border-slate-200 pt-4">
+                                        <div className="flex items-center justify-between">
+                                          <Label>Relacionar con archivos</Label>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setShowRelationSelector(!showRelationSelector)}
+                                            className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                          >
+                                            <Link className="h-4 w-4 mr-1" />
+                                            Relacionar
+                                          </Button>
                                         </div>
-                                        {selectedRelatedItems.length > 0 && (
-                                          <div className="text-xs text-slate-600">
-                                            {selectedRelatedItems.length} archivo(s) seleccionado(s)
+
+                                        {showRelationSelector && (
+                                          <div className="space-y-3 bg-slate-50 p-3 rounded-lg">
+                                            <p className="text-sm text-slate-600">
+                                              Selecciona archivos de tu Codex para relacionar con esta nota:
+                                            </p>
+                                            <div className="max-h-40 overflow-y-auto space-y-2">
+                                              {codexItems
+                                                .filter(item => item.tipo !== 'nota' && item.id)
+                                                .slice(0, 10)
+                                                .map((item) => (
+                                                  <div key={item.id} className="flex items-center gap-2">
+                                                    <Checkbox
+                                                      checked={selectedRelatedItems.includes(item.id)}
+                                                      onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                          setSelectedRelatedItems([...selectedRelatedItems, item.id])
+                                                        } else {
+                                                          setSelectedRelatedItems(selectedRelatedItems.filter(id => id !== item.id))
+                                                        }
+                                                      }}
+                                                      inputProps={{ 'aria-label': item.id }}
+                                                    />
+                                                    <label
+                                                      htmlFor={`relation-${item.id}`}
+                                                      className="flex-1 text-sm cursor-pointer flex items-center gap-2"
+                                                    >
+                                                      {(() => {
+                                                        const IconComponent = getTypeIcon(item.tipo, item)
+                                                        const platform = getSocialPlatform(item);
+                                                        if (platform !== 'other') {
+                                                          return <IconComponent />;
+                                                        }
+                                                        return <IconComponent className="h-3 w-3 text-slate-500" />
+                                                      })()}
+                                                      <span className="truncate">{item.titulo}</span>
+                                                      <span className="text-xs text-slate-400 uppercase">
+                                                        {item.tipo}
+                                                      </span>
+                                                    </label>
+                                                  </div>
+                                                ))}
+                                            </div>
+                                            {selectedRelatedItems.length > 0 && (
+                                              <div className="text-xs text-slate-600">
+                                                {selectedRelatedItems.length} archivo(s) seleccionado(s)
+                                              </div>
+                                            )}
                                           </div>
                                         )}
                                       </div>
@@ -3405,687 +3687,686 @@ export default function EnhancedCodex() {
                                   </div>
                                 )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Links Form */}
-                      {selectedSourceType === "links" && (
-                        <div className="space-y-4">
-                          {/* Links Input */}
-                          <div className="space-y-2">
-                            <Label htmlFor="links-input">Enlaces *</Label>
-                            <Textarea
-                              id="links-input"
-                              placeholder="Pega aquí uno o múltiples enlaces web, separados por líneas o espacios..."
-                              rows={4}
-                              value={linksInput}
-                              onChange={(e) => handleLinksInputChange(e.target.value)}
-                            />
-                            {detectedLinks.length > 0 && (
-                              <div className="text-sm text-green-600">
-                                ✓ {detectedLinks.length} enlace(s) detectado(s)
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Analysis Checkbox - Solo mostrar para enlaces de Twitter/X */}
-                          {hasTwitterLinks(detectedLinks) && (
-                            <div className="space-y-3">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  checked={shouldAnalyzeLinks}
-                                  onChange={(e) => setShouldAnalyzeLinks(e.target.checked)}
-                                  inputProps={{ 'aria-label': 'controlled' }}
-                                />
-                                <Label htmlFor="analyze-links" className="text-sm font-medium cursor-pointer">
-                                  ✨ Analizar automáticamente enlaces de X 
-                                  {isAutoAnalyzing && (
-                                    <span className="ml-2 text-blue-600 text-xs">
-                                      (análisis en progreso...)
-                                    </span>
-                                  )}
-                                </Label>
-                              </div>
-                              {shouldAnalyzeLinks && (
-                                <div className="flex items-center space-x-2 ml-6">
-                                  <Checkbox
-                                    checked={shouldGenerateDescription}
-                                    onChange={(e) => setShouldGenerateDescription(e.target.checked)}
-                                    inputProps={{ 'aria-label': 'controlled' }}
-                                  />
-                                  <Label htmlFor="generate-description" className="text-sm font-medium cursor-pointer text-gray-600">
-                                    Generar Descripción
-                                  </Label>
-                                </div>
-                              )}
                             </div>
                           )}
 
-                          {/* Optional Metadata Section */}
-                          <div className="border border-slate-200 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => setShowLinkMetadata(!showLinkMetadata)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">Información adicional</span>
-                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                  Opcional
-                                </Badge>
+                          {/* Links Form */}
+                          {selectedSourceType === "links" && (
+                            <div className="space-y-4">
+                              {/* Links Input */}
+                              <div className="space-y-2">
+                                <Label htmlFor="links-input">Enlaces *</Label>
+                                <Textarea
+                                  id="links-input"
+                                  placeholder="Pega aquí uno o múltiples enlaces web, separados por líneas o espacios..."
+                                  rows={4}
+                                  value={linksInput}
+                                  onChange={(e) => handleLinksInputChange(e.target.value)}
+                                />
+                                {detectedLinks.length > 0 && (
+                                  <div className="text-sm text-green-600">
+                                    ✓ {detectedLinks.length} enlace(s) detectado(s)
+                                  </div>
+                                )}
                               </div>
-                              {showLinkMetadata ? (
-                                <ChevronUp className="h-4 w-4 text-slate-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-slate-500" />
+
+                              {/* Analysis Checkbox - Solo mostrar para enlaces de Twitter/X */}
+                              {hasTwitterLinks(detectedLinks) && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={shouldAnalyzeLinks}
+                                      onChange={(e) => setShouldAnalyzeLinks(e.target.checked)}
+                                      inputProps={{ 'aria-label': 'controlled' }}
+                                    />
+                                    <Label htmlFor="analyze-links" className="text-sm font-medium cursor-pointer">
+                                      ✨ Analizar automáticamente enlaces de X
+                                      {isAutoAnalyzing && (
+                                        <span className="ml-2 text-blue-600 text-xs">
+                                          (análisis en progreso...)
+                                        </span>
+                                      )}
+                                    </Label>
+                                  </div>
+                                  {shouldAnalyzeLinks && (
+                                    <div className="flex items-center space-x-2 ml-6">
+                                      <Checkbox
+                                        checked={shouldGenerateDescription}
+                                        onChange={(e) => setShouldGenerateDescription(e.target.checked)}
+                                        inputProps={{ 'aria-label': 'controlled' }}
+                                      />
+                                      <Label htmlFor="generate-description" className="text-sm font-medium cursor-pointer text-gray-600">
+                                        Generar Descripción
+                                      </Label>
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                            </button>
-                            
-                            {showLinkMetadata && (
-                              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
-                                <div className="space-y-2">
-                                  <Label htmlFor="link-title">Título personalizado</Label>
-                                  <Input
-                                    id="link-title"
-                                    placeholder="Ej: Artículos sobre corrupción municipal"
-                                    value={linkTitle}
-                                    onChange={(e) => setLinkTitle(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="link-description">Descripción</Label>
-                                  <Textarea
-                                    id="link-description"
-                                    placeholder="Breve descripción del contenido de los enlaces..."
-                                    rows={3}
-                                    value={linkDescription}
-                                    onChange={(e) => setLinkDescription(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="link-tags">Etiquetas</Label>
-                                  <Input 
-                                    id="link-tags" 
-                                    placeholder="Ej: prensa, investigación, reportaje"
-                                    value={linkTags}
-                                    onChange={(e) => setLinkTags(e.target.value)}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="link-project">Proyecto</Label>
-                                  <Select value={linkProject} onValueChange={setLinkProject}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar proyecto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
-                                      {userProjects.map((project) => (
-                                        <SelectItem key={project.id} value={project.id}>
-                                          {project.title}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+
+                              {/* Optional Metadata Section */}
+                              <div className="border border-slate-200 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowLinkMetadata(!showLinkMetadata)}
+                                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-700">Información adicional</span>
+                                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                      Opcional
+                                    </Badge>
+                                  </div>
+                                  {showLinkMetadata ? (
+                                    <ChevronUp className="h-4 w-4 text-slate-500" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                  )}
+                                </button>
+
+                                {showLinkMetadata && (
+                                  <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="link-title">Título personalizado</Label>
+                                      <Input
+                                        id="link-title"
+                                        placeholder="Ej: Artículos sobre corrupción municipal"
+                                        value={linkTitle}
+                                        onChange={(e) => setLinkTitle(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="link-description">Descripción</Label>
+                                      <Textarea
+                                        id="link-description"
+                                        placeholder="Breve descripción del contenido de los enlaces..."
+                                        rows={3}
+                                        value={linkDescription}
+                                        onChange={(e) => setLinkDescription(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="link-tags">Etiquetas</Label>
+                                      <Input
+                                        id="link-tags"
+                                        placeholder="Ej: prensa, investigación, reportaje"
+                                        value={linkTags}
+                                        onChange={(e) => setLinkTags(e.target.value)}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor="link-project">Proyecto</Label>
+                                      <Select value={linkProject} onValueChange={setLinkProject}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Seleccionar proyecto" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                                          {userProjects.map((project) => (
+                                            <SelectItem key={project.id} value={project.id}>
+                                              {project.title}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
+
+
+
+                          {/* Action Buttons */}
+                          <DialogFooter className="p-6 bg-slate-50 border-t -mx-6 -mb-4 mt-4">
+                            <Button
+                              onClick={clearForm}
+                              variant="outline"
+                              className="flex-1"
+                              disabled={isSubmitting || isUploading}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              className="flex-1 bg-blue-600 hover:bg-blue-700"
+                              disabled={
+                                isSubmitting ||
+                                isUploading ||
+                                (selectedSourceType === "note" && (!noteTitle.trim() || !noteContent.trim())) ||
+                                (selectedSourceType === "upload" && selectedFiles.length === 0) ||
+                                (selectedSourceType === "drive" && (!isDriveConnected || !selectedDriveFile)) ||
+                                (selectedSourceType === "links" && detectedLinks.length === 0)
+                              }
+                              onClick={() => {
+                                if (selectedSourceType === "note") {
+                                  handleSaveNote()
+                                } else if (selectedSourceType === "upload") {
+                                  handleUploadFiles()
+                                } else if (selectedSourceType === "drive") {
+                                  handleSaveDriveFile()
+                                } else if (selectedSourceType === "links") {
+                                  handleSaveMultipleLinks()
+                                }
+                              }}
+                            >
+                              {(isSubmitting || isUploading) ? (
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              ) : null}
+                              {selectedSourceType === "upload" && (isUploading ? "Subiendo archivos..." : `Subir ${selectedFiles.length} archivo(s)`)}
+                              {selectedSourceType === "drive" && (isSubmitting ? "Guardando..." : "Guardar desde Drive")}
+                              {selectedSourceType === "note" && (isSubmitting ? "Guardando..." : "Guardar Nota")}
+                              {selectedSourceType === "links" && (isSubmitting ? "Guardando..." : `Guardar ${detectedLinks.length} enlace(s)`)}
+                            </Button>
+                          </DialogFooter>
                         </div>
                       )}
-
-                      {/* Action Buttons */}
-                      <DialogFooter className="p-6 bg-slate-50 border-t -mx-6 -mb-4 mt-4">
-                        <Button
-                          onClick={clearForm}
-                          variant="outline"
-                          className="flex-1"
-                          disabled={isSubmitting || isUploading}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          disabled={
-                            isSubmitting || 
-                            isUploading ||
-                            (selectedSourceType === "note" && (!noteTitle.trim() || !noteContent.trim())) ||
-                            (selectedSourceType === "upload" && selectedFiles.length === 0) ||
-                            (selectedSourceType === "drive" && (!isDriveConnected || !selectedDriveFile)) ||
-                            (selectedSourceType === "links" && detectedLinks.length === 0)
-                          }
-                          onClick={() => {
-                            if (selectedSourceType === "note") {
-                              handleSaveNote()
-                            } else if (selectedSourceType === "upload") {
-                              handleUploadFiles()
-                            } else if (selectedSourceType === "drive") {
-                              handleSaveDriveFile()
-                            } else if (selectedSourceType === "links") {
-                              handleSaveMultipleLinks()
-                            }
-                          }}
-                        >
-                          {(isSubmitting || isUploading) ? (
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          ) : null}
-                          {selectedSourceType === "upload" && (isUploading ? "Subiendo archivos..." : `Subir ${selectedFiles.length} archivo(s)`)}
-                          {selectedSourceType === "drive" && (isSubmitting ? "Guardando..." : "Guardar desde Drive")}
-                          {selectedSourceType === "note" && (isSubmitting ? "Guardando..." : "Guardar Nota")}
-                          {selectedSourceType === "links" && (isSubmitting ? "Guardando..." : `Guardar ${detectedLinks.length} enlace(s)`)}
-                        </Button>
-                      </DialogFooter>
                     </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-            )}
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 px-8 py-3 rounded-xl"
-              onClick={loadCodexData}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 mr-2" />
+                  </DialogContent>
+                </Dialog>
               )}
-              {isLoading ? 'Actualizando...' : 'Explorar Codex'}
-            </Button>
-          </div>
-
-          {error && (
-            <div className="mt-4 max-w-2xl mx-auto">
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 text-red-700">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{error}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 px-8 py-3 rounded-xl"
+                onClick={loadCodexData}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5 mr-2" />
+                )}
+                {isLoading ? 'Actualizando...' : 'Explorar Codex'}
+              </Button>
             </div>
-          )}
 
-          {isTranscribing && (
-            <div className="mt-4 max-w-2xl mx-auto">
-              <Card className="border-blue-200 bg-blue-50">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Mic className="h-5 w-5 text-blue-500 animate-pulse" />
-                      <p className="text-blue-600 font-medium">
-                        {transcriptionProgress < 40 ? 'Descargando media de Instagram...' :
-                         transcriptionProgress < 80 ? 'Transcribiendo contenido...' :
-                         'Guardando transcripción...'}
-                      </p>
+            {error && (
+              <div className="mt-4 max-w-2xl mx-auto">
+                <Card className="border-red-200 bg-red-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-red-700">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{error}</span>
                     </div>
-                    <div className="w-full bg-blue-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${transcriptionProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-sm text-blue-600">{transcriptionProgress}% completado</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <Card className="mb-8 border-0 shadow-md">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar por título, proyecto, etiquetas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+                  </CardContent>
+                </Card>
               </div>
-              <div className="flex gap-3">
-                {categoryFilter === 'item' && (
-                  <Select value={selectedType} onValueChange={setSelectedType}>
+            )}
+
+            {isTranscribing && (
+              <div className="mt-4 max-w-2xl mx-auto">
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Mic className="h-5 w-5 text-blue-500 animate-pulse" />
+                        <p className="text-blue-600 font-medium">
+                          {transcriptionProgress < 40 ? 'Descargando media de Instagram...' :
+                            transcriptionProgress < 80 ? 'Transcribiendo contenido...' :
+                              'Guardando transcripción...'}
+                        </p>
+                      </div>
+                      <div className="w-full bg-blue-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${transcriptionProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-sm text-blue-600">{transcriptionProgress}% completado</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Search and Filters */}
+          <Card className="mb-8 border-0 shadow-md">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar por título, proyecto, etiquetas..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  {categoryFilter === 'item' && (
+                    <Select value={selectedType} onValueChange={setSelectedType}>
+                      <SelectTrigger className="w-48 h-12 border-slate-200">
+                        <SelectValue placeholder="Tipo de fuente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los tipos</SelectItem>
+                        <SelectItem value="documento">Documentos</SelectItem>
+                        <SelectItem value="audio">Audios</SelectItem>
+                        <SelectItem value="video">Videos</SelectItem>
+                        <SelectItem value="enlace">Enlaces</SelectItem>
+                        <SelectItem value="nota">Notas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger className="w-48 h-12 border-slate-200">
-                      <SelectValue placeholder="Tipo de fuente" />
+                      <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos los tipos</SelectItem>
-                      <SelectItem value="documento">Documentos</SelectItem>
-                      <SelectItem value="audio">Audios</SelectItem>
-                      <SelectItem value="video">Videos</SelectItem>
-                      <SelectItem value="enlace">Enlaces</SelectItem>
-                      <SelectItem value="nota">Notas</SelectItem>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="nuevo">Nuevo</SelectItem>
+                      <SelectItem value="revision">En revisión</SelectItem>
+                      <SelectItem value="procesado">Procesado</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-48 h-12 border-slate-200">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="nuevo">Nuevo</SelectItem>
-                    <SelectItem value="revision">En revisión</SelectItem>
-                    <SelectItem value="procesado">Procesado</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="lg" className="h-12 px-4 border-slate-200">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            {/* Toolbar de selección */}
-            <div className="flex flex-wrap gap-3 mt-4">
-              {!selectionMode ? (
-                <Button variant="outline" size="lg" onClick={() => setSelectionMode(true)}>
-                  Seleccionar archivos
-                </Button>
-              ) : (
-                <>
-                  <Button variant="destructive" size="lg" onClick={handleDeleteSelectedItems} disabled={selectedIds.length === 0}>
-                    Eliminar seleccionados ({selectedIds.length})
+                  <Button variant="outline" size="lg" className="h-12 px-4 border-slate-200">
+                    <Filter className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="lg" onClick={() => { setSelectionMode(false); setSelectedIds([]); }}>
-                    Cancelar selección
-                  </Button>
-                  <Button variant="destructive" size="lg" onClick={handleDeleteAllItems}>
-                    Eliminar todos
-                  </Button>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Content Tabs */}
-        <Tabs defaultValue="recent" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-96 mx-auto bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="recent" className="rounded-lg">
-              Recientes
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="rounded-lg">
-              Proyectos
-            </TabsTrigger>
-            <TabsTrigger value="favorites" className="rounded-lg">
-              Favoritos
-            </TabsTrigger>
-            <TabsTrigger value="archive" className="rounded-lg">
-              Archivo
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="recent" className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">
-                {isLoading ? 'Cargando...' : showAllItems
-                  ? `Todos los elementos (${topLevelItems.length})`
-                  : `Elementos recientes (${topLevelItems.length})`}
-              </h3>
-              {!showAllItems && topLevelItems.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAllItems(true)}
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                >
-                  Ver todos los elementos
-                </Button>
-              )}
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
-                <span className="ml-2 text-slate-600">Cargando elementos del Codex...</span>
+                </div>
               </div>
-            ) : topLevelItems.length === 0 ? (
-              <div className="text-center py-12">
-                <Archive className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">No hay elementos</h3>
-                <p className="text-slate-600 mb-4">
-                  {codexItems.length === 0 
-                    ? "Aún no has agregado elementos a tu Codex." 
-                    : "No se encontraron elementos que coincidan con tu búsqueda."
-                  }
-                </p>
-                <Button
-                  onClick={() => setIsModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar primer elemento
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {categoryFilter === 'wiki' ? (
-                  // Render Wiki Items
-                  wikiItems
-                    .filter(item => !wikiSubcategory || item.subcategory === wikiSubcategory)
-                    .map((item) => (
-                      <WikiItemCard
-                        key={item.id}
-                        item={item}
-                        onView={handleViewWikiItem}
-                        onEdit={handleEditWikiItem}
-                        onDelete={handleDeleteWikiItem}
-                      />
-                    ))
+              {/* Toolbar de selección */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                {!selectionMode ? (
+                  <Button variant="outline" size="lg" onClick={() => setSelectionMode(true)}>
+                    Seleccionar archivos
+                  </Button>
                 ) : (
-                  // Render General and Monitoring Items
-                  topLevelItems.map((item) => {
-                  if (item.is_group_parent) {
-                    return <CodexFolderCard 
-                      key={item.id} 
-                      item={item} 
-                      onEdit={(group) => {
-                        setGroupToEdit(group)
-                        setIsEditGroupModalOpen(true)
-                      }}
-                      onDelete={() => handleDeleteGroup(item.group_id || item.id)}
-                      onAddItem={() => handleOpenAddToGroupModal(item)}
-                      onViewItem={handleViewItem}
-                      onDownloadItem={handleDownloadItem}
-                      onTranscribeItem={handleTranscribeItem}
-                      onShowTranscription={handleShowTranscription}
-                      onEditItem={handleEditItem}
-                      selectionMode={selectionMode}
-                      selectedIds={selectedIds}
-                      toggleSelectItem={toggleSelectItem}
-                    />
-                  } else {
-                    // Monitoring cards - usar nuevo componente con logos de plataforma
-                    if (item.tipo === 'monitoreos' || (item.tipo === 'item' && (item as any).original_type === 'monitor')) {
-                      return (
-                        <MonitoringCard
+                  <>
+                    <Button variant="destructive" size="lg" onClick={handleDeleteSelectedItems} disabled={selectedIds.length === 0}>
+                      Eliminar seleccionados ({selectedIds.length})
+                    </Button>
+                    <Button variant="ghost" size="lg" onClick={() => { setSelectionMode(false); setSelectedIds([]); }}>
+                      Cancelar selección
+                    </Button>
+                    <Button variant="destructive" size="lg" onClick={handleDeleteAllItems}>
+                      Eliminar todos
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Content Tabs */}
+          <Tabs defaultValue="recent" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:w-96 mx-auto bg-slate-100 p-1 rounded-xl">
+              <TabsTrigger value="recent" className="rounded-lg">
+                Recientes
+              </TabsTrigger>
+              <TabsTrigger value="projects" className="rounded-lg">
+                Proyectos
+              </TabsTrigger>
+              <TabsTrigger value="favorites" className="rounded-lg">
+                Favoritos
+              </TabsTrigger>
+              <TabsTrigger value="archive" className="rounded-lg">
+                Archivo
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="recent" className="space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {isLoading ? 'Cargando...' : showAllItems
+                    ? `Todos los elementos (${topLevelItems.length})`
+                    : `Elementos recientes (${topLevelItems.length})`}
+                </h3>
+                {!showAllItems && topLevelItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllItems(true)}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    Ver todos los elementos
+                  </Button>
+                )}
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
+                  <span className="ml-2 text-slate-600">Cargando elementos del Codex...</span>
+                </div>
+              ) : topLevelItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <Archive className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No hay elementos</h3>
+                  <p className="text-slate-600 mb-4">
+                    {codexItems.length === 0
+                      ? "Aún no has agregado elementos a tu Codex."
+                      : "No se encontraron elementos que coincidan con tu búsqueda."
+                    }
+                  </p>
+                  <Button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar primer elemento
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {categoryFilter === 'wiki' ? (
+                    // Render Wiki Items
+                    wikiItems
+                      .filter(item => !wikiSubcategory || item.subcategory === wikiSubcategory)
+                      .map((item) => (
+                        <WikiItemCard
                           key={item.id}
                           item={item}
+                          onView={handleViewWikiItem}
+                          onEdit={handleEditWikiItem}
+                          onDelete={handleDeleteWikiItem}
+                        />
+                      ))
+                  ) : (
+                    // Render General and Monitoring Items
+                    topLevelItems.map((item) => {
+                      if (item.is_group_parent) {
+                        return <CodexFolderCard
+                          key={item.id}
+                          item={item}
+                          onEdit={(group) => {
+                            setGroupToEdit(group)
+                            setIsEditGroupModalOpen(true)
+                          }}
+                          onDelete={() => handleDeleteGroup(item.group_id || item.id)}
+                          onAddItem={() => handleOpenAddToGroupModal(item)}
+                          onViewItem={handleViewItem}
+                          onDownloadItem={handleDownloadItem}
+                          onTranscribeItem={handleTranscribeItem}
+                          onShowTranscription={handleShowTranscription}
+                          onEditItem={handleEditItem}
                           selectionMode={selectionMode}
                           selectedIds={selectedIds}
                           toggleSelectItem={toggleSelectItem}
-                          onView={handleViewItem}
-                          onEdit={handleEditItem}
-                          onDelete={handleDeleteItemConfirm}
-                          onOpenLinks={async (itm) => {
-                            let rows: any[] = []
-                            try {
-                              rows = await getLinksForParentItem(itm.id) || []
-                            } catch (e) {
-                              rows = []
-                            }
-                            openMonitorMiniModal(itm, rows)
-                          }}
                         />
-                      )
-                    } else {
-                      // Card normal para otros tipos (audio, video, documento, enlace, nota)
-                      const IconComponent = getTypeIcon(item.tipo, item)
-                      return (
-                        <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
-                          {selectionMode && (
-                            <Checkbox
-                              checked={selectedIds.includes(item.id)}
-                              onChange={() => toggleSelectItem(item.id)}
-                              className="absolute top-2 left-2 z-20 bg-white rounded"
+                      } else {
+                        // Monitoring cards - usar nuevo componente con logos de plataforma
+                        if (item.tipo === 'monitoreos' || (item.tipo === 'item' && (item as any).original_type === 'monitor')) {
+                          return (
+                            <MonitoringCard
+                              key={item.id}
+                              item={item}
+                              selectionMode={selectionMode}
+                              selectedIds={selectedIds}
+                              toggleSelectItem={toggleSelectItem}
+                              onView={handleViewItem}
+                              onEdit={handleEditItem}
+                              onDelete={handleDeleteItemConfirm}
+                              onOpenLinks={async (itm) => {
+                                let rows: any[] = []
+                                try {
+                                  rows = await getLinksForParentItem(itm.id) || []
+                                } catch (e) {
+                                  rows = []
+                                }
+                                openMonitorMiniModal(itm, rows)
+                              }}
                             />
-                          )}
-                          <CardHeader className="p-4 border-b border-slate-200">
-                            {/* Title and menu in the same row */}
-                            <div className="flex items-center justify-between gap-2 min-w-0">
-                              <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
-                                {item.titulo}
-                              </CardTitle>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="-mr-2 -mt-2 opacity-60 hover:opacity-100">
-                                    <MoreVertical className="h-5 w-5" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewItem(item)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Ver
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  {(item.storage_path || item.url) && (
-                                    <DropdownMenuItem onClick={() => handleDownloadItem(item)}>
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Descargar
-                                    </DropdownMenuItem>
-                                  )}
-                                  {item.audio_transcription && (
-                                    <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
-                                      <Mic className="h-4 w-4 mr-2" />
-                                      Transcripción Audio
-                                    </DropdownMenuItem>
-                                  )}
-                                  {(item as any).transcripcion && (
-                                    <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Transcripción Texto
-                                    </DropdownMenuItem>
-                                  )}
-                                  {canTranscribe(item) && !item.audio_transcription && !(item as any).transcripcion && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleTranscribeItem(item)}
-                                      disabled={isTranscribing}
-                                    >
-                                      <Mic className="h-4 w-4 mr-2" />
-                                      {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
-                                    </DropdownMenuItem>
-                                  )}
-                                  {canBeGrouped(item) && !item.group_id && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => handleOpenGroupModal(item)}>
-                                        <FolderPlus className="h-4 w-4 mr-2" />
-                                        Crear Grupo
+                          )
+                        } else {
+                          // Card normal para otros tipos (audio, video, documento, enlace, nota)
+                          const IconComponent = getTypeIcon(item.tipo, item)
+                          return (
+                            <Card key={item.id} className="relative bg-white shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden flex flex-col">
+                              {selectionMode && (
+                                <Checkbox
+                                  checked={selectedIds.includes(item.id)}
+                                  onChange={() => toggleSelectItem(item.id)}
+                                  className="absolute top-2 left-2 z-20 bg-white rounded"
+                                />
+                              )}
+                              <CardHeader className="p-4 border-b border-slate-200">
+                                {/* Title and menu in the same row */}
+                                <div className="flex items-center justify-between gap-2 min-w-0">
+                                  <CardTitle className="text-lg font-semibold text-slate-900 truncate min-w-0" title={item.titulo}>
+                                    {item.titulo}
+                                  </CardTitle>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="-mr-2 -mt-2 opacity-60 hover:opacity-100">
+                                        <MoreVertical className="h-5 w-5" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleViewItem(item)}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Ver
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleOpenAddToGroupModal(item)}>
-                                        <Users className="h-4 w-4 mr-2" />
-                                        Agregar a Grupo
+                                      <DropdownMenuItem onClick={() => handleEditItem(item)}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Editar
                                       </DropdownMenuItem>
-                                    </>
+                                      {(item.storage_path || item.url) && (
+                                        <DropdownMenuItem onClick={() => handleDownloadItem(item)}>
+                                          <Download className="h-4 w-4 mr-2" />
+                                          Descargar
+                                        </DropdownMenuItem>
+                                      )}
+                                      {item.audio_transcription && (
+                                        <DropdownMenuItem onClick={() => handleShowTranscription(item, 'audio')}>
+                                          <Mic className="h-4 w-4 mr-2" />
+                                          Transcripción Audio
+                                        </DropdownMenuItem>
+                                      )}
+                                      {(item as any).transcripcion && (
+                                        <DropdownMenuItem onClick={() => handleShowTranscription(item, 'text')}>
+                                          <FileText className="h-4 w-4 mr-2" />
+                                          Transcripción Texto
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canTranscribe(item) && !item.audio_transcription && !(item as any).transcripcion && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleTranscribeItem(item)}
+                                          disabled={isTranscribing}
+                                        >
+                                          <Mic className="h-4 w-4 mr-2" />
+                                          {isTranscribing ? 'Transcribiendo...' : 'Transcribir'}
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canBeGrouped(item) && !item.group_id && (
+                                        <>
+                                          <DropdownMenuItem onClick={() => handleOpenGroupModal(item)}>
+                                            <FolderPlus className="h-4 w-4 mr-2" />
+                                            Crear Grupo
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleOpenAddToGroupModal(item)}>
+                                            <Users className="h-4 w-4 mr-2" />
+                                            Agregar a Grupo
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
+                                      {item.group_id && !item.is_group_parent && (
+                                        <DropdownMenuItem onClick={() => handleRemoveFromGroup(item)} className="text-orange-600">
+                                          <Users className="h-4 w-4 mr-2" />
+                                          Remover del Grupo
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem>
+                                        <Share2 className="h-4 w-4 mr-2" />
+                                        Compartir
+                                      </DropdownMenuItem>
+                                      {selectionMode && (
+                                        <Checkbox checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} className="mr-2" />
+                                      )}
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => handleDeleteItemConfirm(item)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Eliminar
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                                {/* Icon and file size below title */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  {(() => {
+                                    const platform = getSocialPlatform(item);
+                                    if (platform !== 'other') {
+                                      return <IconComponent />;
+                                    }
+                                    return (
+                                      <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
+                                        <IconComponent className="h-5 w-5 text-slate-600" />
+                                      </div>
+                                    );
+                                  })()}
+                                  <CardDescription className="text-sm text-slate-500">
+                                    {formatFileSize(item.tamano)}
+                                  </CardDescription>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-4 pt-3 space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
+                                    {item.tipo}
+                                  </Badge>
+                                  {item.is_drive && (
+                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                      Google Drive
+                                    </Badge>
+                                  )}
+                                  {item.is_group_parent && (
+                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                                      📁 Grupo: {item.group_name} ({item.total_parts} partes)
+                                    </Badge>
                                   )}
                                   {item.group_id && !item.is_group_parent && (
-                                    <DropdownMenuItem onClick={() => handleRemoveFromGroup(item)} className="text-orange-600">
-                                      <Users className="h-4 w-4 mr-2" />
-                                      Remover del Grupo
-                                    </DropdownMenuItem>
+                                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                                      🔗 Parte {item.part_number}
+                                    </Badge>
                                   )}
-                                  <DropdownMenuItem>
-                                    <Share2 className="h-4 w-4 mr-2" />
-                                    Compartir
-                                  </DropdownMenuItem>
-                                  {selectionMode && (
-                                    <Checkbox checked={selectedIds.includes(item.id)} onChange={() => toggleSelectItem(item.id)} className="mr-2" />
+                                  {item.audio_transcription && (
+                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'audio')}>
+                                      🎤 Audio
+                                    </Badge>
                                   )}
-                                  <DropdownMenuItem 
-                                    className="text-red-600"
-                                    onClick={() => handleDeleteItemConfirm(item)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Eliminar
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            {/* Icon and file size below title */}
-                            <div className="flex items-center gap-2 mt-2">
-                              {(() => {
-                                const platform = getSocialPlatform(item);
-                                if (platform !== 'other') {
-                                  return <IconComponent />;
-                                }
-                                return (
-                                  <div className="bg-slate-100 p-2 rounded-lg flex-shrink-0">
-                                    <IconComponent className="h-5 w-5 text-slate-600" />
-                                  </div>
-                                );
-                              })()}
-                              <CardDescription className="text-sm text-slate-500">
-                                {formatFileSize(item.tamano)}
-                              </CardDescription>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-3 space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 capitalize">
-                                {item.tipo}
-                              </Badge>
-                              {item.is_drive && (
-                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                  Google Drive
-                                </Badge>
-                              )}
-                              {item.is_group_parent && (
-                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                                  📁 Grupo: {item.group_name} ({item.total_parts} partes)
-                                </Badge>
-                              )}
-                              {item.group_id && !item.is_group_parent && (
-                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                                  🔗 Parte {item.part_number}
-                                </Badge>
-                              )}
-                              {item.audio_transcription && (
-                                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'audio')}>
-                                  🎤 Audio
-                                </Badge>
-                              )}
-                              {(item as any).transcripcion && (
-                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'text')}>
-                                  📝 Texto
-                                </Badge>
-                              )}
-                              {/* Solo el icono, sin badge */}
-                            </div>
-
-                            {/* NUEVO: Mostrar métricas de engagement para todas las redes sociales */}
-                            {(() => {
-                              const platform = getSocialPlatform(item);
-                              if (platform !== 'other' && (item.likes || item.comments || item.shares || item.views)) {
-                                return (
-                                  <div className={`flex items-center gap-4 text-sm text-slate-600 p-3 rounded-lg border ${
-                                    platform === 'x' ? 'bg-slate-50 border-slate-200' :
-                                    platform === 'instagram' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
-                                    platform === 'facebook' ? 'bg-blue-50 border-blue-200' :
-                                    platform === 'tiktok' ? 'bg-gray-50 border-gray-200' :
-                                    platform === 'youtube' ? 'bg-red-50 border-red-200' :
-                                    'bg-slate-50 border-slate-200'
-                                  }`}>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-red-500">❤️</span>
-                                  <span className="font-medium">{item.likes || 0}</span>
+                                  {(item as any).transcripcion && (
+                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 cursor-pointer" onClick={() => handleShowTranscription(item, 'text')}>
+                                      📝 Texto
+                                    </Badge>
+                                  )}
+                                  {/* Solo el icono, sin badge */}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-blue-600">💬</span>
-                                  <span className="font-medium">{item.comments || 0}</span>
+
+                                {/* NUEVO: Mostrar métricas de engagement para todas las redes sociales */}
+                                {(() => {
+                                  const platform = getSocialPlatform(item);
+                                  if (platform !== 'other' && (item.likes || item.comments || item.shares || item.views)) {
+                                    return (
+                                      <div className={`flex items-center gap-4 text-sm text-slate-600 p-3 rounded-lg border ${platform === 'x' ? 'bg-slate-50 border-slate-200' :
+                                        platform === 'instagram' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
+                                          platform === 'facebook' ? 'bg-blue-50 border-blue-200' :
+                                            platform === 'tiktok' ? 'bg-gray-50 border-gray-200' :
+                                              platform === 'youtube' ? 'bg-red-50 border-red-200' :
+                                                'bg-slate-50 border-slate-200'
+                                        }`}>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-red-500">❤️</span>
+                                          <span className="font-medium">{item.likes || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-blue-600">💬</span>
+                                          <span className="font-medium">{item.comments || 0}</span>
+                                        </div>
+                                        {item.views && item.views > 0 && (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-cyan-600">👁️</span>
+                                            <span className="font-medium">{item.views}</span>
+                                          </div>
+                                        )}
+                                        {item.shares && item.shares > 0 && (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-indigo-600">🔄</span>
+                                            <span className="font-medium">{item.shares}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                {item.proyecto && (
+                                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <Folder className="h-4 w-4" />
+                                    <span className="truncate">{item.proyecto}</span>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>{formatDate(item.fecha)}</span>
                                 </div>
-                                {item.views && item.views > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-cyan-600">👁️</span>
-                                    <span className="font-medium">{item.views}</span>
+
+                                {item.etiquetas && item.etiquetas.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.etiquetas.slice(0, 2).map((tag, index) => (
+                                      <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {item.etiquetas.length > 2 && (
+                                      <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                        +{item.etiquetas.length - 2}
+                                      </Badge>
+                                    )}
                                   </div>
                                 )}
-                                {item.shares && item.shares > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-indigo-600">🔄</span>
-                                    <span className="font-medium">{item.shares}</span>
-                                  </div>
+
+                                {item.descripcion && (
+                                  <p className="text-sm text-slate-600 line-clamp-2">
+                                    {item.descripcion}
+                                  </p>
                                 )}
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
+                              </CardContent>
+                            </Card>
+                          )
+                        }
+                      }
+                    })
+                  )}
+                </div>
+              )}
 
-                            {item.proyecto && (
-                              <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <Folder className="h-4 w-4" />
-                                <span className="truncate">{item.proyecto}</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(item.fecha)}</span>
-                            </div>
-
-                            {item.etiquetas && item.etiquetas.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {item.etiquetas.slice(0, 2).map((tag, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {item.etiquetas.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
-                                    +{item.etiquetas.length - 2}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-
-                            {item.descripcion && (
-                              <p className="text-sm text-slate-600 line-clamp-2">
-                                {item.descripcion}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      )
-                    }
-                  }
-                })
-                )}
-              </div>
-            )}
-
-            {/* Load More / Show Less Section */}
-            {(topLevelItems.length > itemsToShow && !showAllItems) && (
-              <div className="flex flex-col items-center gap-4 pt-8 border-t border-slate-200">
-                <div className="text-center">
-                  <p className="text-slate-600 mb-4">
-                    Mostrando {itemsToShow} de {topLevelItems.length} elementos
-                  </p>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => setItemsToShow((prev) => Math.min(prev + 6, topLevelItems.length))}
-                      variant="outline"
-                      className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                    >
-                      Cargar 6 más
-                    </Button>
-                    <Button
-                      onClick={() => setShowAllItems(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      Ver todos ({topLevelItems.length})
-                    </Button>
+              {/* Load More / Show Less Section */}
+              {(topLevelItems.length > itemsToShow && !showAllItems) && (
+                <div className="flex flex-col items-center gap-4 pt-8 border-t border-slate-200">
+                  <div className="text-center">
+                    <p className="text-slate-600 mb-4">
+                      Mostrando {itemsToShow} de {topLevelItems.length} elementos
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => setItemsToShow((prev) => Math.min(prev + 6, topLevelItems.length))}
+                        variant="outline"
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        Cargar 6 más
+                      </Button>
+                      <Button
+                        onClick={() => setShowAllItems(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Ver todos ({topLevelItems.length})
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {showAllItems && topLevelItems.length > 0 && (
-               <div className="flex flex-col items-center gap-4 pt-8 border-t border-slate-200">
+              {showAllItems && topLevelItems.length > 0 && (
+                <div className="flex flex-col items-center gap-4 pt-8 border-t border-slate-200">
                   <p className="text-slate-600 mb-4">Mostrando todos los {topLevelItems.length} elementos</p>
                   <Button
                     onClick={() => {
@@ -4096,452 +4377,453 @@ export default function EnhancedCodex() {
                   >
                     Mostrar menos
                   </Button>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="projects">
-            <div className="text-center py-12">
-              <Folder className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Vista de Proyectos</h3>
-              <p className="text-slate-600">Organiza tus fuentes por proyectos de investigación</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="favorites">
-            <div className="text-center py-12">
-              <Tag className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Elementos Favoritos</h3>
-              <p className="text-slate-600">Acceso rápido a tus fuentes más importantes</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="archive">
-            <div className="text-center py-12">
-              <Archive className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Archivo</h3>
-              <p className="text-slate-600">Fuentes archivadas y materiales históricos</p>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Mini modal para enlaces de monitoreo */}
-      <MiniModal
-        open={monitorModalOpen}
-        title={monitorModalTitle}
-        links={monitorLinks}
-        onClose={() => setMonitorModalOpen(false)}
-        onToggle={toggleMonitorLink}
-      />
-
-      {/* Modal de Edición */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-slate-900">
-              Editar Elemento
-            </DialogTitle>
-            <DialogDescription className="text-slate-600">
-              Modifica los metadatos de este elemento del Codex
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Título *
-              </label>
-              <Input
-                value={editForm.titulo}
-                onChange={(e) => setEditForm({ ...editForm, titulo: e.target.value })}
-                placeholder="Título del elemento"
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Descripción
-              </label>
-              <textarea
-                value={editForm.descripcion}
-                onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
-                placeholder="Descripción opcional"
-                rows={3}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-blue-500 resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Proyecto *
-              </label>
-              <Select 
-                value={editForm.proyecto} 
-                onValueChange={(value) => setEditForm({ ...editForm, proyecto: value })}
-              >
-                <SelectTrigger className="border-slate-200 focus:border-blue-500">
-                  <SelectValue placeholder="Selecciona un proyecto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
-                  {userProjects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Campo URL - Solo para enlaces */}
-            {editingItem?.tipo === 'enlace' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  URL del Enlace *
-                </label>
-                <Input
-                  value={editForm.url}
-                  onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                  placeholder="https://ejemplo.com"
-                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                  type="url"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Etiquetas
-              </label>
-              <Input
-                value={editForm.etiquetas}
-                onChange={(e) => setEditForm({ ...editForm, etiquetas: e.target.value })}
-                placeholder="Etiquetas separadas por comas"
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Separa las etiquetas con comas
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(false)}
-              className="flex-1"
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              disabled={!editForm.titulo.trim() || !editForm.proyecto || isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                'Guardar Cambios'
+                </div>
               )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </TabsContent>
 
-      {/* Modal de Transcripción */}
-      <Dialog open={!!transcriptionModalItem} onOpenChange={() => setTranscriptionModalItem(null)}>
-        {transcriptionModalItem && (
-          <DialogContent className="sm:max-w-2xl">
+            <TabsContent value="projects">
+              <div className="text-center py-12">
+                <Folder className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Vista de Proyectos</h3>
+                <p className="text-slate-600">Organiza tus fuentes por proyectos de investigación</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="favorites">
+              <div className="text-center py-12">
+                <Tag className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Elementos Favoritos</h3>
+                <p className="text-slate-600">Acceso rápido a tus fuentes más importantes</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="archive">
+              <div className="text-center py-12">
+                <Archive className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Archivo</h3>
+                <p className="text-slate-600">Fuentes archivadas y materiales históricos</p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Mini modal para enlaces de monitoreo */}
+        <MiniModal
+          open={monitorModalOpen}
+          title={monitorModalTitle}
+          links={monitorLinks}
+          onClose={() => setMonitorModalOpen(false)}
+          onToggle={toggleMonitorLink}
+        />
+
+        {/* Modal de Edición */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {(transcriptionModalItem as any).transcriptionType === 'audio' ? (
-                  <Mic className="w-5 h-5 text-blue-600" />
-                ) : (
-                  <FileText className="w-5 h-5 text-green-600" />
-                )}
-                Transcripción de {(transcriptionModalItem as any).transcriptionType === 'audio' ? 'Audio' : 'Texto'} - "{transcriptionModalItem.titulo}"
+              <DialogTitle className="text-xl font-semibold text-slate-900">
+                Editar Elemento
               </DialogTitle>
-              <DialogDescription>Vista de solo lectura</DialogDescription>
+              <DialogDescription className="text-slate-600">
+                Modifica los metadatos de este elemento del Codex
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto prose">
-              {((transcriptionModalItem as any).transcriptionType === 'audio' ? 
-                transcriptionModalItem.audio_transcription : 
-                (transcriptionModalItem as any).transcripcion
-              )?.split('\n').map((p, idx) => (
-                <p key={idx}>{p}</p>
-              ))}
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Título *
+                </label>
+                <Input
+                  value={editForm.titulo}
+                  onChange={(e) => setEditForm({ ...editForm, titulo: e.target.value })}
+                  placeholder="Título del elemento"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  value={editForm.descripcion}
+                  onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
+                  placeholder="Descripción opcional"
+                  rows={3}
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Proyecto *
+                </label>
+                <Select
+                  value={editForm.proyecto}
+                  onValueChange={(value) => setEditForm({ ...editForm, proyecto: value })}
+                >
+                  <SelectTrigger className="border-slate-200 focus:border-blue-500">
+                    <SelectValue placeholder="Selecciona un proyecto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin-proyecto">Sin proyecto</SelectItem>
+                    {userProjects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Campo URL - Solo para enlaces */}
+              {editingItem?.tipo === 'enlace' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    URL del Enlace *
+                  </label>
+                  <Input
+                    value={editForm.url}
+                    onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                    placeholder="https://ejemplo.com"
+                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                    type="url"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Etiquetas
+                </label>
+                <Input
+                  value={editForm.etiquetas}
+                  onChange={(e) => setEditForm({ ...editForm, etiquetas: e.target.value })}
+                  placeholder="Etiquetas separadas por comas"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Separa las etiquetas con comas
+                </p>
+              </div>
             </div>
 
-            <DialogFooter>
-              <Button onClick={() => setTranscriptionModalItem(null)}>Cerrar</Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditModalOpen(false)}
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={!editForm.titulo.trim() || !editForm.proyecto || isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar Cambios'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Transcripción */}
+        <Dialog open={!!transcriptionModalItem} onOpenChange={() => setTranscriptionModalItem(null)}>
+          {transcriptionModalItem && (
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {(transcriptionModalItem as any).transcriptionType === 'audio' ? (
+                    <Mic className="w-5 h-5 text-blue-600" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-green-600" />
+                  )}
+                  Transcripción de {(transcriptionModalItem as any).transcriptionType === 'audio' ? 'Audio' : 'Texto'} - "{transcriptionModalItem.titulo}"
+                </DialogTitle>
+                <DialogDescription>Vista de solo lectura</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto prose">
+                {((transcriptionModalItem as any).transcriptionType === 'audio' ?
+                  transcriptionModalItem.audio_transcription :
+                  (transcriptionModalItem as any).transcripcion
+                )?.split('\n').map((p, idx) => (
+                  <p key={idx}>{p}</p>
+                ))}
+              </div>
+
+              <DialogFooter>
+                <Button onClick={() => setTranscriptionModalItem(null)}>Cerrar</Button>
+              </DialogFooter>
+            </DialogContent>
+          )}
+        </Dialog>
+
+        {/* Modal para Crear Grupo */}
+        <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FolderPlus className="w-5 h-5 text-blue-600" />
+                Crear Nuevo Grupo
+              </DialogTitle>
+              <DialogDescription>
+                Convierte este elemento en el contenedor principal de un grupo de partes relacionadas
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombre del Grupo *
+                </label>
+                <Input
+                  value={groupForm.group_name}
+                  onChange={(e) => setGroupForm({ ...groupForm, group_name: e.target.value })}
+                  placeholder="ej: Entrevista con Alcalde - Serie completa"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Descripción del Grupo
+                </label>
+                <Textarea
+                  value={groupForm.group_description}
+                  onChange={(e) => setGroupForm({ ...groupForm, group_description: e.target.value })}
+                  placeholder="Describe el contenido del grupo y la relación entre las partes"
+                  rows={3}
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {selectedItemForGroup && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Elemento Principal:</h4>
+                  <p className="text-sm text-blue-800">{selectedItemForGroup.titulo}</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Este será el contenedor principal del grupo
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsGroupModalOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => selectedItemForGroup && handleCreateGroup(selectedItemForGroup)}
+                disabled={!groupForm.group_name.trim() || isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  'Crear Grupo'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
-        )}
-      </Dialog>
+        </Dialog>
 
-      {/* Modal para Crear Grupo */}
-      <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FolderPlus className="w-5 h-5 text-blue-600" />
-              Crear Nuevo Grupo
-            </DialogTitle>
-            <DialogDescription>
-              Convierte este elemento en el contenedor principal de un grupo de partes relacionadas
-            </DialogDescription>
-          </DialogHeader>
+        {/* Modal para Agregar a Grupo Existente */}
+        <Dialog open={showAddToGroupModal} onOpenChange={setShowAddToGroupModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-600" />
+                Agregar a Grupo Existente
+              </DialogTitle>
+              <DialogDescription>
+                Selecciona un grupo existente y el número de parte para este elemento
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Nombre del Grupo *
-              </label>
-              <Input
-                value={groupForm.group_name}
-                onChange={(e) => setGroupForm({ ...groupForm, group_name: e.target.value })}
-                placeholder="ej: Entrevista con Alcalde - Serie completa"
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Descripción del Grupo
-              </label>
-              <Textarea
-                value={groupForm.group_description}
-                onChange={(e) => setGroupForm({ ...groupForm, group_description: e.target.value })}
-                placeholder="Describe el contenido del grupo y la relación entre las partes"
-                rows={3}
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
-              />
-            </div>
-
-            {selectedItemForGroup && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">Elemento Principal:</h4>
-                <p className="text-sm text-blue-800">{selectedItemForGroup.titulo}</p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Este será el contenedor principal del grupo
-                </p>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Grupo Existente *
+                </label>
+                <Select
+                  value={selectedGroup}
+                  onValueChange={(value) => {
+                    setSelectedGroup(value)
+                    // Establecer número de parte sugerido automáticamente = total_parts + 1
+                    const grp = availableGroups.find(g => (g.group_id || g.id) === value)
+                    if (grp) {
+                      setPartNumber((grp.total_parts || 0) + 1)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="border-slate-200 focus:border-blue-500">
+                    <SelectValue placeholder="Selecciona un grupo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.group_id || group.id}>
+                        {group.group_name} ({group.total_parts ?? 0} partes)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availableGroups.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    No hay grupos disponibles. Crea uno primero.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
 
-          <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsGroupModalOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => selectedItemForGroup && handleCreateGroup(selectedItemForGroup)}
-              disabled={!groupForm.group_name.trim() || isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Creando...
-                </>
-              ) : (
-                'Crear Grupo'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para Agregar a Grupo Existente */}
-      <Dialog open={showAddToGroupModal} onOpenChange={setShowAddToGroupModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-purple-600" />
-              Agregar a Grupo Existente
-            </DialogTitle>
-            <DialogDescription>
-              Selecciona un grupo existente y el número de parte para este elemento
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Grupo Existente *
-              </label>
-              <Select
-                value={selectedGroup}
-                onValueChange={(value) => {
-                  setSelectedGroup(value)
-                  // Establecer número de parte sugerido automáticamente = total_parts + 1
-                  const grp = availableGroups.find(g => (g.group_id || g.id) === value)
-                  if (grp) {
-                    setPartNumber((grp.total_parts || 0) + 1)
-                  }
-                }}
-              >
-                <SelectTrigger className="border-slate-200 focus:border-blue-500">
-                  <SelectValue placeholder="Selecciona un grupo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.group_id || group.id}>
-                      {group.group_name} ({group.total_parts ?? 0} partes)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {availableGroups.length === 0 && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Número de Parte *
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={partNumber}
+                  onChange={(e) => setPartNumber(parseInt(e.target.value) || 1)}
+                  placeholder="1"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
                 <p className="text-xs text-slate-500 mt-1">
-                  No hay grupos disponibles. Crea uno primero.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Número de Parte *
-              </label>
-              <Input
-                type="number"
-                min="1"
-                value={partNumber}
-                onChange={(e) => setPartNumber(parseInt(e.target.value) || 1)}
-                placeholder="1"
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Número que identifica esta parte dentro del grupo
-              </p>
-            </div>
-
-            {selectedItemForGroup && (
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h4 className="font-medium text-purple-900 mb-2">Elemento a Agregar:</h4>
-                <p className="text-sm text-purple-800">{selectedItemForGroup.titulo}</p>
-                <p className="text-xs text-purple-600 mt-1">
-                  Se agregará como parte {partNumber} del grupo seleccionado
+                  Número que identifica esta parte dentro del grupo
                 </p>
               </div>
-            )}
-          </div>
 
-          <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowAddToGroupModal(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleAddToGroup}
-              disabled={!selectedGroup || !partNumber || isSubmitting}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Agregando...
-                </>
-              ) : (
-                'Agregar al Grupo'
+              {selectedItemForGroup && (
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-purple-900 mb-2">Elemento a Agregar:</h4>
+                  <p className="text-sm text-purple-800">{selectedItemForGroup.titulo}</p>
+                  <p className="text-xs text-purple-600 mt-1">
+                    Se agregará como parte {partNumber} del grupo seleccionado
+                  </p>
+                </div>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para Editar Grupo */}
-      <Dialog open={isEditGroupModalOpen} onOpenChange={setIsEditGroupModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit className="w-5 h-5 text-blue-600" />
-              Editar Grupo
-            </DialogTitle>
-            <DialogDescription>
-              Modifica el nombre y la descripción del grupo
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Nombre del Grupo *
-              </label>
-              <Input
-                value={groupToEdit?.group_name || ''}
-                onChange={e => setGroupToEdit(g => g ? { ...g, group_name: e.target.value } : g)}
-                placeholder="ej: Entrevista con Alcalde - Serie completa"
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Descripción del Grupo
-              </label>
-              <Textarea
-                value={groupToEdit?.group_description || ''}
-                onChange={e => setGroupToEdit(g => g ? { ...g, group_description: e.target.value } : g)}
-                placeholder="Describe el contenido del grupo y la relación entre las partes"
-                rows={3}
-                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
-              />
+
+            <DialogFooter className="gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddToGroupModal(false)}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAddToGroup}
+                disabled={!selectedGroup || !partNumber || isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  'Agregar al Grupo'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para Editar Grupo */}
+        <Dialog open={isEditGroupModalOpen} onOpenChange={setIsEditGroupModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="w-5 h-5 text-blue-600" />
+                Editar Grupo
+              </DialogTitle>
+              <DialogDescription>
+                Modifica el nombre y la descripción del grupo
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombre del Grupo *
+                </label>
+                <Input
+                  value={groupToEdit?.group_name || ''}
+                  onChange={e => setGroupToEdit(g => g ? { ...g, group_name: e.target.value } : g)}
+                  placeholder="ej: Entrevista con Alcalde - Serie completa"
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Descripción del Grupo
+                </label>
+                <Textarea
+                  value={groupToEdit?.group_description || ''}
+                  onChange={e => setGroupToEdit(g => g ? { ...g, group_description: e.target.value } : g)}
+                  placeholder="Describe el contenido del grupo y la relación entre las partes"
+                  rows={3}
+                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter className="gap-3">
-            <Button variant="outline" onClick={() => setIsEditGroupModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!groupToEdit) return;
-                await updateGroupInfo(groupToEdit.group_id || groupToEdit.id, groupToEdit.user_id, {
-                  group_name: groupToEdit.group_name,
-                  group_description: groupToEdit.group_description
-                })
-                setIsEditGroupModalOpen(false)
-                setGroupToEdit(null)
-                await loadCodexData()
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={!groupToEdit?.group_name?.trim()}
-            >
-              Guardar Cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-3">
+              <Button variant="outline" onClick={() => setIsEditGroupModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!groupToEdit) return;
+                  await updateGroupInfo(groupToEdit.group_id || groupToEdit.id, groupToEdit.user_id, {
+                    group_name: groupToEdit.group_name,
+                    group_description: groupToEdit.group_description
+                  })
+                  setIsEditGroupModalOpen(false)
+                  setGroupToEdit(null)
+                  await loadCodexData()
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={!groupToEdit?.group_name?.trim()}
+              >
+                Guardar Cambios
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Wiki Modals */}
-      <CreateWikiModal
-        open={showCreateWikiModal}
-        onClose={() => setShowCreateWikiModal(false)}
-        userId={user?.id || ''}
-        onSuccess={handleCreateWikiSuccess}
-      />
-      
-      <EditWikiModal
-        open={showEditWikiModal}
-        onClose={() => {
-          setShowEditWikiModal(false);
-          setEditingWikiItem(null);
-        }}
-        item={editingWikiItem}
-        onSuccess={handleEditWikiSuccess}
-      />
+        {/* Wiki Modals */}
+        <CreateWikiModal
+          open={showCreateWikiModal}
+          onClose={() => setShowCreateWikiModal(false)}
+          userId={user?.id || ''}
+          onSuccess={handleCreateWikiSuccess}
+        />
 
-    </div>
+        <EditWikiModal
+          open={showEditWikiModal}
+          onClose={() => {
+            setShowEditWikiModal(false);
+            setEditingWikiItem(null);
+          }}
+          item={editingWikiItem}
+          onSuccess={handleEditWikiSuccess}
+        />
+
+      </div>
+    </>
   )
 } 

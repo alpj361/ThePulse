@@ -28,7 +28,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['eventsource-parser', 'zod-to-json-schema'],
+    include: ['eventsource-parser', 'zod-to-json-schema', 'lucide-react', 'jspdf', 'html2canvas'],
     esbuildOptions: {
       resolveExtensions: ['.js', '.jsx', '.ts', '.tsx', '.json', '.mjs', '.cjs']
     }
