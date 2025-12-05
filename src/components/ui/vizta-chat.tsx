@@ -159,11 +159,11 @@ const ViztaChatContent = React.forwardRef<
   React.useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const newWidth = window.innerWidth - e.clientX;
       const minWidth = 380;
       const maxWidth = Math.min(900, window.innerWidth * 0.7);
-      
+
       if (newWidth >= minWidth && newWidth <= maxWidth) {
         onWidthChange?.(newWidth);
       }
@@ -233,7 +233,7 @@ const ViztaChatContent = React.forwardRef<
               </motion.button>
             </SheetPrimitive.Close>
           </div>
-          
+
           {/* Messages area */}
           <ScrollArea className="flex-1 p-4 bg-gray-50">
             {children}
@@ -287,6 +287,14 @@ class C1ErrorBoundary extends React.Component<
   }
 }
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog";
+
 // Auto-scaling C1Component Wrapper
 interface C1ComponentWrapperProps {
   c1Response: string;
@@ -294,8 +302,8 @@ interface C1ComponentWrapperProps {
   originalQuery?: string; // The query that generated this visualization
 }
 
-const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ 
-  c1Response, 
+const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
+  c1Response,
   cleanResponse = false,
   originalQuery = 'Visualización guardada'
 }) => {
@@ -304,7 +312,7 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
   const [showFullSize, setShowFullSize] = React.useState(false);
   const [renderError, setRenderError] = React.useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
-  
+
   const { saveChartWidget } = useDashboardStore();
 
   React.useEffect(() => {
@@ -312,12 +320,12 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
     setRenderError(null);
     setSaveSuccess(false);
   }, [c1Response]);
-  
+
   const handleSaveToCanvas = () => {
     try {
       saveChartWidget(c1Response, originalQuery);
       setSaveSuccess(true);
-      
+
       // Reset success message after 3 seconds
       setTimeout(() => {
         setSaveSuccess(false);
@@ -331,7 +339,7 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
   const processedResponse = cleanResponse
     ? c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     : c1Response;
-  
+
   // If renderError, show error UI
   if (renderError) {
     return (
@@ -348,80 +356,150 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
     );
   }
 
+  // Common buttons for reuse
+  const Actions = () => (
+    <div className="ml-auto flex items-center gap-2">
+      {saveSuccess && (
+        <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+          ✓ Guardado
+        </span>
+      )}
+      <button
+        onClick={handleSaveToCanvas}
+        disabled={saveSuccess}
+        className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Guardar en Pizarra"
+      >
+        📌 Guardar
+      </button>
+
+      {/* Zoom / Full Screen Modal Trigger */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
+            title="Ver detalle completo"
+          >
+            <Maximize2 className="h-3 w-3" /> Ampliar
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Visualización Detallada</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <C1ErrorBoundary onError={(e) => console.error(e)}>
+              <C1Component c1Response={processedResponse} />
+            </C1ErrorBoundary>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <button
+        onClick={() => setShowFullSize(!showFullSize)}
+        className="text-xs text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1"
+      >
+        {showFullSize ? (
+          <ChevronUp className="h-3 w-3" />
+        ) : (
+          <ChevronDown className="h-3 w-3" />
+        )}
+      </button>
+    </div>
+  );
+
   return (
     <div className="mt-4 border-t pt-3 border-gray-200 w-full">
       <div className="flex items-center gap-2 mb-2">
         <BarChart3 className="h-3.5 w-3.5 text-purple-600" />
         <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
-        <div className="ml-auto flex items-center gap-2">
-          {saveSuccess && (
-            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-              ✓ Guardado
-            </span>
-          )}
-          <button
-            onClick={handleSaveToCanvas}
-            disabled={saveSuccess}
-            className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Guardar en Pizarra"
-          >
-            📌 Guardar
-          </button>
-          <button
-            onClick={() => setShowFullSize(!showFullSize)}
-            className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
-          >
-            {showFullSize ? (
-              <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
-            ) : (
-              <>Mostrar más <ChevronDown className="h-3 w-3" /></>
-            )}
-          </button>
-        </div>
+        <Actions />
       </div>
-      <div 
+      <div
         ref={containerRef}
         className={cn(
           "bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20 rounded-xl border border-gray-100 w-full",
-          showFullSize ? "max-h-none" : "max-h-80 overflow-y-auto"
+          showFullSize ? "max-h-none" : "max-h-96 overflow-y-auto"
         )}
       >
-        {/* Custom CSS to make Thesys components responsive */}
+        {/* Custom CSS for COMPACT SIDEBAR DISPLAY Only */}
         <style>{`
-          .c1-vizta-wrapper [class*="Card"],
-          .c1-vizta-wrapper [class*="card"] {
-            max-width: 100% !important;
-            width: 100% !important;
+          /* Force all containers to be 100% width and enforce box sizing */
+          .c1-vizta-wrapper *, .c1-vizta-wrapper *::before, .c1-vizta-wrapper *::after {
+            box-sizing: border-box;
           }
-          .c1-vizta-wrapper [class*="grid"] {
+
+          /* Force Grid to flush to 1 column in sidebar */
+          .c1-vizta-wrapper [class*="grid"],
+          .c1-vizta-wrapper .grid {
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.75rem !important;
+            grid-template-columns: 1fr !important;
+            width: 100% !important;
+            gap: 0.5rem !important;
           }
-          .c1-vizta-wrapper h1, 
-          .c1-vizta-wrapper h2, 
-          .c1-vizta-wrapper h3 {
-            font-size: 0.95rem !important;
-            font-weight: 600 !important;
-            margin-bottom: 0.5rem !important;
+
+          /* Force Flex rows to wrap */
+          .c1-vizta-wrapper [class*="flex"],
+          .c1-vizta-wrapper .flex {
+             flex-wrap: wrap !important;
+             width: 100% !important;
           }
-          .c1-vizta-wrapper p,
-          .c1-vizta-wrapper span {
-            font-size: 0.8rem !important;
-            line-height: 1.4 !important;
-          }
-          .c1-vizta-wrapper [class*="metric"],
-          .c1-vizta-wrapper [class*="stat"] {
-            padding: 0.75rem !important;
-          }
-          .c1-vizta-wrapper > div {
+
+          /* Cards */
+          .c1-vizta-wrapper [class*="Card"],
+          .c1-vizta-wrapper [class*="card"] {
+            width: 100% !important;
             max-width: 100% !important;
-            overflow-x: hidden !important;
+            min-width: 0 !important;
+            margin: 0 0 0.5rem 0 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            background: rgba(255,255,255,0.6) !important;
+            border-radius: 0.5rem !important;
+          }
+
+          /* Headers: Scale down big text */
+          .c1-vizta-wrapper h1 {
+            font-size: 1.1rem !important;
+            line-height: 1.3 !important;
+          }
+          .c1-vizta-wrapper h2 {
+            font-size: 1rem !important;
+             line-height: 1.3 !important;
+          }
+           .c1-vizta-wrapper h3, .c1-vizta-wrapper h4 {
+            font-size: 0.9rem !important;
+          }
+          
+          /* Metrics / Stats Big Numbers */
+          .c1-vizta-wrapper [class*="text-4xl"],
+          .c1-vizta-wrapper [class*="text-5xl"],
+          .c1-vizta-wrapper [style*="font-size: 3"] {
+             font-size: 1.5rem !important;
+             line-height: 1 !important;
+          }
+
+          /* Hide big gaps */
+          .c1-vizta-wrapper [class*="justify-between"] {
+            justify-content: flex-start !important;
+            gap: 1rem !important;
+          }
+
+          /* SVGs / Charts */
+          .c1-vizta-wrapper svg,
+          .c1-vizta-wrapper canvas {
+            max-width: 100% !important;
+            height: auto !important;
+          }
+          
+          /* Recharts adjustments */
+          .recharts-wrapper {
+             width: 100% !important;
           }
         `}</style>
         <div
           ref={contentRef}
-          className="c1-vizta-wrapper p-3 text-sm"
+          className="c1-vizta-wrapper p-3 text-sm w-full overflow-hidden"
         >
           <C1ErrorBoundary onError={(e) => setRenderError(e.message)}>
             <C1Component c1Response={processedResponse} />
@@ -459,12 +537,12 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
     const handleFeedback = async (score: number) => {
       if (!message.queryLogId || feedbackGiven) return;
-      
+
       setFeedbackGiven(score);
       if (onFeedback) {
         onFeedback(message.id, score);
       }
-      
+
       // Send feedback to backend
       try {
         const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL}/vizta/feedback`, {
@@ -477,7 +555,7 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
             feedbackScore: score
           })
         });
-        
+
         if (!response.ok) {
           console.error('Failed to send feedback');
           setFeedbackGiven(null); // Reset on error
@@ -509,61 +587,341 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
             </div>
           </AvatarFallback>
         </Avatar>
-        
+
         <div className="flex-1 min-w-0">
           {/* Tabs - Only show if we have sources or steps */}
           {showTabs ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-3 bg-gray-100">
-              <TabsTrigger value="answer" className="text-xs gap-1.5">
-                <FileText className="h-3 w-3" />
-                Respuesta
-              </TabsTrigger>
-              {hasSources && (
-                <TabsTrigger value="sources" className="text-xs gap-1.5">
-                  <LinkIcon className="h-3 w-3" />
-                  Fuentes
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="mb-3 bg-gray-100">
+                <TabsTrigger value="answer" className="text-xs gap-1.5">
+                  <FileText className="h-3 w-3" />
+                  Respuesta
                 </TabsTrigger>
-              )}
-              {hasSteps && (
-                <TabsTrigger value="steps" className="text-xs gap-1.5">
-                  <BarChart3 className="h-3 w-3" />
-                  Pasos
-                </TabsTrigger>
-              )}
-              {hasInsights && (
-                <TabsTrigger value="insights" className="text-xs gap-1.5">
-                  <Sparkles className="h-3 w-3" />
-                  Hallazgos
-                </TabsTrigger>
-              )}
-            </TabsList>
+                {hasSources && (
+                  <TabsTrigger value="sources" className="text-xs gap-1.5">
+                    <LinkIcon className="h-3 w-3" />
+                    Fuentes
+                  </TabsTrigger>
+                )}
+                {hasSteps && (
+                  <TabsTrigger value="steps" className="text-xs gap-1.5">
+                    <BarChart3 className="h-3 w-3" />
+                    Pasos
+                  </TabsTrigger>
+                )}
+                {hasInsights && (
+                  <TabsTrigger value="insights" className="text-xs gap-1.5">
+                    <Sparkles className="h-3 w-3" />
+                    Hallazgos
+                  </TabsTrigger>
+                )}
+              </TabsList>
 
-            {/* Answer Tab */}
-            <TabsContent value="answer" className="space-y-2">
+              {/* Answer Tab */}
+              <TabsContent value="answer" className="space-y-2">
+                <div className="relative">
+                  <div className={cn(
+                    "prose prose-sm max-w-none transition-all duration-200",
+                    !isExpanded && "max-h-48 overflow-hidden"
+                  )}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({ children }) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
+                        p: ({ children }) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
+                        ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
+                        ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
+                        li: ({ children }) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        em: ({ children }) => <em className="italic text-gray-600">{children}</em>,
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-[#0891b2] pl-4 py-2 bg-gray-50 rounded-r my-3">
+                            {children}
+                          </blockquote>
+                        ),
+                        code: ({ inline, children }) =>
+                          inline ? (
+                            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-[#1e40af]">
+                              {children}
+                            </code>
+                          ) : (
+                            <div className="relative group">
+                              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs my-3">
+                                <code>{children}</code>
+                              </pre>
+                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <CopyButton text={String(children)} className="bg-gray-800 text-white hover:bg-gray-700" />
+                              </div>
+                            </div>
+                          )
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+
+                    {/* Generative UI Components - shown below text */}
+                    {message.hasUIComponents && message.c1Response && (
+                      <C1ComponentWrapper
+                        c1Response={message.c1Response}
+                        originalQuery={message.originalQuery}
+                      />
+                    )}
+                  </div>
+
+                  {!isExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                  )}
+                </div>
+
+                {message.content.length > 500 && (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1 mt-2"
+                  >
+                    {isExpanded ? (
+                      <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
+                    ) : (
+                      <>Mostrar más <ChevronDown className="h-3 w-3" /></>
+                    )}
+                  </button>
+                )}
+
+                {/* Fuentes visibles solo en la pestaña "Fuentes" */}
+              </TabsContent>
+
+              {/* Sources Tab */}
+              {hasSources && (
+                <TabsContent value="sources" className="space-y-2">
+                  {message.sources!.map((source, idx) => (
+                    <motion.a
+                      key={idx}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#0891b2] hover:bg-gray-50 transition-all duration-150 group"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0891b2] group-hover:text-white transition-colors">
+                        <LinkIcon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{source.title}</p>
+                        <p className="text-xs text-gray-500 truncate">{source.url}</p>
+                      </div>
+                    </motion.a>
+                  ))}
+                </TabsContent>
+              )}
+
+              {/* Steps Tab */}
+              {hasSteps && (
+                <TabsContent value="steps" className="space-y-3">
+                  {message.steps!.map((step, idx) => (
+                    <motion.div
+                      key={idx}
+                      className="flex gap-3"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <div className="flex flex-col items-center">
+                        <div className="h-6 w-6 rounded bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </div>
+                        {idx < message.steps!.length - 1 && (
+                          <div className="w-0.5 flex-1 bg-gray-300 mt-2" />
+                        )}
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <p className="text-sm font-medium text-gray-900 mb-1">{step.step}</p>
+                        <p className="text-xs text-gray-600">{step.description}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </TabsContent>
+              )}
+
+              {/* Insights Tab */}
+              {hasInsights && (
+                <TabsContent value="insights" className="space-y-4">
+                  {message.capturedItems && message.capturedItems.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <BookmarkPlus className="h-3 w-3" />
+                        <span>Datos detectados</span>
+                      </div>
+                      {message.capturedItems.map((item) => {
+                        const status = capturedSaveStatus?.[item.id] || (item.savedProjectId ? 'saved' as SaveStatus : 'idle');
+                        const amountText = item.amount !== undefined && item.amount !== null
+                          ? `${item.amount.toLocaleString()}${item.currency ? ` ${item.currency}` : ''}`
+                          : null;
+                        const geoText = [item.city, item.department].filter(Boolean).join(', ');
+                        return (
+                          <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-1 text-sm text-gray-700">
+                                <h4 className="text-base font-semibold text-gray-900">
+                                  {item.title || item.discovery || item.description || 'Dato detectado'}
+                                </h4>
+                                {item.entity && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium text-gray-700">Entidad:</span> {item.entity}
+                                  </div>
+                                )}
+                                {amountText && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Monto:</span> {amountText}
+                                  </div>
+                                )}
+                                {geoText && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Ubicación:</span> {geoText}
+                                  </div>
+                                )}
+                                {item.discovery && (
+                                  <p className="text-sm text-gray-700 leading-relaxed">{item.discovery}</p>
+                                )}
+                                {item.description && item.description !== item.discovery && (
+                                  <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                                )}
+                                {item.source_url && (
+                                  <a
+                                    href={item.source_url}
+                                    className="text-xs text-[#1e40af] hover:underline"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Ver fuente
+                                  </a>
+                                )}
+                                {item.confidence !== undefined && item.confidence !== null && (
+                                  <div className="text-xs text-gray-500">
+                                    Confianza estimada: {(item.confidence * 100).toFixed(0)}%
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => onRequestProjectSave?.(item)}
+                                  disabled={status === 'saving' || status === 'saved'}
+                                >
+                                  {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en proyecto'}
+                                </Button>
+                                {status === 'error' && (
+                                  <div className="flex items-center gap-1 text-xs text-red-600">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Error al guardar
+                                  </div>
+                                )}
+                                {status === 'saved' && (
+                                  <div className="flex items-center gap-1 text-xs text-green-600">
+                                    <Check className="h-3 w-3" />
+                                    {item.savedProjectTitle ? `En ${item.savedProjectTitle}` : 'Guardado'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {message.termSuggestions && message.termSuggestions.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <BookOpen className="h-3 w-3" />
+                        <span>Términos sugeridos</span>
+                      </div>
+                      {message.termSuggestions.map((term) => {
+                        const status = termSaveStatus?.[term.id] || (term.savedToWiki ? 'saved' as SaveStatus : 'idle');
+                        return (
+                          <div key={term.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-1 text-sm text-gray-700">
+                                <h4 className="text-base font-semibold text-gray-900">{term.term}</h4>
+                                {term.category && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Categoría:</span> {term.category}
+                                  </div>
+                                )}
+                                {term.confidence !== undefined && term.confidence !== null && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Confianza:</span> {(term.confidence * 100).toFixed(0)}%
+                                  </div>
+                                )}
+                                {term.reason && (
+                                  <p className="text-sm text-gray-700 leading-relaxed">{term.reason}</p>
+                                )}
+                                {term.research_focus && (
+                                  <p className="text-xs text-gray-500 leading-relaxed">
+                                    <span className="font-medium text-gray-600">Investigar:</span> {term.research_focus}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => onSaveTermToWiki?.(term)}
+                                  disabled={status === 'saving' || status === 'saved'}
+                                >
+                                  {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en wiki'}
+                                </Button>
+                                {status === 'error' && (
+                                  <div className="flex items-center gap-1 text-xs text-red-600">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Error al guardar
+                                  </div>
+                                )}
+                                {status === 'saved' && (
+                                  <div className="flex items-center gap-1 text-xs text-green-600">
+                                    <Check className="h-3 w-3" />
+                                    Guardado en la wiki
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+              )}
+            </Tabs>
+          ) : (
+            /* No tabs - Just show content */
+            <div className="space-y-2">
               <div className="relative">
                 <div className={cn(
                   "prose prose-sm max-w-none transition-all duration-200",
                   !isExpanded && "max-h-48 overflow-hidden"
                 )}>
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: ({children}) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
-                      h2: ({children}) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
-                      h3: ({children}) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
-                      p: ({children}) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
-                      ul: ({children}) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
-                      ol: ({children}) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
-                      li: ({children}) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
-                      strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                      em: ({children}) => <em className="italic text-gray-600">{children}</em>,
-                      blockquote: ({children}) => (
+                      h1: ({ children }) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
+                      p: ({ children }) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
+                      ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
+                      ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
+                      strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                      em: ({ children }) => <em className="italic text-gray-600">{children}</em>,
+                      blockquote: ({ children }) => (
                         <blockquote className="border-l-4 border-[#0891b2] pl-4 py-2 bg-gray-50 rounded-r my-3">
                           {children}
                         </blockquote>
                       ),
-                      code: ({inline, children}) => 
+                      code: ({ inline, children }) =>
                         inline ? (
                           <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-[#1e40af]">
                             {children}
@@ -585,9 +943,10 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                   {/* Generative UI Components - shown below text */}
                   {message.hasUIComponents && message.c1Response && (
-                    <C1ComponentWrapper 
-                      c1Response={message.c1Response} 
+                    <C1ComponentWrapper
+                      c1Response={message.c1Response}
                       originalQuery={message.originalQuery}
+                      cleanResponse={true}
                     />
                   )}
                 </div>
@@ -611,345 +970,64 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
               )}
 
               {/* Fuentes visibles solo en la pestaña "Fuentes" */}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Sources Tab */}
-            {hasSources && (
-              <TabsContent value="sources" className="space-y-2">
-                {message.sources!.map((source, idx) => (
-                  <motion.a
-                    key={idx}
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#0891b2] hover:bg-gray-50 transition-all duration-150 group"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+          {/* Message metadata */}
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              <time className="text-xs text-gray-500">
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </time>
+
+              {/* Feedback buttons */}
+              {message.queryLogId && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleFeedback(5)}
+                    disabled={!!feedbackGiven}
+                    className={cn(
+                      "p-1 rounded hover:bg-gray-100 transition-colors",
+                      feedbackGiven === 5 && "text-green-600 bg-green-50"
+                    )}
+                    title="Útil"
                   >
-                    <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0891b2] group-hover:text-white transition-colors">
-                      <LinkIcon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{source.title}</p>
-                      <p className="text-xs text-gray-500 truncate">{source.url}</p>
-                    </div>
-                  </motion.a>
-                ))}
-              </TabsContent>
-            )}
-
-            {/* Steps Tab */}
-            {hasSteps && (
-              <TabsContent value="steps" className="space-y-3">
-                {message.steps!.map((step, idx) => (
-                  <motion.div
-                    key={idx}
-                    className="flex gap-3"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(1)}
+                    disabled={!!feedbackGiven}
+                    className={cn(
+                      "p-1 rounded hover:bg-gray-100 transition-colors",
+                      feedbackGiven === 1 && "text-red-600 bg-red-50"
+                    )}
+                    title="No útil"
                   >
-                    <div className="flex flex-col items-center">
-                      <div className="h-6 w-6 rounded bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </div>
-                      {idx < message.steps!.length - 1 && (
-                        <div className="w-0.5 flex-1 bg-gray-300 mt-2" />
-                      )}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <p className="text-sm font-medium text-gray-900 mb-1">{step.step}</p>
-                      <p className="text-xs text-gray-600">{step.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </TabsContent>
-            )}
-
-            {/* Insights Tab */}
-            {hasInsights && (
-              <TabsContent value="insights" className="space-y-4">
-                {message.capturedItems && message.capturedItems.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      <BookmarkPlus className="h-3 w-3" />
-                      <span>Datos detectados</span>
-                    </div>
-                    {message.capturedItems.map((item) => {
-                      const status = capturedSaveStatus?.[item.id] || (item.savedProjectId ? 'saved' as SaveStatus : 'idle');
-                      const amountText = item.amount !== undefined && item.amount !== null
-                        ? `${item.amount.toLocaleString()}${item.currency ? ` ${item.currency}` : ''}`
-                        : null;
-                      const geoText = [item.city, item.department].filter(Boolean).join(', ');
-                      return (
-                        <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="space-y-1 text-sm text-gray-700">
-                              <h4 className="text-base font-semibold text-gray-900">
-                                {item.title || item.discovery || item.description || 'Dato detectado'}
-                              </h4>
-                              {item.entity && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium text-gray-700">Entidad:</span> {item.entity}
-                                </div>
-                              )}
-                              {amountText && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Monto:</span> {amountText}
-                                </div>
-                              )}
-                              {geoText && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Ubicación:</span> {geoText}
-                                </div>
-                              )}
-                              {item.discovery && (
-                                <p className="text-sm text-gray-700 leading-relaxed">{item.discovery}</p>
-                              )}
-                              {item.description && item.description !== item.discovery && (
-                                <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
-                              )}
-                              {item.source_url && (
-                                <a
-                                  href={item.source_url}
-                                  className="text-xs text-[#1e40af] hover:underline"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Ver fuente
-                                </a>
-                              )}
-                              {item.confidence !== undefined && item.confidence !== null && (
-                                <div className="text-xs text-gray-500">
-                                  Confianza estimada: {(item.confidence * 100).toFixed(0)}%
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onRequestProjectSave?.(item)}
-                                disabled={status === 'saving' || status === 'saved'}
-                              >
-                                {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en proyecto'}
-                              </Button>
-                              {status === 'error' && (
-                                <div className="flex items-center gap-1 text-xs text-red-600">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Error al guardar
-                                </div>
-                              )}
-                              {status === 'saved' && (
-                                <div className="flex items-center gap-1 text-xs text-green-600">
-                                  <Check className="h-3 w-3" />
-                                  {item.savedProjectTitle ? `En ${item.savedProjectTitle}` : 'Guardado'}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {message.termSuggestions && message.termSuggestions.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      <BookOpen className="h-3 w-3" />
-                      <span>Términos sugeridos</span>
-                    </div>
-                    {message.termSuggestions.map((term) => {
-                      const status = termSaveStatus?.[term.id] || (term.savedToWiki ? 'saved' as SaveStatus : 'idle');
-                      return (
-                        <div key={term.id} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="space-y-1 text-sm text-gray-700">
-                              <h4 className="text-base font-semibold text-gray-900">{term.term}</h4>
-                              {term.category && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Categoría:</span> {term.category}
-                                </div>
-                              )}
-                              {term.confidence !== undefined && term.confidence !== null && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Confianza:</span> {(term.confidence * 100).toFixed(0)}%
-                                </div>
-                              )}
-                              {term.reason && (
-                                <p className="text-sm text-gray-700 leading-relaxed">{term.reason}</p>
-                              )}
-                              {term.research_focus && (
-                                <p className="text-xs text-gray-500 leading-relaxed">
-                                  <span className="font-medium text-gray-600">Investigar:</span> {term.research_focus}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-stretch gap-2 min-w-[160px]">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onSaveTermToWiki?.(term)}
-                                disabled={status === 'saving' || status === 'saved'}
-                              >
-                                {status === 'saving' ? 'Guardando...' : status === 'saved' ? 'Guardado' : 'Guardar en wiki'}
-                              </Button>
-                              {status === 'error' && (
-                                <div className="flex items-center gap-1 text-xs text-red-600">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Error al guardar
-                                </div>
-                              )}
-                              {status === 'saved' && (
-                                <div className="flex items-center gap-1 text-xs text-green-600">
-                                  <Check className="h-3 w-3" />
-                                  Guardado en la wiki
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </TabsContent>
-            )}
-          </Tabs>
-        ) : (
-          /* No tabs - Just show content */
-          <div className="space-y-2">
-            <div className="relative">
-              <div className={cn(
-                "prose prose-sm max-w-none transition-all duration-200",
-                !isExpanded && "max-h-48 overflow-hidden"
-              )}>
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({children}) => <h1 className="text-lg font-bold mb-3 mt-2 text-gray-900">{children}</h1>,
-                    h2: ({children}) => <h2 className="text-base font-semibold mb-2 mt-3 text-gray-800">{children}</h2>,
-                    h3: ({children}) => <h3 className="text-sm font-semibold mb-2 mt-2 text-gray-700">{children}</h3>,
-                    p: ({children}) => <p className="mb-3 leading-relaxed text-sm text-gray-700">{children}</p>,
-                    ul: ({children}) => <ul className="mb-3 ml-4 space-y-1.5 list-disc marker:text-[#1e40af]">{children}</ul>,
-                    ol: ({children}) => <ol className="mb-3 ml-4 space-y-1.5 list-decimal marker:text-[#1e40af]">{children}</ol>,
-                    li: ({children}) => <li className="leading-relaxed text-sm text-gray-700">{children}</li>,
-                    strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                    em: ({children}) => <em className="italic text-gray-600">{children}</em>,
-                    blockquote: ({children}) => (
-                      <blockquote className="border-l-4 border-[#0891b2] pl-4 py-2 bg-gray-50 rounded-r my-3">
-                        {children}
-                      </blockquote>
-                    ),
-                    code: ({inline, children}) => 
-                      inline ? (
-                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-[#1e40af]">
-                          {children}
-                        </code>
-                      ) : (
-                        <div className="relative group">
-                          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs my-3">
-                            <code>{children}</code>
-                          </pre>
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <CopyButton text={String(children)} className="bg-gray-800 text-white hover:bg-gray-700" />
-                          </div>
-                        </div>
-                      )
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-
-                {/* Generative UI Components - shown below text */}
-                {message.hasUIComponents && message.c1Response && (
-                  <C1ComponentWrapper 
-                    c1Response={message.c1Response} 
-                    originalQuery={message.originalQuery}
-                    cleanResponse={true} 
-                  />
-                )}
-              </div>
-
-              {!isExpanded && (
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    <ThumbsDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               )}
             </div>
 
-            {message.content.length > 500 && (
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1 mt-2"
-              >
-                {isExpanded ? (
-                  <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
-                ) : (
-                  <>Mostrar más <ChevronDown className="h-3 w-3" /></>
-                )}
-              </button>
-            )}
-
-            {/* Fuentes visibles solo en la pestaña "Fuentes" */}
-          </div>
-        )}
-        
-        {/* Message metadata */}
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
-          <div className="flex items-center gap-3">
-            <time className="text-xs text-gray-500">
-              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </time>
-            
-            {/* Feedback buttons */}
-            {message.queryLogId && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleFeedback(5)}
-                  disabled={!!feedbackGiven}
-                  className={cn(
-                    "p-1 rounded hover:bg-gray-100 transition-colors",
-                    feedbackGiven === 5 && "text-green-600 bg-green-50"
-                  )}
-                  title="Útil"
-                >
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => handleFeedback(1)}
-                  disabled={!!feedbackGiven}
-                  className={cn(
-                    "p-1 rounded hover:bg-gray-100 transition-colors",
-                    feedbackGiven === 1 && "text-red-600 bg-red-50"
-                  )}
-                  title="No útil"
-                >
-                  <ThumbsDown className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {message.executionTime && (
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {(message.executionTime / 1000).toFixed(1)}s
-              </span>
-            )}
-            {message.tweetsAnalyzed && message.tweetsAnalyzed > 0 && (
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
-                <Hash className="h-3 w-3" />
-                {message.tweetsAnalyzed}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {message.executionTime && (
+                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {(message.executionTime / 1000).toFixed(1)}s
+                </span>
+              )}
+              {message.tweetsAnalyzed && message.tweetsAnalyzed > 0 && (
+                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded flex items-center gap-1">
+                  <Hash className="h-3 w-3" />
+                  {message.tweetsAnalyzed}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
-  );
-});
+      </motion.div>
+    );
+  });
 AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
@@ -979,7 +1057,7 @@ const ViztaChatUI = () => {
   const [pendingCapturedItem, setPendingCapturedItem] = React.useState<CapturedInsight | null>(null);
   const [isWikiModalOpen, setIsWikiModalOpen] = React.useState(false);
   const [pendingTerm, setPendingTerm] = React.useState<TermInsight | null>(null);
-  
+
   // ✨ NUEVO: Estado para funcionalidad @
   const [showMentions, setShowMentions] = React.useState(false);
   const [mentionQuery, setMentionQuery] = React.useState('');
@@ -1036,7 +1114,7 @@ const ViztaChatUI = () => {
   // ✨ NUEVO: Filtrar elementos del codex cuando cambia la query
   React.useEffect(() => {
     if (mentionQuery.trim()) {
-      const filtered = availableCodexItems.filter(item => 
+      const filtered = availableCodexItems.filter(item =>
         item.title?.toLowerCase().includes(mentionQuery.toLowerCase()) ||
         item.content?.toLowerCase().includes(mentionQuery.toLowerCase())
       );
@@ -1051,13 +1129,13 @@ const ViztaChatUI = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPosition = e.target.selectionStart;
-    
+
     setInputValue(value);
-    
+
     // Detectar si el usuario está escribiendo después de @
     const textBeforeCursor = value.substring(0, cursorPosition);
     const atMatch = textBeforeCursor.match(/@(\w*)$/);
-    
+
     if (atMatch) {
       setShowMentions(true);
       setMentionQuery(atMatch[1]);
@@ -1073,7 +1151,7 @@ const ViztaChatUI = () => {
     const beforeAt = inputValue.substring(0, mentionPosition);
     const afterAt = inputValue.substring(mentionPosition + 1 + mentionQuery.length);
     const newValue = `${beforeAt}@${item.title}${afterAt}`;
-    
+
     setInputValue(newValue);
     setShowMentions(false);
     setMentionQuery('');
@@ -1084,12 +1162,12 @@ const ViztaChatUI = () => {
     if (showMentions && filteredCodexItems.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedMentionIndex(prev => 
+        setSelectedMentionIndex(prev =>
           prev < filteredCodexItems.length - 1 ? prev + 1 : 0
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedMentionIndex(prev => 
+        setSelectedMentionIndex(prev =>
           prev > 0 ? prev - 1 : filteredCodexItems.length - 1
         );
       } else if (e.key === 'Enter') {
@@ -1215,7 +1293,7 @@ const ViztaChatUI = () => {
 
       // ✨ Enviar consulta al backend con el toggle de Generative UI y codex items seleccionados
       const response = await sendViztaChatQuery(currentInput, sessionId, mode, useGenerativeUI, selectedCodex);
-      
+
       // ✨ DEBUG: Verificar respuesta
       console.log('✅ [VIZTA-CHAT] Respuesta recibida, usó codex?', response);
       console.log("🔍 Respuesta recibida del servidor:", JSON.stringify(response, null, 2));
@@ -1239,19 +1317,19 @@ const ViztaChatUI = () => {
 
         // Extraer fuentes del contenido si están en markdown
         let extractedSources = response.sources || [];
-        
+
         if (!extractedSources.length && (messageContent.includes('**Fuentes**') || messageContent.includes('Fuentes'))) {
           // Buscar la sección de fuentes (con o sin markdown bold)
           const sourcesRegex = /(?:^|\n)(?:\*\*)?Fuentes(?:\*\*)?[\s\n]+([\s\S]*?)(?=\n\n[A-Z]|\n\n$|$)/m;
           const sourcesMatch = messageContent.match(sourcesRegex);
-          
+
           if (sourcesMatch) {
             const sourcesText = sourcesMatch[1].trim();
             const sourceLines = sourcesText.split('\n').filter(line => {
               const trimmed = line.trim();
               return (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) && trimmed.length > 2;
             });
-            
+
             extractedSources = sourceLines.map(line => {
               const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
               return {
@@ -1259,17 +1337,17 @@ const ViztaChatUI = () => {
                 url: '#' // Placeholder, ya que no tenemos URL en el markdown
               };
             });
-            
+
             // Limpiar el contenido removiendo la sección de fuentes completa
             // Buscar desde "Fuentes" hasta el final o hasta la próxima sección
             messageContent = messageContent.replace(/(?:^|\n)(?:\*\*)?Fuentes(?:\*\*)?[\s\S]*$/, '').trim();
           }
         }
-        
+
         // Extraer timestamp y type de manera segura
         let messageTimestamp = Date.now();
         let toolType = response.toolUsed;
-        
+
         if (response.response && typeof response.response === 'object') {
           if ('timestamp' in response.response && response.response.timestamp) {
             messageTimestamp = new Date(response.response.timestamp).getTime();
@@ -1278,7 +1356,7 @@ const ViztaChatUI = () => {
             toolType = toolType || response.response.type;
           }
         }
-        
+
         const assistantId = (Date.now() + 1).toString();
 
         const capturedTabItems = Array.isArray(response.capturedItems)
@@ -1403,449 +1481,448 @@ const ViztaChatUI = () => {
       <ViztaChat>
         <ViztaChatTrigger />
         <ViztaChatContent chatWidth={chatWidth} onWidthChange={setChatWidth}>
-        <div className="flex flex-col space-y-4">
-          {/* Mode toggle */}
-          <motion.div
-            className="flex flex-col gap-2 mb-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-gray-600 font-medium">Modo</div>
-              <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
-                <button
-                  onClick={() => setMode('chat')}
-                  className={cn(
-                    'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                    mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
-                  )}
-                >
-                  Chat
-                </button>
-                <button
-                  onClick={() => setMode('agentic')}
-                  className={cn(
-                    'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                    mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
-                  )}
-                >
-                  Agéntico
-                </button>
-              </div>
-            </div>
-
-            {/* Generative UI Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-gray-600 font-medium">Visualización</div>
-              <button
-                onClick={() => setUseGenerativeUI(!useGenerativeUI)}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
-                  useGenerativeUI
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                )}
-              >
-                <BarChart3 className="h-3.5 w-3.5" />
-                {useGenerativeUI ? 'UI Generativa' : 'Texto Simple'}
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Welcome screen */}
-          {messages.length === 0 ? (
-            <motion.div 
-              className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none"
+          <div className="flex flex-col space-y-4">
+            {/* Mode toggle */}
+            <motion.div
+              className="flex flex-col gap-2 mb-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.15 }}
             >
-              {/* Logo */}
-              <div className="mb-6">
-                <div className="h-16 w-16 border-2 border-[#1e40af] rounded-lg bg-white flex items-center justify-center shadow-sm">
-                  <span className="text-2xl font-bold text-[#1e40af]">V</span>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-600 font-medium">Modo</div>
+                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
+                  <button
+                    onClick={() => setMode('chat')}
+                    className={cn(
+                      'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                      mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                    )}
+                  >
+                    Chat
+                  </button>
+                  <button
+                    onClick={() => setMode('agentic')}
+                    className={cn(
+                      'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                      mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                    )}
+                  >
+                    Agéntico
+                  </button>
                 </div>
               </div>
-              
-              <h3 className="text-2xl font-semibold mb-2 text-gray-900">
-                Vizta
-              </h3>
-              <p className="text-sm text-gray-600 mb-8 max-w-sm leading-relaxed">
-                Asistente de análisis de noticias y tendencias de Guatemala
-              </p>
 
-              {/* Quick prompts */}
-              <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
-                {quickPrompts.map((prompt, index) => (
-                  <motion.button
-                    key={index}
-                    onClick={() => setInputValue(prompt.text)}
-                    className={cn(
-                      "group relative overflow-hidden rounded-lg p-4 text-left text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200",
-                      `bg-gradient-to-r ${prompt.gradient}`
-                    )}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + index * 0.05 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="relative z-10 flex items-center gap-3">
-                      {prompt.icon}
-                      <span className="flex-1">{prompt.text}</span>
-                    </div>
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                  </motion.button>
-                ))}
+              {/* Generative UI Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-600 font-medium">Visualización</div>
+                <button
+                  onClick={() => setUseGenerativeUI(!useGenerativeUI)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
+                    useGenerativeUI
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  )}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  {useGenerativeUI ? 'UI Generativa' : 'Texto Simple'}
+                </button>
               </div>
             </motion.div>
-          ) : (
-            <AnimatePresence mode="popLayout">
-              {messages.map((message, index) => (
-                message.sender === "user" ? (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-start gap-3 ml-auto max-w-[85%]"
-                  >
-                    <div className="flex-1 rounded-lg p-4 bg-[#1e40af] text-white shadow-sm">
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                      <time className="text-xs text-white/70 mt-2 block">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </time>
-                    </div>
-                    <Avatar className="h-9 w-9 shadow-sm">
-                      <AvatarFallback className="bg-gray-200 text-gray-700">
-                        <MessageCircle className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </motion.div>
-                ) : (
-                  <AssistantMessage
-                    key={message.id}
-                    message={message}
-                    onRequestProjectSave={handleRequestProjectSave}
-                    onSaveTermToWiki={handleSaveTermToWiki}
-                    capturedSaveStatus={capturedSaveStatus}
-                    termSaveStatus={termSaveStatus}
-                  />
-                )
-              ))}
-            </AnimatePresence>
-          )}
-          
-          {/* Loading state */}
-          <AnimatePresence>
-            {isLoading && (
-              <motion.div 
-                className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-              >
-                <Avatar className="h-9 w-9 shadow-sm">
-                  <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
-                    <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
-                      V
-                    </div>
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <TypingIndicator />
-                    <span className="text-sm text-gray-600">Analizando...</span>
-                  </div>
-                  <SkeletonLoader lines={3} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
-          <div ref={scrollRef} />
-        </div>
-        
-        {/* Context Modal - Full screen */}
-        <AnimatePresence>
-          {isContextModalOpen && (
-            <>
+            {/* Welcome screen */}
+            {messages.length === 0 ? (
               <motion.div
-                className="fixed inset-0 bg-black/50 z-[60]"
+                className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsContextModalOpen(false)}
-              />
-              <motion.div
-                className="fixed inset-4 md:inset-12 bg-white rounded-lg shadow-2xl z-[70] flex flex-col"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3 }}
               >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b">
-                  <h2 className="text-xl font-semibold text-gray-900">Contexto</h2>
-                  <button
-                    onClick={() => setIsContextModalOpen(false)}
-                    className="h-8 w-8 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* ✨ Modal Content - CodexSelector funcional */}
-                <div className="flex-1 overflow-auto p-6">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">📚 Selecciona items del Codex</h3>
-                    <p className="text-sm text-gray-600">
-                      Selecciona documentos, Wiki items, o monitoreos para que Vizta los use como contexto en su respuesta.
-                    </p>
-                    {selectedCodex.length > 0 && (
-                      <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                          <p className="text-sm text-blue-800 font-medium">
-                            {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          {selectedCodex.slice(0, 3).map((itemId, index) => (
-                            <div key={itemId} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                              {index + 1}. {itemId}
-                            </div>
-                          ))}
-                          {selectedCodex.length > 3 && (
-                            <div className="text-xs text-blue-600 italic">
-                              +{selectedCodex.length - 3} más...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ✨ Usar CodexSelector real */}
-                  <CodexSelector 
-                    selectedCodex={selectedCodex} 
-                    onCodexChange={setSelectedCodex} 
-                  />
-                </div>
-                
-                {/* Modal Actions */}
-                <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
-                  <button
-                    onClick={() => setSelectedCodex([])}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    Limpiar selección
-                  </button>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setIsContextModalOpen(false)}
-                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsContextModalOpen(false);
-                        setIsContextOpen(false);
-                      }}
-                      className="px-6 py-2 bg-[#1e40af] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-sm font-medium"
-                    >
-                      Aplicar ({selectedCodex.length})
-                    </button>
+                {/* Logo */}
+                <div className="mb-6">
+                  <div className="h-16 w-16 border-2 border-[#1e40af] rounded-lg bg-white flex items-center justify-center shadow-sm">
+                    <span className="text-2xl font-bold text-[#1e40af]">V</span>
                   </div>
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-        
-        {/* Input area */}
-        <div className="border-t bg-white p-4">
-          <div className="flex gap-2">
-            {/* Context Button */}
-            <div className="relative">
-              <button
-                ref={contextButtonRef}
-                onClick={() => setIsContextOpen(!isContextOpen)}
-                className="h-12 w-12 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
-                title="Contexto"
-              >
-                <Info className="h-5 w-5 text-gray-600" />
-              </button>
 
-              {/* Context Dropdown */}
-              <AnimatePresence>
-                {isContextOpen && (
-                  <>
-                    {/* Backdrop */}
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsContextOpen(false)}
-                    />
-                    
-                    {/* Dropdown Menu */}
-                    <motion.div
-                      className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                <h3 className="text-2xl font-semibold mb-2 text-gray-900">
+                  Vizta
+                </h3>
+                <p className="text-sm text-gray-600 mb-8 max-w-sm leading-relaxed">
+                  Asistente de análisis de noticias y tendencias de Guatemala
+                </p>
+
+                {/* Quick prompts */}
+                <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
+                  {quickPrompts.map((prompt, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={() => setInputValue(prompt.text)}
+                      className={cn(
+                        "group relative overflow-hidden rounded-lg p-4 text-left text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200",
+                        `bg-gradient-to-r ${prompt.gradient}`
+                      )}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.15 }}
+                      transition={{ delay: 0.1 + index * 0.05 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      {/* Dropdown Header */}
-                      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">Contexto</h3>
-                        <button
-                          onClick={() => {
-                            setIsContextOpen(false);
-                            setIsContextModalOpen(true);
-                          }}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Expandir"
-                        >
-                          <Maximize2 className="h-4 w-4 text-gray-600" />
-                        </button>
+                      <div className="relative z-10 flex items-center gap-3">
+                        {prompt.icon}
+                        <span className="flex-1">{prompt.text}</span>
                       </div>
-
-                      {/* Dropdown Content */}
-                      <div className="p-3 space-y-2 max-h-96 overflow-auto">
-                        {/* ✨ Codex - Abrir modal completo */}
-                        <button 
-                          className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
-                          onClick={() => {
-                            setIsContextOpen(false);
-                            setIsContextModalOpen(true);
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <FileUp className="h-4 w-4 text-[#1e40af]" />
-                            <span className="text-sm font-medium text-gray-900">📚 Codex</span>
-                            {selectedCodex.length > 0 && (
-                              <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                {selectedCodex.length}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            {selectedCodex.length > 0 
-                              ? `${selectedCodex.length} items seleccionados` 
-                              : 'Docs, Wiki, Monitoreos'}
-                          </p>
-                        </button>
-
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {messages.map((message, index) => (
+                  message.sender === "user" ? (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-start gap-3 ml-auto max-w-[85%]"
+                    >
+                      <div className="flex-1 rounded-lg p-4 bg-[#1e40af] text-white shadow-sm">
+                        <p className="text-sm leading-relaxed">{message.content}</p>
+                        <time className="text-xs text-white/70 mt-2 block">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </time>
                       </div>
-
-                      {/* Dropdown Footer */}
-                      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                        <p className="text-xs text-gray-500">
-                          Agrega contexto para mejorar las respuestas
-                        </p>
-                      </div>
+                      <Avatar className="h-9 w-9 shadow-sm">
+                        <AvatarFallback className="bg-gray-200 text-gray-700">
+                          <MessageCircle className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
                     </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Input Field */}
-            <div className="flex-1 relative">
-              <Textarea
-                placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
-                value={inputValue}
-                onChange={handleInputChange}
-                className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400"
-                style={{ fontSize: '16px', WebkitTextSizeAdjust: '100%' }}
-                onKeyDown={handleKeyDown}
-              />
-              
-              {/* ✨ NUEVO: Dropdown de menciones @ */}
-              {showMentions && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                  <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-2">
-                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                    <span>Elementos del Codex disponibles:</span>
-                    <span className="text-blue-600 font-medium">{filteredCodexItems.length} encontrados</span>
-                  </div>
-                  
-                  {filteredCodexItems.length > 0 ? (
-                    <>
-                      {filteredCodexItems.map((item, index) => (
-                        <button
-                          key={item.id}
-                          onClick={() => handleMentionSelect(item)}
-                          className={`w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3 ${
-                            index === selectedMentionIndex ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'text-gray-700'
-                          }`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate flex items-center gap-2">
-                              <span className="text-blue-600">@</span>
-                              {item.title}
-                            </div>
-                            {item.content && (
-                              <div className="text-xs text-gray-500 truncate mt-1">
-                                {item.content.substring(0, 60)}...
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                              {item.type || 'documento'}
-                            </div>
-                            {index === selectedMentionIndex && (
-                              <div className="text-xs text-blue-600 font-medium">
-                                ← Seleccionado
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                      <div className="p-2 text-xs text-gray-400 border-t bg-gray-50">
-                        <div className="flex items-center gap-4">
-                          <span>↑↓ navegar</span>
-                          <span>Enter seleccionar</span>
-                          <span>Esc cancelar</span>
-                        </div>
-                      </div>
-                    </>
                   ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      <div className="text-sm">No se encontraron elementos</div>
-                      <div className="text-xs mt-1">
-                        {availableCodexItems.length === 0 
-                          ? "No hay elementos en tu Codex. Crea algunos documentos primero."
-                          : "Intenta con otro término de búsqueda"
-                        }
+                    <AssistantMessage
+                      key={message.id}
+                      message={message}
+                      onRequestProjectSave={handleRequestProjectSave}
+                      onSaveTermToWiki={handleSaveTermToWiki}
+                      capturedSaveStatus={capturedSaveStatus}
+                      termSaveStatus={termSaveStatus}
+                    />
+                  )
+                ))}
+              </AnimatePresence>
+            )}
+
+            {/* Loading state */}
+            <AnimatePresence>
+              {isLoading && (
+                <motion.div
+                  className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Avatar className="h-9 w-9 shadow-sm">
+                    <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
+                      <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
+                        V
                       </div>
-                      {availableCodexItems.length === 0 && (
-                        <div className="text-xs mt-2 text-blue-600">
-                          💡 Ve a "Conocimiento" para crear elementos del Codex
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <TypingIndicator />
+                      <span className="text-sm text-gray-600">Analizando...</span>
+                    </div>
+                    <SkeletonLoader lines={3} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div ref={scrollRef} />
+          </div>
+
+          {/* Context Modal - Full screen */}
+          <AnimatePresence>
+            {isContextModalOpen && (
+              <>
+                <motion.div
+                  className="fixed inset-0 bg-black/50 z-[60]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsContextModalOpen(false)}
+                />
+                <motion.div
+                  className="fixed inset-4 md:inset-12 bg-white rounded-lg shadow-2xl z-[70] flex flex-col"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b">
+                    <h2 className="text-xl font-semibold text-gray-900">Contexto</h2>
+                    <button
+                      onClick={() => setIsContextModalOpen(false)}
+                      className="h-8 w-8 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* ✨ Modal Content - CodexSelector funcional */}
+                  <div className="flex-1 overflow-auto p-6">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">📚 Selecciona items del Codex</h3>
+                      <p className="text-sm text-gray-600">
+                        Selecciona documentos, Wiki items, o monitoreos para que Vizta los use como contexto en su respuesta.
+                      </p>
+                      {selectedCodex.length > 0 && (
+                        <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                            <p className="text-sm text-blue-800 font-medium">
+                              {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            {selectedCodex.slice(0, 3).map((itemId, index) => (
+                              <div key={itemId} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                                {index + 1}. {itemId}
+                              </div>
+                            ))}
+                            {selectedCodex.length > 3 && (
+                              <div className="text-xs text-blue-600 italic">
+                                +{selectedCodex.length - 3} más...
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
 
-            {/* Send Button */}
-            <Button 
-              size="icon" 
-              onClick={handleSend}
-              disabled={isLoading || !inputValue.trim()}
-              className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              <Send className="h-4 w-4" />
-              <span className="sr-only">Enviar mensaje</span>
-            </Button>
+                    {/* ✨ Usar CodexSelector real */}
+                    <CodexSelector
+                      selectedCodex={selectedCodex}
+                      onCodexChange={setSelectedCodex}
+                    />
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
+                    <button
+                      onClick={() => setSelectedCodex([])}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      Limpiar selección
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsContextModalOpen(false)}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsContextModalOpen(false);
+                          setIsContextOpen(false);
+                        }}
+                        className="px-6 py-2 bg-[#1e40af] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-sm font-medium"
+                      >
+                        Aplicar ({selectedCodex.length})
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Input area */}
+          <div className="border-t bg-white p-4">
+            <div className="flex gap-2">
+              {/* Context Button */}
+              <div className="relative">
+                <button
+                  ref={contextButtonRef}
+                  onClick={() => setIsContextOpen(!isContextOpen)}
+                  className="h-12 w-12 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
+                  title="Contexto"
+                >
+                  <Info className="h-5 w-5 text-gray-600" />
+                </button>
+
+                {/* Context Dropdown */}
+                <AnimatePresence>
+                  {isContextOpen && (
+                    <>
+                      {/* Backdrop */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsContextOpen(false)}
+                      />
+
+                      {/* Dropdown Menu */}
+                      <motion.div
+                        className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {/* Dropdown Header */}
+                        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                          <h3 className="font-semibold text-gray-900">Contexto</h3>
+                          <button
+                            onClick={() => {
+                              setIsContextOpen(false);
+                              setIsContextModalOpen(true);
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Expandir"
+                          >
+                            <Maximize2 className="h-4 w-4 text-gray-600" />
+                          </button>
+                        </div>
+
+                        {/* Dropdown Content */}
+                        <div className="p-3 space-y-2 max-h-96 overflow-auto">
+                          {/* ✨ Codex - Abrir modal completo */}
+                          <button
+                            className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                            onClick={() => {
+                              setIsContextOpen(false);
+                              setIsContextModalOpen(true);
+                            }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileUp className="h-4 w-4 text-[#1e40af]" />
+                              <span className="text-sm font-medium text-gray-900">📚 Codex</span>
+                              {selectedCodex.length > 0 && (
+                                <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                                  {selectedCodex.length}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {selectedCodex.length > 0
+                                ? `${selectedCodex.length} items seleccionados`
+                                : 'Docs, Wiki, Monitoreos'}
+                            </p>
+                          </button>
+
+                        </div>
+
+                        {/* Dropdown Footer */}
+                        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                          <p className="text-xs text-gray-500">
+                            Agrega contexto para mejorar las respuestas
+                          </p>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Input Field */}
+              <div className="flex-1 relative">
+                <Textarea
+                  placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400"
+                  style={{ fontSize: '16px', WebkitTextSizeAdjust: '100%' }}
+                  onKeyDown={handleKeyDown}
+                />
+
+                {/* ✨ NUEVO: Dropdown de menciones @ */}
+                {showMentions && (
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                    <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-2">
+                      <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                      <span>Elementos del Codex disponibles:</span>
+                      <span className="text-blue-600 font-medium">{filteredCodexItems.length} encontrados</span>
+                    </div>
+
+                    {filteredCodexItems.length > 0 ? (
+                      <>
+                        {filteredCodexItems.map((item, index) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleMentionSelect(item)}
+                            className={`w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3 ${index === selectedMentionIndex ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'text-gray-700'
+                              }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate flex items-center gap-2">
+                                <span className="text-blue-600">@</span>
+                                {item.title}
+                              </div>
+                              {item.content && (
+                                <div className="text-xs text-gray-500 truncate mt-1">
+                                  {item.content.substring(0, 60)}...
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                {item.type || 'documento'}
+                              </div>
+                              {index === selectedMentionIndex && (
+                                <div className="text-xs text-blue-600 font-medium">
+                                  ← Seleccionado
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                        <div className="p-2 text-xs text-gray-400 border-t bg-gray-50">
+                          <div className="flex items-center gap-4">
+                            <span>↑↓ navegar</span>
+                            <span>Enter seleccionar</span>
+                            <span>Esc cancelar</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        <div className="text-sm">No se encontraron elementos</div>
+                        <div className="text-xs mt-1">
+                          {availableCodexItems.length === 0
+                            ? "No hay elementos en tu Codex. Crea algunos documentos primero."
+                            : "Intenta con otro término de búsqueda"
+                          }
+                        </div>
+                        {availableCodexItems.length === 0 && (
+                          <div className="text-xs mt-2 text-blue-600">
+                            💡 Ve a "Conocimiento" para crear elementos del Codex
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Send Button */}
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={isLoading || !inputValue.trim()}
+                className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                <Send className="h-4 w-4" />
+                <span className="sr-only">Enviar mensaje</span>
+              </Button>
+            </div>
           </div>
-        </div>
         </ViztaChatContent>
         <ProjectSelectorDialog
           open={isProjectSelectorOpen}
@@ -1877,7 +1954,7 @@ const ViztaChatUI = () => {
           setPendingTerm(null);
         }}
         initialName={pendingTerm?.term}
-        initialType={(pendingTerm?.category && ['person','organization','location','event','concept'].includes(pendingTerm.category)) ? (pendingTerm!.category as any) : 'concept'}
+        initialType={(pendingTerm?.category && ['person', 'organization', 'location', 'event', 'concept'].includes(pendingTerm.category)) ? (pendingTerm!.category as any) : 'concept'}
         initialDescription={pendingTerm?.reason || pendingTerm?.research_focus || ''}
         initialTags={pendingTerm?.category ? [pendingTerm.category, 'vizta_chat'] : ['vizta_chat']}
         initialMetadata={{ source: 'vizta_chat', confidence: pendingTerm?.confidence ?? null }}
@@ -1886,12 +1963,12 @@ const ViztaChatUI = () => {
   );
 };
 
-export { 
-  ViztaChat, 
-  ViztaChatTrigger, 
-  ViztaChatContent, 
-  ViztaChatOverlay, 
+export {
+  ViztaChat,
+  ViztaChatTrigger,
+  ViztaChatContent,
+  ViztaChatOverlay,
   ViztaChatPortal,
-  ViztaChatUI 
+  ViztaChatUI
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BarChart3, Smile, Type, X } from 'lucide-react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import type { ChartWidget } from '../../stores/dashboardStore';
@@ -38,33 +38,30 @@ export function DashboardWidgetToolbar({
       <div className="flex border-b border-gray-200">
         <button
           onClick={() => setActiveTab('charts')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'charts'
-              ? 'text-purple-600 border-b-2 border-purple-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'charts'
+            ? 'text-purple-600 border-b-2 border-purple-600'
+            : 'text-gray-600 hover:text-gray-900'
+            }`}
         >
           <BarChart3 className="h-4 w-4 inline mr-2" />
           Gráficos
         </button>
         <button
           onClick={() => setActiveTab('emoji')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'emoji'
-              ? 'text-purple-600 border-b-2 border-purple-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'emoji'
+            ? 'text-purple-600 border-b-2 border-purple-600'
+            : 'text-gray-600 hover:text-gray-900'
+            }`}
         >
           <Smile className="h-4 w-4 inline mr-2" />
           Emojis
         </button>
         <button
           onClick={() => setActiveTab('text')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'text'
-              ? 'text-purple-600 border-b-2 border-purple-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'text'
+            ? 'text-purple-600 border-b-2 border-purple-600'
+            : 'text-gray-600 hover:text-gray-900'
+            }`}
         >
           <Type className="h-4 w-4 inline mr-2" />
           Texto
@@ -83,10 +80,17 @@ export function DashboardWidgetToolbar({
               </div>
             ) : (
               savedCharts.map((chart) => (
-                <button
+                <div
                   key={chart.id}
-                  onClick={() => onAddChart(chart)}
-                  className="w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-md transition-all"
+                  draggable={true}
+                  onDragStart={(e) => {
+                    // Set data for drop
+                    e.dataTransfer.setData("widgetType", "chart");
+                    e.dataTransfer.setData("widgetData", JSON.stringify(chart));
+                    // Visual feedback
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className="w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative"
                 >
                   <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
                     {chart.originalQuery}
@@ -94,7 +98,19 @@ export function DashboardWidgetToolbar({
                   <div className="text-xs text-gray-500">
                     {new Date(chart.timestamp).toLocaleDateString()}
                   </div>
-                </button>
+                  {/* Hint overlay */}
+                  <div className="absolute inset-0 bg-purple-50/0 group-hover:bg-purple-50/10 transition-colors rounded-lg" />
+                  <div className="absolute top-2 right-2 text-gray-300 group-hover:text-purple-400">
+                    <BarChart3 className="h-4 w-4" />
+                  </div>
+                  {/* Click to add fallback */}
+                  <button
+                    onClick={() => onAddChart(chart)}
+                    className="absolute bottom-2 right-2 text-[10px] bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-700 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    + Agregar
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -108,7 +124,7 @@ export function DashboardWidgetToolbar({
             >
               Seleccionar Emoji
             </button>
-            
+
             {showEmojiPicker && (
               <div className="mb-3">
                 <EmojiPicker onEmojiClick={handleEmojiClick} width="100%" />
