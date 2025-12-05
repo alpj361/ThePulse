@@ -107,9 +107,9 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
     },
     {
       icon: <BarChart3 size={20} />,
-      label: 'Sondeos (Pronto)',
-      path: '#',
-      disabled: true
+      label: language === 'es' ? 'Pizarras' : 'Dashboards',
+      path: '/sondeos',
+      disabled: false
     },
     {
       icon: <Layers size={20} />,

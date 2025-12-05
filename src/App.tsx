@@ -27,8 +27,8 @@ import { Box, CircularProgress } from '@mui/material';
 import { SpreadsheetProvider } from './context/SpreadsheetContext';
 import EnhancedCodex from './pages/EnhancedCodex';
 import News from './pages/News';
-import SondeosModern from './pages/SondeosModern';
-const Sondeos = SondeosModern; // Alias para compatibilidad
+import DashboardsPage from './pages/DashboardsPage';
+const Sondeos = DashboardsPage; // Pizarras reemplaza Sondeos
 import SondeosFullPage from './pages/SondeosFullPage';
 import Projects from './pages/Projects';
 import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
@@ -257,7 +257,7 @@ function App() {
           <Route path="/sondeos" element={
             <VerifiedRoute>
               <Layout>
-                <SondeosFullPage />
+                <Sondeos />
               </Layout>
             </VerifiedRoute>
           } />
@@ -271,7 +271,7 @@ function App() {
           <Route path="/sondeos/modern" element={
             <VerifiedRoute>
               <Layout>
-                <SondeosModern />
+                <Sondeos />
               </Layout>
             </VerifiedRoute>
           } />

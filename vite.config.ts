@@ -16,12 +16,12 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api/sondeo': {
-        target: 'http://127.0.0.1:3010',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/sondeo/, '/api/sondeo')
       },
       '/api': {
-        target: 'http://127.0.0.1:3010',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       }

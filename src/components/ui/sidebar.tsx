@@ -84,7 +84,7 @@ const translations = {
     trends: 'Trends',
     news: 'News',
     actividad: 'Actividad',
-    sondeos: 'Sondeos',
+    sondeos: 'Pizarras',
     codex: 'Codex',
     proyectos: 'Proyectos',
     sources: 'Sources',
@@ -102,7 +102,7 @@ const translations = {
     trends: 'Trends',
     news: 'News',
     actividad: 'Activity',
-    sondeos: 'Polls',
+    sondeos: 'Dashboards',
     codex: 'Codex',
     proyectos: 'Projects',
     sources: 'Sources',
@@ -165,7 +165,7 @@ export function SessionNavBar() {
           icon: <BarChart3 className="h-4 w-4" />,
           label: t.sondeos,
           path: "/sondeos",
-          disabled: true
+          disabled: false
         }
       ]
     },

@@ -7,9 +7,9 @@ import { supabase } from './supabase';
 
 // Función para obtener la URL del ExtractorW dinámicamente
 function getExtractorWUrl(): string {
-  // Si estamos en desarrollo, usar el puerto 3010 local
+  // Si estamos en desarrollo, usar el puerto 8080 local (ExtractorW backend)
   if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://127.0.0.1:3010/api';
+    return 'http://127.0.0.1:8080/api';
   }
   // En producción, usar el servidor de producción
   return 'https://server.standatpd.com/api';
@@ -154,7 +154,7 @@ export async function sendViztaChatQuery(
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-    
+
     // Solo agregar Authorization si hay token
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -181,7 +181,7 @@ export async function sendViztaChatQuery(
 
     const data = await response.json();
     console.log('✅ Respuesta de Vizta Chat recibida');
-    
+
     return data;
 
   } catch (error) {
@@ -202,7 +202,7 @@ export async function getUserScrapes(options: {
 } = {}): Promise<ScrapeData[]> {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('No hay sesión de usuario activa');
     }
@@ -240,7 +240,7 @@ export async function getUserScrapes(options: {
 export async function getUserScrapeStats(): Promise<any> {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('No hay sesión de usuario activa');
     }
@@ -271,7 +271,7 @@ export async function getUserScrapeStats(): Promise<any> {
 export async function getSessionScrapes(sessionId: string): Promise<ScrapeData[]> {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('No hay sesión de usuario activa');
     }
@@ -302,7 +302,7 @@ export async function getSessionScrapes(sessionId: string): Promise<ScrapeData[]
 export async function getAvailableTools(): Promise<any[]> {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('No hay sesión de usuario activa');
     }
@@ -338,7 +338,7 @@ export function generateSessionId(): string {
  * Formatea un mensaje para mostrar en el chat
  */
 export function formatChatMessage(
-  content: string, 
+  content: string,
   sender: 'user' | 'assistant',
   metadata?: any
 ): ViztaChatMessage {

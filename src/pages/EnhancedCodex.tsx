@@ -198,6 +198,7 @@ const MonitorAccordionCard: React.FC<{
             </Button>
           </div>
         </div>
+
       </CardHeader>
       <div ref={contentRef} style={{ maxHeight: maxHeight, transition: 'max-height 300ms ease-in-out, opacity 200ms ease-in-out', opacity: expanded ? 1 : 0 }} className="overflow-hidden">
         <CardContent className="p-3">
@@ -232,7 +233,7 @@ const MonitorAccordionCard: React.FC<{
           )}
         </CardContent>
       </div>
-    </Card>
+    </Card >
   );
 };
 
@@ -674,6 +675,7 @@ export default function EnhancedCodex() {
   const [showDocumentEditor, setShowDocumentEditor] = useState(false);
   const [documentContent, setDocumentContent] = useState('');
   const [documentTitle, setDocumentTitle] = useState('');
+  const [documentDescription, setDocumentDescription] = useState('');
   const [documentTags, setDocumentTags] = useState('');
   const [documentProject, setDocumentProject] = useState('');
   const [isDocumentFullscreen, setIsDocumentFullscreen] = useState(false);
@@ -1895,7 +1897,8 @@ export default function EnhancedCodex() {
         user_id: user?.id,
         tipo: 'documento',
         titulo: documentTitle.trim(),
-        descripcion: documentContent, // Contenido HTML del editor
+        descripcion: documentDescription, // Resumen corto para el Codex
+        content: documentContent, // Contenido HTML completo del editor
         etiquetas: finalTags,
         proyecto: selectedProjectData ? selectedProjectData.title : 'Sin proyecto',
         project_id: selectedProjectData ? documentProject : null,
@@ -1954,7 +1957,18 @@ export default function EnhancedCodex() {
   const handleEditDocument = (item: CodexItem) => {
     setEditingDocumentId(item.id)
     setDocumentTitle(item.titulo)
-    setDocumentContent(item.descripcion || '')
+
+    // Manejo de compatibilidad: 
+    // Si tiene content, usamos content para el editor y descripcion para el resumen.
+    // Si NO tiene content (legacy), usamos descripcion para el editor y dejamos resumen vacío.
+    if (item.content) {
+      setDocumentContent(item.content)
+      setDocumentDescription(item.descripcion || '')
+    } else {
+      setDocumentContent(item.descripcion || '')
+      setDocumentDescription('') // Resumen vacío para items legacy hasta que el usuario lo llene
+    }
+
     setDocumentTags(item.etiquetas.filter(tag => tag !== 'editor-interno').join(', '))
 
     // Determinar el proyecto
@@ -1969,7 +1983,8 @@ export default function EnhancedCodex() {
 
     setShowDocumentEditor(true)
     setSelectedSourceType('document')
-    setIsModalOpen(true)
+    // FIX: No abrir el modal de "Agregar Nueva Fuente"
+    // setIsModalOpen(true) 
   }
 
   const handleDocumentChange = (content: string) => {
@@ -1980,6 +1995,7 @@ export default function EnhancedCodex() {
     setShowDocumentEditor(false)
     setDocumentContent('')
     setDocumentTitle('')
+    setDocumentDescription('')
     setDocumentTags('')
     setDocumentProject('')
     setEditingDocumentId(null)
@@ -2810,8 +2826,15 @@ export default function EnhancedCodex() {
                   onChange={(e) => setDocumentTitle(e.target.value)}
                   className="text-2xl font-bold border-0 focus:ring-0 px-0"
                 />
+                <Input
+                  placeholder="Breve descripción o resumen para el Codex..."
+                  value={documentDescription}
+                  onChange={(e) => setDocumentDescription(e.target.value)}
+                  className="text-sm text-slate-500 border-0 focus:ring-0 px-0 mt-1"
+                />
               </div>
             </div>
+
             <div className="flex items-center gap-3">
               {lastSavedTime && (
                 <span className="text-xs text-green-600">
@@ -2902,8 +2925,9 @@ export default function EnhancedCodex() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Main Codex View */}
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">

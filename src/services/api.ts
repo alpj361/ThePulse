@@ -60,7 +60,14 @@ function resolveExtractorWUrl(): string {
   const envUrl = (import.meta.env.VITE_EXTRACTORW_URL || import.meta.env.VITE_EXTRACTORW_API_URL) as string | undefined;
   if (envUrl && envUrl.trim() !== '') {
     // Normalizar localhost → 127.0.0.1 para evitar IPv6 (::1) resets en Docker Desktop (macOS)
-    const normalized = envUrl.trim().replace(/\/$/, '').replace('://localhost', '://127.0.0.1');
+    let normalized = envUrl.trim().replace(/\/$/, '').replace('://localhost', '://127.0.0.1');
+
+    // FIX: Si detectamos puertos incorrectos en desarrollo, forzamos el 8080
+    if (normalized.includes(':3009') || normalized.includes(':3010')) {
+      console.warn('⚠️ Detectado puerto incorrecto en variables de entorno. Forzando puerto 8080 (ExtractorW correcto).');
+      normalized = normalized.replace(':3009', ':8080').replace(':3010', ':8080');
+    }
+
     return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
   }
 
@@ -69,7 +76,7 @@ function resolveExtractorWUrl(): string {
     import.meta.env.DEV ||
     ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(window.location.hostname)
   ) {
-    return 'http://127.0.0.1:8081/api';
+    return 'http://127.0.0.1:8080/api';
   }
 
   // 3. Fallback producción
@@ -109,8 +116,8 @@ console.log(`   VPS: ${VPS_API_URL || 'No configurado'}`);
 console.log(`   Entorno: ${import.meta.env.DEV ? 'Desarrollo' : 'Producción'}`);
 
 // Verificar que la URL no sea el valor genérico del archivo netlify.toml
-const isGenericUrl = VPS_API_URL.includes('your-vps-scraper-url') || 
-                     VPS_API_URL.includes('dev-your-vps-scraper-url');
+const isGenericUrl = VPS_API_URL.includes('your-vps-scraper-url') ||
+  VPS_API_URL.includes('dev-your-vps-scraper-url');
 
 // URL real a usar
 const API_URL_TO_USE = !isGenericUrl && VPS_API_URL ? VPS_API_URL : '';
@@ -153,7 +160,7 @@ export async function fetchRawTrendsFromVPS(): Promise<any> {
         location: "guatemala",
         twitter_trends: [
           "1. Napoli251K",
-          "2. Lilo68K", 
+          "2. Lilo68K",
           "3. Alejandro Giammattei",
           "4. Lukita",
           "5. santa maría de jesús",
@@ -165,14 +172,14 @@ export async function fetchRawTrendsFromVPS(): Promise<any> {
         ]
       };
     }
-    
+
     console.log(`Realizando fetch a ${API_URL_TO_USE}/trending`);
     const response = await fetch(`${API_URL_TO_USE}/trending`);
-    
+
     if (!response.ok) {
       throw new Error(`Error fetching trends: ${response.statusText}`);
     }
-    
+
     const responseData = await response.json();
     console.log('Datos crudos recibidos del API:', responseData);
     return responseData;
@@ -182,7 +189,7 @@ export async function fetchRawTrendsFromVPS(): Promise<any> {
     console.log('Error en fetchRawTrendsFromVPS, retornando datos de prueba');
     return {
       status: "success",
-      location: "guatemala", 
+      location: "guatemala",
       twitter_trends: [
         "1. Napoli251K",
         "2. Lilo68K",
@@ -190,7 +197,7 @@ export async function fetchRawTrendsFromVPS(): Promise<any> {
         "4. Lukita",
         "5. santa maría de jesús",
         "6. Aguirre",
-        "7. #SerieA14K", 
+        "7. #SerieA14K",
         "8. McTominay118K",
         "9. margaret satterthwaite",
         "10. Sinibaldi"
@@ -212,7 +219,7 @@ export async function storeTrendsInSupabase(trendsData: TrendResponse): Promise<
       console.log('🔄 Timestamp duplicado ignorado - los datos ya existen en Supabase');
       return; // No es un error real, continuar normalmente
     }
-    
+
     console.error('Error storing trends in Supabase:', error);
     // Just log the error, but don't throw to prevent UI breaking
   }
@@ -243,17 +250,17 @@ async function testFetch() {
 export async function fetchTrendsFromExtractorW(rawTrendsData?: any, authToken?: string): Promise<TrendResponse> {
   try {
     console.log('🚀 Iniciando fetchTrendsFromExtractorW');
-    
+
     // SIEMPRE enviar background: true para activar procesamiento detallado
-    const requestBody = rawTrendsData ? 
-      { rawData: rawTrendsData, background: true } : 
+    const requestBody = rawTrendsData ?
+      { rawData: rawTrendsData, background: true } :
       { background: true };
-    
+
     // Preparar headers
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     // Agregar token de autenticación si está disponible
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
@@ -261,7 +268,7 @@ export async function fetchTrendsFromExtractorW(rawTrendsData?: any, authToken?:
     } else {
       console.log('⚠️  No se proporcionó token de autenticación - endpoint puede requerir auth');
     }
-    
+
     console.log('📡 Llamando a ExtractorW backend para procesamiento rápido...');
     console.log('📝 Request body:', requestBody); // Debug log para verificar que se envía background: true
     const response = await fetch(`${EXTRACTORW_API_URL}/processTrends`, {
@@ -269,34 +276,34 @@ export async function fetchTrendsFromExtractorW(rawTrendsData?: any, authToken?:
       headers,
       body: JSON.stringify(requestBody)
     });
-    
+
     if (!response.ok) {
       throw new Error(`Error calling ExtractorW: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log('✅ Respuesta rápida recibida de ExtractorW:', data);
-    
+
     // DEBUG: Mostrar específicamente los topKeywords
     console.log('🔍 DEBUG - topKeywords del backend:', data.topKeywords?.slice(0, 3));
     data.topKeywords?.slice(0, 3).forEach((keyword: any, index: number) => {
       console.log(`  ${index + 1}. ${keyword.keyword}: count=${keyword.count}`);
     });
-    
+
     // FIJO: Intentar usar datos de volumen reales si están disponibles
     let processedTopKeywords = data.topKeywords || [];
-    
+
     // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
     const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
     if (allHaveCountOne && data.wordCloudData && data.wordCloudData.length > 0) {
       console.log('🔧 FIJO: Detectado count=1 para todos en fetchTrends, usando volúmenes de wordCloudData');
-      
+
       // Crear un mapa de volúmenes desde wordCloudData
       const volumeMap = new Map();
       data.wordCloudData.forEach((item: any) => {
         volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
       });
-      
+
       // Actualizar topKeywords con volúmenes reales
       processedTopKeywords = processedTopKeywords.map((keyword: any) => {
         const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
@@ -307,10 +314,10 @@ export async function fetchTrendsFromExtractorW(rawTrendsData?: any, authToken?:
         };
       });
     }
-    
+
     // La respuesta inicial viene sin about y statistics
     // Estos se procesan en background
-    
+
     return {
       wordCloudData: data.wordCloudData || [],
       topKeywords: processedTopKeywords,
@@ -339,11 +346,11 @@ export async function pollForCompletedData(timestamp: string, maxAttempts: numbe
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       console.log(`🔄 Polling attempt ${attempt}/${maxAttempts} for timestamp: ${timestamp}`);
-      
+
       const response = await fetch(`${EXTRACTORW_API_URL}/processingStatus/${encodeURIComponent(timestamp)}`, {
         method: 'GET'
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           console.log(`⚠️  Record not found yet, attempt ${attempt}`);
@@ -352,30 +359,30 @@ export async function pollForCompletedData(timestamp: string, maxAttempts: numbe
         } else {
           console.log(`⚠️  Polling attempt ${attempt} failed: ${response.status} ${response.statusText}`);
         }
-        
+
         // Wait longer on early attempts, shorter on later ones
         const waitTime = attempt <= 5 ? 15000 : (attempt <= 10 ? 12000 : 8000);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
-      
+
       const data = await response.json();
       console.log(`📊 Polling result ${attempt}:`, {
         status: data.status,
         has_about: data.has_about,
         has_statistics: data.has_statistics
       });
-      
+
       if (data.status === 'complete' && data.has_about && data.has_statistics) {
         console.log('✅ Procesamiento completo detectado!');
         return data.data;
       }
-      
+
       if (data.status === 'error') {
         console.error('❌ Error en procesamiento detectado');
         return null;
       }
-      
+
       // Progressive wait times: start with longer waits, then shorter
       // First 3 attempts: 20 seconds (Perplexity is still processing)
       // Next 7 attempts: 15 seconds 
@@ -388,17 +395,17 @@ export async function pollForCompletedData(timestamp: string, maxAttempts: numbe
       } else {
         waitTime = 10000; // 10 seconds for final attempts
       }
-      
-      console.log(`⏳ Esperando ${waitTime/1000} segundos antes del siguiente intento...`);
+
+      console.log(`⏳ Esperando ${waitTime / 1000} segundos antes del siguiente intento...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
-      
+
     } catch (error) {
       console.error(`❌ Error en polling attempt ${attempt}:`, error);
       // Wait 10 seconds on fetch errors
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
   }
-  
+
   console.log(`⏰ Polling timeout reached after ${maxAttempts} attempts (approx ${Math.round(maxAttempts * 15 / 60)} minutes), returning null`);
   return null;
 }
@@ -409,10 +416,10 @@ export async function pollForCompletedData(timestamp: string, maxAttempts: numbe
 export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | null> {
   try {
     console.log('📡 Obteniendo últimas tendencias de ExtractorW...');
-    
+
     // Intentar el endpoint de latestTrends
     const response = await fetch(`${EXTRACTORW_API_URL}/latestTrends`);
-    
+
     if (!response.ok) {
       if (response.status === 404) {
         console.log('📭 No hay tendencias previas en ExtractorW backend');
@@ -421,7 +428,7 @@ export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | n
       }
       throw new Error(`Error getting latest trends: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log('✅ Últimas tendencias obtenidas de ExtractorW:', {
       timestamp: data.timestamp,
@@ -430,27 +437,27 @@ export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | n
       has_statistics: Object.keys(data.statistics || {}).length > 0,
       has_controversy: data.controversyAnalyses?.length > 0
     });
-    
+
     // DEBUG: Mostrar específicamente los topKeywords desde latestTrends
     console.log('🔍 DEBUG - topKeywords desde latestTrends:', data.topKeywords?.slice(0, 3));
     data.topKeywords?.slice(0, 3).forEach((keyword: any, index: number) => {
       console.log(`  ${index + 1}. ${keyword.keyword}: count=${keyword.count}`);
     });
-    
+
     // FIJO: Intentar usar datos de volumen reales si están disponibles
     let processedTopKeywords = data.topKeywords || [];
-    
+
     // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
     const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
     if (allHaveCountOne && data.wordCloudData && data.wordCloudData.length > 0) {
       console.log('🔧 FIJO: Detectado count=1 para todos, intentando usar volúmenes de wordCloudData');
-      
+
       // Crear un mapa de volúmenes desde wordCloudData
       const volumeMap = new Map();
       data.wordCloudData.forEach((item: any) => {
         volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
       });
-      
+
       // Actualizar topKeywords con volúmenes reales
       processedTopKeywords = processedTopKeywords.map((keyword: any) => {
         const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
@@ -461,7 +468,7 @@ export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | n
         };
       });
     }
-    
+
     return {
       wordCloudData: data.wordCloudData || [],
       topKeywords: processedTopKeywords,
@@ -488,15 +495,15 @@ export async function getLatestTrendsFromExtractorW(): Promise<TrendResponse | n
 export async function fetchAndStoreTrends(authToken?: string): Promise<TrendResponse> {
   try {
     console.log('🚀 Iniciando fetchAndStoreTrends con ExtractorW');
-    
+
     // 1. Fetch raw trends from VPS (if available)
     console.log('📡 Obteniendo datos raw de VPS...');
     const rawTrendsData = await fetchRawTrendsFromVPS();
-    
+
     // 2. Process with ExtractorW (fast response) - now with auth token
     console.log('⚡ Procesando con ExtractorW (respuesta rápida)...');
     const initialData = await fetchTrendsFromExtractorW(rawTrendsData, authToken);
-    
+
     // 3. Start polling for complete data in background
     if (initialData.timestamp && initialData.processing_status === 'basic_completed') {
       console.log('🔄 Iniciando polling para datos completos...');
@@ -511,7 +518,7 @@ export async function fetchAndStoreTrends(authToken?: string): Promise<TrendResp
         console.error('❌ Error en polling background:', error);
       });
     }
-    
+
     // 4. Store initial data in Supabase
     try {
       console.log('💾 Guardando datos iniciales en Supabase...');
@@ -521,7 +528,7 @@ export async function fetchAndStoreTrends(authToken?: string): Promise<TrendResp
       console.error('⚠️  Error storing in Supabase:', storageError);
       // Continue even if storage fails
     }
-    
+
     return initialData;
   } catch (error) {
     console.error('❌ Error in fetchAndStoreTrends:', error);
@@ -537,20 +544,20 @@ export async function fetchAndStoreTrends(authToken?: string): Promise<TrendResp
 export async function getLatestTrends(): Promise<TrendResponse | null> {
   try {
     console.log('📊 Iniciando getLatestTrends');
-    
+
     // 1. Try to get latest from ExtractorW first
     console.log('🔍 Intentando obtener datos de ExtractorW...');
     const extractorData = await getLatestTrendsFromExtractorW();
-    
+
     if (extractorData) {
       console.log('✅ Datos obtenidos de ExtractorW');
       return extractorData;
     }
-    
+
     // 2. Fallback to Supabase
     console.log('🔄 ExtractorW no tiene datos previos, fallback a Supabase...');
     const supabaseData = await getLatestTrendData();
-    
+
     if (supabaseData) {
       console.log('✅ Datos obtenidos de Supabase:', {
         timestamp: supabaseData.timestamp,
@@ -559,21 +566,21 @@ export async function getLatestTrends(): Promise<TrendResponse | null> {
         categoriesCount: supabaseData.category_data?.length || 0,
         has_controversy: supabaseData.controversy_analyses?.length > 0
       });
-      
+
       // FIJO: También aplicar fix de volúmenes para datos de Supabase
       let processedTopKeywords = supabaseData.top_keywords || [];
-      
+
       // Si los topKeywords tienen todos count=1, intentar obtener volúmenes reales de wordCloudData
       const allHaveCountOne = processedTopKeywords.every((kw: any) => kw.count === 1);
       if (allHaveCountOne && supabaseData.word_cloud_data && supabaseData.word_cloud_data.length > 0) {
         console.log('🔧 FIJO: Detectado count=1 en Supabase, usando volúmenes de wordCloudData');
-        
+
         // Crear un mapa de volúmenes desde wordCloudData
         const volumeMap = new Map();
         supabaseData.word_cloud_data.forEach((item: any) => {
           volumeMap.set(item.text?.toLowerCase(), item.value || item.volume || 1);
         });
-        
+
         // Actualizar topKeywords con volúmenes reales
         processedTopKeywords = processedTopKeywords.map((keyword: any) => {
           const realVolume = volumeMap.get(keyword.keyword?.toLowerCase()) || keyword.count || 1;
@@ -584,7 +591,7 @@ export async function getLatestTrends(): Promise<TrendResponse | null> {
           };
         });
       }
-      
+
       // Asegurar que los datos de Supabase tienen la estructura correcta
       return {
         wordCloudData: supabaseData.word_cloud_data || [],
@@ -604,7 +611,7 @@ export async function getLatestTrends(): Promise<TrendResponse | null> {
         controversyChartData: supabaseData.controversy_chart_data || {}
       };
     }
-    
+
     console.log('⚠️  No se encontraron datos en ExtractorW ni en Supabase');
     return null;
   } catch (error) {
@@ -623,16 +630,16 @@ export async function getLatestTrends(): Promise<TrendResponse | null> {
 export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: string, authToken?: string): Promise<any> {
   try {
     console.log('📡 Enviando sondeo a ExtractorW con contexto tipo:', contextoArmado.tipo_contexto);
-    
+
     // Configurar headers con autenticación si hay token
-    const headers: Record<string, string> = { 
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-    
+
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
-    
+
     // Mapear contextos del frontend al formato que espera el backend
     const selectedContexts = [];
     if (contextoArmado.tipo_contexto) {
@@ -644,19 +651,19 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
         if (tipo === 'tweets') selectedContexts.push('tweets');
       });
     }
-    
+
     // Si no hay contextos específicos, usar los contextos seleccionados directamente
     if (selectedContexts.length === 0 && contextoArmado.contextos_seleccionados) {
       selectedContexts.push(...contextoArmado.contextos_seleccionados);
     }
-    
+
     // Fallback a tendencias si no hay contextos
     if (selectedContexts.length === 0) {
       selectedContexts.push('tendencias');
     }
-    
+
     console.log('📊 Contextos mapeados:', selectedContexts);
-    
+
     // Preparar payload en el formato correcto para el backend
     const payload = {
       pregunta: pregunta,
@@ -674,28 +681,28 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
         }
       }
     };
-    
+
     console.log('📤 Payload enviado:', JSON.stringify(payload, null, 2));
-    
+
     // 1. Enviar el contexto y pregunta a ExtractorW (nuevo endpoint /api/sondeo)
     const response = await fetch(`${EXTRACTORW_API_URL}/sondeo`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)
     });
-    
+
     console.log('📡 Response status:', response.status);
     console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-    
+
     const responseText = await response.text();
     console.log('📡 Response text (raw):', responseText);
-    
+
     if (!response.ok) {
       console.error('❌ Error response status:', response.status);
       console.error('❌ Error response text:', responseText);
       throw new Error(`Error enviando sondeo (${response.status}): ${response.statusText} - ${responseText}`);
     }
-    
+
     let data;
     try {
       data = JSON.parse(responseText);
@@ -704,7 +711,7 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
       console.error('❌ Raw response:', responseText);
       throw new Error(`Error parsing response: ${parseError.message}`);
     }
-    
+
     console.log('✅ Respuesta de sondeo recibida:', {
       success: data.success,
       tiene_resultado: !!data.resultado,
@@ -713,9 +720,9 @@ export async function sendSondeoToExtractorW(contextoArmado: any, pregunta: stri
       creditos_restantes: data.creditos?.creditos_restantes,
       keys: Object.keys(data)
     });
-    
+
     console.log('📊 Datos completos recibidos:', JSON.stringify(data, null, 2));
-    
+
     return data;
   } catch (error) {
     console.error('❌ Error en sendSondeoToExtractorW:', error);
@@ -767,7 +774,7 @@ export const transformTrendData = (backendData: any): AboutInfo[] => {
 export async function getSondeoHistorial(limit: number = 10, offset: number = 0) {
   try {
     const accessToken = localStorage.getItem('supabase.auth.token');
-    
+
     if (!accessToken) {
       throw new Error('No hay token de acceso disponible');
     }
@@ -796,7 +803,7 @@ export async function getSondeoHistorial(limit: number = 10, offset: number = 0)
 export async function getSondeoById(id: string) {
   try {
     const accessToken = localStorage.getItem('supabase.auth.token');
-    
+
     if (!accessToken) {
       throw new Error('No hay token de acceso disponible');
     }

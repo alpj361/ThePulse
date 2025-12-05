@@ -1,12 +1,12 @@
-const EXTRACTORW_URL = process.env.VITE_EXTRACTORW_API_URL || 'http://localhost:3009';
+const EXTRACTORW_URL = process.env.VITE_EXTRACTORW_API_URL || 'http://localhost:3010';
 
 console.log('🔍 DIAGNÓSTICO DE CONECTIVIDAD - SISTEMA DE TRANSCRIPCIÓN');
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 async function testConnection() {
   try {
     console.log(`\n📡 Probando conectividad con: ${EXTRACTORW_URL}`);
-    
+
     // Test 1: Status básico
     console.log('\n1️⃣ Verificando endpoint de status...');
     try {
@@ -74,8 +74,9 @@ async function testConnection() {
     console.log('\n🎯 RECOMENDACIONES:');
     console.log('─'.repeat(50));
     console.log('• Si el servidor no responde: cd ExtractorW && npm run dev');
-    console.log('• Verificar archivo .env en PulseJ: VITE_EXTRACTORW_API_URL=http://localhost:3009');
-    console.log('• Verificar que el puerto 3009 no esté bloqueado');
+    console.log(`Testing connection to ExtractorW at: ${EXTRACTORW_URL}`);
+    console.log('Ensure ExtractorW is running on port 3010 (or update VITE_EXTRACTORW_API_URL)');
+    console.log('• Verificar que el puerto 3010 no esté bloqueado');
     console.log('• Asegurar que FFmpeg esté instalado para transcripciones de video');
 
   } catch (error) {
@@ -86,9 +87,9 @@ async function testConnection() {
 // Simulación de Token para pruebas
 const simulateTokenTest = () => {
   console.log('\n5️⃣ Información sobre autenticación...');
-  console.log('Token actual en localStorage:', 
-    typeof window !== 'undefined' && localStorage.getItem('token') ? 
-    '✅ Token presente' : '❌ Token faltante'
+  console.log('Token actual en localStorage:',
+    typeof window !== 'undefined' && localStorage.getItem('token') ?
+      '✅ Token presente' : '❌ Token faltante'
   );
   console.log('💡 El token se debe obtener del proceso de login en PulseJ');
 };

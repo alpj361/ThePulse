@@ -33,6 +33,7 @@ import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { C1Component, ThemeProvider } from '@thesysai/genui-sdk';
 import '@crayonai/react-ui/styles/index.css';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
@@ -79,6 +80,7 @@ interface Message {
   feedbackScore?: number; // User's rating 1-5
   c1Response?: string; // For Thesys Generative UI
   hasUIComponents?: boolean; // Indicates if message has UI components
+  originalQuery?: string; // The user's original query that generated this response
   capturedItems?: CapturedInsight[];
   termSuggestions?: TermInsight[];
 }
@@ -243,61 +245,108 @@ const ViztaChatContent = React.forwardRef<
 });
 ViztaChatContent.displayName = "ViztaChatContent";
 
+// Error Boundary for C1Component
+interface C1ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class C1ErrorBoundary extends React.Component<
+  { children: React.ReactNode; onError?: (error: Error) => void },
+  C1ErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode; onError?: (error: Error) => void }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): C1ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[C1ErrorBoundary] Error caught:', error, errorInfo);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-amber-50 rounded-lg p-3 text-sm text-amber-700 border border-amber-200">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="font-medium">Error al renderizar UI</span>
+          </div>
+          <p className="text-xs text-amber-600">
+            {this.state.error?.message || 'Error desconocido al procesar componentes visuales'}
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Auto-scaling C1Component Wrapper
 interface C1ComponentWrapperProps {
   c1Response: string;
   cleanResponse?: boolean;
+  originalQuery?: string; // The query that generated this visualization
 }
 
-const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cleanResponse = false }) => {
+const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ 
+  c1Response, 
+  cleanResponse = false,
+  originalQuery = 'Visualización guardada'
+}) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const [scale, setScale] = React.useState(1);
-  const [isCompact, setIsCompact] = React.useState(false);
   const [showFullSize, setShowFullSize] = React.useState(false);
+  const [renderError, setRenderError] = React.useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = React.useState(false);
+  
+  const { saveChartWidget } = useDashboardStore();
 
   React.useEffect(() => {
-    if (!containerRef.current || !contentRef.current) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (!containerRef.current || !contentRef.current) return;
-
-      const containerWidth = containerRef.current.offsetWidth;
-      const contentWidth = contentRef.current.scrollWidth;
-
-      if (contentWidth > containerWidth) {
-        const newScale = containerWidth / contentWidth;
-        const finalScale = Math.max(newScale, 0.3); // Min scale 30% para chat
-        setScale(finalScale);
-        setIsCompact(finalScale < 0.7);
-      } else {
-        setScale(1);
-        setIsCompact(false);
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-    resizeObserver.observe(contentRef.current);
-
-    // Initial calculation
-    setTimeout(() => {
-      if (!containerRef.current || !contentRef.current) return;
-      const containerWidth = containerRef.current.offsetWidth;
-      const contentWidth = contentRef.current.scrollWidth;
-      if (contentWidth > containerWidth) {
-        const newScale = containerWidth / contentWidth;
-        const finalScale = Math.max(newScale, 0.3);
-        setScale(finalScale);
-        setIsCompact(finalScale < 0.7);
-      }
-    }, 100);
-
-    return () => resizeObserver.disconnect();
+    // Reset error when c1Response changes
+    setRenderError(null);
+    setSaveSuccess(false);
   }, [c1Response]);
+  
+  const handleSaveToCanvas = () => {
+    try {
+      saveChartWidget(c1Response, originalQuery);
+      setSaveSuccess(true);
+      
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('[C1ComponentWrapper] Error saving to canvas:', error);
+    }
+  };
 
+  // Process and clean the response
   const processedResponse = cleanResponse
     ? c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     : c1Response;
+  
+  // If renderError, show error UI
+  if (renderError) {
+    return (
+      <div className="mt-4 border-t pt-3 border-gray-200 w-full">
+        <div className="flex items-center gap-2 mb-2">
+          <BarChart3 className="h-3.5 w-3.5 text-red-600" />
+          <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
+        </div>
+        <div className="bg-red-50 rounded-lg p-3 text-sm text-red-700">
+          <p className="font-medium">Error al renderizar visualización</p>
+          <p className="text-xs mt-1 text-red-600">{renderError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 border-t pt-3 border-gray-200 w-full">
@@ -305,49 +354,80 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({ c1Response, cle
         <BarChart3 className="h-3.5 w-3.5 text-purple-600" />
         <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
         <div className="ml-auto flex items-center gap-2">
-          {isCompact && (
-            <span className="text-xs text-gray-500">
-              {Math.round(scale * 100)}%
+          {saveSuccess && (
+            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+              ✓ Guardado
             </span>
           )}
-          {isCompact && (
-            <button
-              onClick={() => setShowFullSize(!showFullSize)}
-              className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
-            >
-              {showFullSize ? (
-                <>Compactar <ChevronUp className="h-3 w-3" /></>
-              ) : (
-                <>Expandir <ChevronDown className="h-3 w-3" /></>
-              )}
-            </button>
-          )}
+          <button
+            onClick={handleSaveToCanvas}
+            disabled={saveSuccess}
+            className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Guardar en Pizarra"
+          >
+            📌 Guardar
+          </button>
+          <button
+            onClick={() => setShowFullSize(!showFullSize)}
+            className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
+          >
+            {showFullSize ? (
+              <>Mostrar menos <ChevronUp className="h-3 w-3" /></>
+            ) : (
+              <>Mostrar más <ChevronDown className="h-3 w-3" /></>
+            )}
+          </button>
         </div>
       </div>
       <div 
         ref={containerRef}
         className={cn(
-          "bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 w-full overflow-hidden",
-          isCompact && !showFullSize && "max-h-64 overflow-y-auto"
+          "bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20 rounded-xl border border-gray-100 w-full",
+          showFullSize ? "max-h-none" : "max-h-80 overflow-y-auto"
         )}
       >
+        {/* Custom CSS to make Thesys components responsive */}
+        <style>{`
+          .c1-vizta-wrapper [class*="Card"],
+          .c1-vizta-wrapper [class*="card"] {
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+          .c1-vizta-wrapper [class*="grid"] {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+          }
+          .c1-vizta-wrapper h1, 
+          .c1-vizta-wrapper h2, 
+          .c1-vizta-wrapper h3 {
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.5rem !important;
+          }
+          .c1-vizta-wrapper p,
+          .c1-vizta-wrapper span {
+            font-size: 0.8rem !important;
+            line-height: 1.4 !important;
+          }
+          .c1-vizta-wrapper [class*="metric"],
+          .c1-vizta-wrapper [class*="stat"] {
+            padding: 0.75rem !important;
+          }
+          .c1-vizta-wrapper > div {
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+          }
+        `}</style>
         <div
           ref={contentRef}
-          style={{
-            transform: showFullSize ? 'scale(1)' : `scale(${scale})`,
-            transformOrigin: 'top left',
-            width: showFullSize ? '100%' : (scale < 1 ? `${100 / scale}%` : '100%'),
-            transition: 'transform 0.2s ease-out'
-          }}
+          className="c1-vizta-wrapper p-3 text-sm"
         >
-          <C1Component c1Response={processedResponse} />
+          <C1ErrorBoundary onError={(e) => setRenderError(e.message)}>
+            <C1Component c1Response={processedResponse} />
+          </C1ErrorBoundary>
         </div>
       </div>
-      {isCompact && !showFullSize && (
-        <div className="mt-2 text-xs text-gray-500 text-center">
-          Visualización compactada para chat
-        </div>
-      )}
     </div>
   );
 };
@@ -505,7 +585,10 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                   {/* Generative UI Components - shown below text */}
                   {message.hasUIComponents && message.c1Response && (
-                    <C1ComponentWrapper c1Response={message.c1Response} />
+                    <C1ComponentWrapper 
+                      c1Response={message.c1Response} 
+                      originalQuery={message.originalQuery}
+                    />
                   )}
                 </div>
 
@@ -782,7 +865,11 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                 {/* Generative UI Components - shown below text */}
                 {message.hasUIComponents && message.c1Response && (
-                  <C1ComponentWrapper c1Response={message.c1Response} cleanResponse={true} />
+                  <C1ComponentWrapper 
+                    c1Response={message.c1Response} 
+                    originalQuery={message.originalQuery}
+                    cleanResponse={true} 
+                  />
                 )}
               </div>
 
@@ -1238,6 +1325,7 @@ const ViztaChatUI = () => {
           c1Response: response.response && typeof response.response === 'object' && 'c1Response' in response.response
             ? response.response.c1Response
             : undefined,
+          originalQuery: currentInput, // Save original user query for canvas
           hasUIComponents: response.response && typeof response.response === 'object' && 'hasUIComponents' in response.response
             ? response.response.hasUIComponents
             : false,
@@ -1806,3 +1894,4 @@ export {
   ViztaChatPortal,
   ViztaChatUI 
 };
+
