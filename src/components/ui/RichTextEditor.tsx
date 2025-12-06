@@ -39,7 +39,8 @@ import {
     Maximize,
     Minimize,
     Save,
-    Download
+    Download,
+    MessageCircle
 } from 'lucide-react';
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -59,9 +60,10 @@ interface RichTextEditorProps {
     autoSave?: boolean
     autoSaveInterval?: number
     title?: string
+    documentSource?: string  // ✨ NUEVO: Source name for Vizta context
 }
 
-const MenuBar = ({ editor, isFullscreen, onToggleFullscreen, onSave, onExportPDF, onExportWord }: any) => {
+const MenuBar = ({ editor, isFullscreen, onToggleFullscreen, onSave, onExportPDF, onExportWord, documentSource }: any) => {
     if (!editor) {
         return null
     }
@@ -91,6 +93,35 @@ const MenuBar = ({ editor, isFullscreen, onToggleFullscreen, onSave, onExportPDF
 
     const addTable = () => {
         editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+    }
+
+    // ✨ NUEVO: Send selected text to Vizta
+    const handleSendToVizta = () => {
+        const { from, to, empty } = editor.state.selection
+
+        if (empty) {
+            // If no selection, use all content
+            const allText = editor.getText()
+            if (allText) {
+                window.dispatchEvent(new CustomEvent('sendToVizta', {
+                    detail: {
+                        text: allText,
+                        source: documentSource || 'Documento'
+                    }
+                }))
+            }
+        } else {
+            // Use selected text
+            const selectedText = editor.state.doc.textBetween(from, to, ' ')
+            if (selectedText) {
+                window.dispatchEvent(new CustomEvent('sendToVizta', {
+                    detail: {
+                        text: selectedText,
+                        source: documentSource || 'Documento'
+                    }
+                }))
+            }
+        }
     }
 
     const buttonClass = (isActive?: boolean) =>
@@ -274,6 +305,18 @@ const MenuBar = ({ editor, isFullscreen, onToggleFullscreen, onSave, onExportPDF
 
                 {/* Actions */}
                 <div className="flex gap-1 ml-auto">
+                    {/* ✨ NUEVO: Send to Vizta */}
+                    <Button
+                        onClick={handleSendToVizta}
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700"
+                        title="Enviar a Vizta (selección o todo)"
+                    >
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="hidden sm:inline">Enviar a Vizta</span>
+                    </Button>
+
                     {onSave && (
                         <Button onClick={onSave} variant="ghost" size="sm" className="gap-2" title="Guardar (Ctrl+S)">
                             <Save className="h-4 w-4" />
@@ -471,6 +514,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 onSave={onSave}
                 onExportPDF={handleExportPDF}
                 onExportWord={handleExportWord}
+                documentSource={title}  // ✨ NUEVO: Pass document title as source
             />
             <div className={`overflow-y-auto ${isFullscreen ? 'h-[calc(100vh-60px)]' : 'max-h-[600px]'} bg-slate-50`}>
                 <EditorContent editor={editor} />

@@ -5,7 +5,6 @@ import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
 import LogRocket from 'logrocket';
 import App from "./App";
 import "./index.css";
-import "./styles/dashboards.css";
 
 // Inicializar LogRocket
 LogRocket.init('yxc4k4/pulse-jornal');

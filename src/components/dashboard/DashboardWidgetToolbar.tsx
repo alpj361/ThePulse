@@ -8,13 +8,15 @@ interface DashboardWidgetToolbarProps {
   onAddChart: (chart: ChartWidget) => void;
   onAddEmoji: (emoji: string, size: 'small' | 'medium' | 'large') => void;
   onAddText: (text: string) => void;
+  onAddCustomChart: () => void;
 }
 
 export function DashboardWidgetToolbar({
   savedCharts,
   onAddChart,
   onAddEmoji,
-  onAddText
+  onAddText,
+  onAddCustomChart
 }: DashboardWidgetToolbarProps) {
   const [activeTab, setActiveTab] = useState<'charts' | 'emoji' | 'text'>('charts');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -72,6 +74,13 @@ export function DashboardWidgetToolbar({
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'charts' && (
           <div className="space-y-3">
+            <button
+              onClick={onAddCustomChart}
+              className="w-full py-2 px-3 border border-dashed border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium mb-4"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Crear Gráfico Personalizado
+            </button>
             {savedCharts.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />

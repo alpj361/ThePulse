@@ -26,14 +26,14 @@ import {
   BookmarkPlus,
   BookOpen,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Table
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { C1Component, ThemeProvider } from '@thesysai/genui-sdk';
 import '@crayonai/react-ui/styles/index.css';
-import { useDashboardStore } from '../../stores/dashboardStore';
 
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
@@ -46,11 +46,31 @@ import { SkeletonLoader } from "./skeleton-loader";
 import { CopyButton } from "./copy-button";
 import CodexSelector from "./CodexSelector";  // ✨ NUEVO: Import CodexSelector
 import { useAuth } from '../../context/AuthContext';  // ✨ NUEVO: Import useAuth
+import { useSpreadsheet } from '../../context/SpreadsheetContext';  // ✨ NUEVO: Import SpreadsheetContext
 import ProjectSelectorDialog from "./ProjectSelectorDialog";
+import { SpreadsheetPreviewTable } from "./SpreadsheetPreviewTable";  // ✨ NUEVO: Import SpreadsheetPreviewTable
 import { supabase } from "../../services/supabase";
 import type { Project } from "../../types/projects";
 import type { ViztaCapturedItem, ViztaTermSuggestion } from "../../services/viztaChat";
 import CreateWikiModal from "../codex/wiki/CreateWikiModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
+
+class C1ErrorBoundary extends React.Component<{ children: React.ReactNode, onError?: (error: Error) => void }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, errorInfo: any) {
+    this.props.onError?.(error);
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -80,7 +100,6 @@ interface Message {
   feedbackScore?: number; // User's rating 1-5
   c1Response?: string; // For Thesys Generative UI
   hasUIComponents?: boolean; // Indicates if message has UI components
-  originalQuery?: string; // The user's original query that generated this response
   capturedItems?: CapturedInsight[];
   termSuggestions?: TermInsight[];
 }
@@ -245,61 +264,11 @@ const ViztaChatContent = React.forwardRef<
 });
 ViztaChatContent.displayName = "ViztaChatContent";
 
-// Error Boundary for C1Component
-interface C1ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class C1ErrorBoundary extends React.Component<
-  { children: React.ReactNode; onError?: (error: Error) => void },
-  C1ErrorBoundaryState
-> {
-  constructor(props: { children: React.ReactNode; onError?: (error: Error) => void }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): C1ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[C1ErrorBoundary] Error caught:', error, errorInfo);
-    this.props.onError?.(error);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="bg-amber-50 rounded-lg p-3 text-sm text-amber-700 border border-amber-200">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="font-medium">Error al renderizar UI</span>
-          </div>
-          <p className="text-xs text-amber-600">
-            {this.state.error?.message || 'Error desconocido al procesar componentes visuales'}
-          </p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./dialog";
-
 // Auto-scaling C1Component Wrapper
 interface C1ComponentWrapperProps {
   c1Response: string;
   cleanResponse?: boolean;
-  originalQuery?: string; // The query that generated this visualization
+  originalQuery?: string;
 }
 
 const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
@@ -309,38 +278,65 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const [showFullSize, setShowFullSize] = React.useState(false);
-  const [renderError, setRenderError] = React.useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = React.useState(false);
 
-  const { saveChartWidget } = useDashboardStore();
+  // State
+  const [scale, setScale] = React.useState(1);
+  const [isCompact, setIsCompact] = React.useState(false);
+  const [showFullSize, setShowFullSize] = React.useState(false);
+  const [isNarrow, setIsNarrow] = React.useState(false);
+  const [renderError, setRenderError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // Reset error when c1Response changes
     setRenderError(null);
-    setSaveSuccess(false);
   }, [c1Response]);
 
-  const handleSaveToCanvas = () => {
-    try {
-      saveChartWidget(c1Response, originalQuery);
-      setSaveSuccess(true);
+  React.useEffect(() => {
+    if (!containerRef.current || !contentRef.current) return;
 
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setSaveSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error('[C1ComponentWrapper] Error saving to canvas:', error);
-    }
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Logic for scaling and narrowing
+      if (!containerRef.current || !contentRef.current) return;
+
+      const containerWidth = containerRef.current.offsetWidth;
+      const contentScrollWidth = contentRef.current.scrollWidth;
+
+      setIsNarrow(containerWidth < 480);
+
+      // Only scale if not narrow AND content overflows
+      if (!isNarrow && contentScrollWidth > containerWidth) {
+        const newScale = containerWidth / contentScrollWidth;
+        const finalScale = Math.max(newScale, 0.3);
+        setScale(finalScale);
+        setIsCompact(finalScale < 0.85);
+      } else {
+        setScale(1);
+        setIsCompact(false);
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    // Also observe content changes? Thesys content might load async.
+    // We can use a MutationObserver or just ResizeObserver on content if it changes size.
+    // ResizeObserver on contentRef.current is good.
+    resizeObserver.observe(contentRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [c1Response, showFullSize, isNarrow]); // Added isNarrow to re-eval if needed
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("widgetType", "chart");
+    e.dataTransfer.setData("widgetData", JSON.stringify({
+      c1Response,
+      originalQuery,
+      timestamp: Date.now()
+    }));
+    e.dataTransfer.effectAllowed = "copy";
   };
 
-  // Process and clean the response
   const processedResponse = cleanResponse
     ? c1Response.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     : c1Response;
 
-  // If renderError, show error UI
   if (renderError) {
     return (
       <div className="mt-4 border-t pt-3 border-gray-200 w-full">
@@ -356,153 +352,132 @@ const C1ComponentWrapper: React.FC<C1ComponentWrapperProps> = ({
     );
   }
 
-  // Common buttons for reuse
-  const Actions = () => (
-    <div className="ml-auto flex items-center gap-2">
-      {saveSuccess && (
-        <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-          ✓ Guardado
-        </span>
-      )}
-      <button
-        onClick={handleSaveToCanvas}
-        disabled={saveSuccess}
-        className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Guardar en Pizarra"
-      >
-        📌 Guardar
-      </button>
-
-      {/* Zoom / Full Screen Modal Trigger */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <button
-            className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1"
-            title="Ver detalle completo"
-          >
-            <Maximize2 className="h-3 w-3" /> Ampliar
-          </button>
-        </DialogTrigger>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Visualización Detallada</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <C1ErrorBoundary onError={(e) => console.error(e)}>
-              <C1Component c1Response={processedResponse} />
-            </C1ErrorBoundary>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <button
-        onClick={() => setShowFullSize(!showFullSize)}
-        className="text-xs text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1"
-      >
-        {showFullSize ? (
-          <ChevronUp className="h-3 w-3" />
-        ) : (
-          <ChevronDown className="h-3 w-3" />
-        )}
-      </button>
-    </div>
-  );
-
   return (
     <div className="mt-4 border-t pt-3 border-gray-200 w-full">
       <div className="flex items-center gap-2 mb-2">
-        <BarChart3 className="h-3.5 w-3.5 text-purple-600" />
-        <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
-        <Actions />
+        <div className="flex items-center gap-2 cursor-grab active:cursor-grabbing hover:bg-gray-100 px-1 py-0.5 rounded transition-colors" draggable onDragStart={handleDragStart} title="Arrastrar a pizarra">
+          <BarChart3 className="h-3.5 w-3.5 text-purple-600" />
+          <h4 className="text-xs font-semibold text-gray-900">Visualización</h4>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+            {isNarrow ? 'Compacto' : 'Estándar'}
+          </span>
+
+          {isCompact && (
+            <button
+              onClick={() => setShowFullSize(!showFullSize)}
+              className="text-xs text-[#1e40af] hover:text-[#1e3a8a] font-medium flex items-center gap-1 px-1.5 py-0.5 hover:bg-blue-50 rounded"
+            >
+              {showFullSize ? (
+                <>Compactar <ChevronUp className="h-3 w-3" /></>
+              ) : (
+                <>Expandir <ChevronDown className="h-3 w-3" /></>
+              )}
+            </button>
+          )}
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="text-gray-400 hover:text-purple-600 p-1 hover:bg-gray-100 rounded transition-colors" title="Ver pantalla completa">
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white">
+              <DialogHeader className="px-6 py-4 border-b bg-gray-50 flex-shrink-0">
+                <DialogTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-purple-600" />
+                  Visualización Detallada
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-auto p-6 bg-slate-50/50">
+                <div className="bg-white rounded-xl shadow-sm border p-6 min-h-[400px]">
+                  <C1Component c1Response={processedResponse} isStreaming={false} />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
       <div
         ref={containerRef}
+        draggable={true}
+        onDragStart={handleDragStart}
         className={cn(
-          "bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20 rounded-xl border border-gray-100 w-full",
+          "bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20 rounded-xl border border-gray-100 w-full relative group cursor-grab active:cursor-grabbing transition-all hover:border-purple-300 hover:shadow-sm",
           showFullSize ? "max-h-none" : "max-h-96 overflow-y-auto"
         )}
       >
-        {/* Custom CSS for COMPACT SIDEBAR DISPLAY Only */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-purple-400 bg-white/90 border border-purple-100 shadow-sm rounded px-1.5 py-0.5 text-[10px] font-medium z-10">
+          Arrastrar a Pizarra
+        </div>
+
         <style>{`
-          /* Force all containers to be 100% width and enforce box sizing */
-          .c1-vizta-wrapper *, .c1-vizta-wrapper *::before, .c1-vizta-wrapper *::after {
-            box-sizing: border-box;
+          .c1-vizta-wrapper {
+             container-type: inline-size;
+             container-name: vizta-wrapper;
           }
-
-          /* Force Grid to flush to 1 column in sidebar */
-          .c1-vizta-wrapper [class*="grid"],
-          .c1-vizta-wrapper .grid {
-            display: flex !important;
-            flex-direction: column !important;
-            grid-template-columns: 1fr !important;
-            width: 100% !important;
-            gap: 0.5rem !important;
+           /* Force box sizing */
+          .c1-vizta-wrapper * {
+            box-sizing: border-box !important;
           }
-
-          /* Force Flex rows to wrap */
-          .c1-vizta-wrapper [class*="flex"],
-          .c1-vizta-wrapper .flex {
-             flex-wrap: wrap !important;
-             width: 100% !important;
-          }
-
-          /* Cards */
-          .c1-vizta-wrapper [class*="Card"],
           .c1-vizta-wrapper [class*="card"] {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            margin: 0 0 0.5rem 0 !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
-            background: rgba(255,255,255,0.6) !important;
-            border-radius: 0.5rem !important;
+             box-shadow: none !important;
+             background: transparent !important;
           }
 
-          /* Headers: Scale down big text */
-          .c1-vizta-wrapper h1 {
-            font-size: 1.1rem !important;
-            line-height: 1.3 !important;
-          }
-          .c1-vizta-wrapper h2 {
-            font-size: 1rem !important;
-             line-height: 1.3 !important;
-          }
-           .c1-vizta-wrapper h3, .c1-vizta-wrapper h4 {
-            font-size: 0.9rem !important;
-          }
-          
-          /* Metrics / Stats Big Numbers */
-          .c1-vizta-wrapper [class*="text-4xl"],
-          .c1-vizta-wrapper [class*="text-5xl"],
-          .c1-vizta-wrapper [style*="font-size: 3"] {
-             font-size: 1.5rem !important;
-             line-height: 1 !important;
+          /* Container Query Logic */
+          @container vizta-wrapper (max-width: 500px) {
+            .c1-vizta-wrapper [class*="grid"] {
+                grid-template-columns: 1fr !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 1rem !important;
+            }
+            .c1-vizta-wrapper [class*="flex"] {
+                flex-wrap: wrap !important;
+            }
           }
 
-          /* Hide big gaps */
-          .c1-vizta-wrapper [class*="justify-between"] {
-            justify-content: flex-start !important;
-            gap: 1rem !important;
-          }
-
-          /* SVGs / Charts */
-          .c1-vizta-wrapper svg,
-          .c1-vizta-wrapper canvas {
-            max-width: 100% !important;
-            height: auto !important;
-          }
-          
-          /* Recharts adjustments */
-          .recharts-wrapper {
-             width: 100% !important;
-          }
+          /* Fallback Class Logic */
+          ${isNarrow ? `
+            .c1-vizta-wrapper [class*="grid"],
+            .c1-vizta-wrapper [class*="Grid"] {
+                display: flex !important;
+                flex-direction: column !important;
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+            .c1-vizta-wrapper [class*="flex"] {
+                flex-wrap: wrap !important;
+            }
+            .c1-vizta-wrapper [class*="row"] {
+                 flex-direction: column !important;
+            }
+            .c1-vizta-wrapper h1, .c1-vizta-wrapper h2 { font-size: 1.1rem !important; }
+            .c1-vizta-wrapper svg, .c1-vizta-wrapper canvas {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+          ` : ''}
         `}</style>
+
         <div
           ref={contentRef}
-          className="c1-vizta-wrapper p-3 text-sm w-full overflow-hidden"
+          className={cn(
+            "c1-vizta-wrapper p-4 text-sm w-full",
+            isNarrow && "compact-mode"
+          )}
+          style={{
+            transform: (!isNarrow && !showFullSize) ? `scale(${scale})` : 'none',
+            transformOrigin: 'top left',
+            width: (!isNarrow && !showFullSize) ? (scale < 1 ? `${100 / scale}%` : '100%') : '100%',
+          }}
         >
           <C1ErrorBoundary onError={(e) => setRenderError(e.message)}>
-            <C1Component c1Response={processedResponse} />
+            <C1Component c1Response={processedResponse} isStreaming={false} />
           </C1ErrorBoundary>
         </div>
       </div>
@@ -663,10 +638,7 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                     {/* Generative UI Components - shown below text */}
                     {message.hasUIComponents && message.c1Response && (
-                      <C1ComponentWrapper
-                        c1Response={message.c1Response}
-                        originalQuery={message.originalQuery}
-                      />
+                      <C1ComponentWrapper c1Response={message.c1Response} />
                     )}
                   </div>
 
@@ -943,11 +915,7 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
 
                   {/* Generative UI Components - shown below text */}
                   {message.hasUIComponents && message.c1Response && (
-                    <C1ComponentWrapper
-                      c1Response={message.c1Response}
-                      originalQuery={message.originalQuery}
-                      cleanResponse={true}
-                    />
+                    <C1ComponentWrapper c1Response={message.c1Response} cleanResponse={true} />
                   )}
                 </div>
 
@@ -1033,6 +1001,7 @@ AssistantMessage.displayName = "AssistantMessage";
 // Main component
 const ViztaChatUI = () => {
   const { user, session } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado
+  const { setSpreadsheetData, openSpreadsheet } = useSpreadsheet();  // ✨ NUEVO: Spreadsheet context
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -1058,6 +1027,13 @@ const ViztaChatUI = () => {
   const [isWikiModalOpen, setIsWikiModalOpen] = React.useState(false);
   const [pendingTerm, setPendingTerm] = React.useState<TermInsight | null>(null);
 
+  // ✨ NUEVO: Estado para Spreadsheet Preview
+  const [spreadsheetPreview, setSpreadsheetPreview] = React.useState<{
+    columns: Array<{ id: string; title: string; type: string }>;
+    rows: Array<Record<string, any>>;
+    source: string;
+  } | null>(null);
+
   // ✨ NUEVO: Estado para funcionalidad @
   const [showMentions, setShowMentions] = React.useState(false);
   const [mentionQuery, setMentionQuery] = React.useState('');
@@ -1067,6 +1043,9 @@ const ViztaChatUI = () => {
   const [selectedMentionIndex, setSelectedMentionIndex] = React.useState(0);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const contextButtonRef = React.useRef<HTMLButtonElement>(null);
+
+  // ✨ NUEVO: Estado para texto importado desde documentos
+  const [importedTextSource, setImportedTextSource] = React.useState<string | null>(null);
 
   // Save chat width to localStorage when it changes
   React.useEffect(() => {
@@ -1124,6 +1103,33 @@ const ViztaChatUI = () => {
     }
     setSelectedMentionIndex(0);
   }, [mentionQuery, availableCodexItems]);
+
+  // ✨ NUEVO: Listener para evento sendToVizta desde documentos
+  React.useEffect(() => {
+    const handleSendToVizta = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text: string; source: string }>;
+      const { text, source } = customEvent.detail;
+
+      console.log('✨ [VIZTA-CHAT] Texto recibido desde documento:', { source, textLength: text.length });
+
+      // Insert text into input
+      setInputValue(prev => {
+        if (prev.trim()) {
+          return `${prev}\n\n--- Texto desde ${source} ---\n\n${text}`;
+        }
+        return text;
+      });
+
+      // Set source for badge display
+      setImportedTextSource(source);
+
+      // Auto-clear source badge after 10 seconds
+      setTimeout(() => setImportedTextSource(null), 10000);
+    };
+
+    window.addEventListener('sendToVizta', handleSendToVizta);
+    return () => window.removeEventListener('sendToVizta', handleSendToVizta);
+  }, []);
 
   // ✨ NUEVO: Manejar input con detección de @
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -1265,6 +1271,58 @@ const ViztaChatUI = () => {
     setIsWikiModalOpen(true);
   }, [user]);
 
+  // ✨ NUEVO: Manejar organización de datos en tabla
+  const handleOrganizeAsTable = React.useCallback(async () => {
+    if (!inputValue.trim() && selectedCodex.length === 0) {
+      console.warn('No hay datos para organizar');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { sendViztaChatQuery } = await import('../../services/viztaChat');
+
+      // Enviar consulta especial para organizar datos
+      const organizationPrompt = selectedCodex.length > 0
+        ? `Organiza los datos del Codex seleccionado en formato tabla estructurada`
+        : `Organiza los siguientes datos en formato tabla: ${inputValue}`;
+
+      const response = await sendViztaChatQuery(
+        organizationPrompt,
+        sessionId,
+        mode,
+        false, // No UI generativa para esto
+        selectedCodex,
+        { action: 'organize_table' }
+      );
+
+      // Si la respuesta incluye datos tabulares
+      if (response.tableData) {
+        setSpreadsheetPreview({
+          columns: response.tableData.columns,
+          rows: response.tableData.rows,
+          source: response.tableData.source || 'Vizta'
+        });
+      }
+    } catch (error) {
+      console.error('Error organizando datos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [inputValue, selectedCodex, sessionId, mode]);
+
+  // ✨ NUEVO: Aplicar datos a spreadsheet
+  const handleApplyToSpreadsheet = React.useCallback((rows: Array<Record<string, any>>, columns: Array<any>) => {
+    if (!spreadsheetPreview) return;
+
+    // Convertir a formato SpreadsheetContext
+    setSpreadsheetData(rows, columns);
+    openSpreadsheet();
+
+    // Limpiar preview
+    setSpreadsheetPreview(null);
+  }, [spreadsheetPreview, setSpreadsheetData, openSpreadsheet]);
+
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -1403,7 +1461,6 @@ const ViztaChatUI = () => {
           c1Response: response.response && typeof response.response === 'object' && 'c1Response' in response.response
             ? response.response.c1Response
             : undefined,
-          originalQuery: currentInput, // Save original user query for canvas
           hasUIComponents: response.response && typeof response.response === 'object' && 'hasUIComponents' in response.response
             ? response.response.hasUIComponents
             : false,
@@ -1432,6 +1489,19 @@ const ViztaChatUI = () => {
               }
             });
             return next;
+          });
+        }
+
+        // ✨ NUEVO: Si la respuesta incluye tableData, mostrar preview
+        if (response.tableData && response.tableData.rows && response.tableData.columns) {
+          console.log('📊 [VIZTA-CHAT] Table data received:', {
+            rows: response.tableData.rows.length,
+            columns: response.tableData.columns.length
+          });
+          setSpreadsheetPreview({
+            columns: response.tableData.columns,
+            rows: response.tableData.rows,
+            source: response.tableData.source || 'Vizta'
           });
         }
 
@@ -1615,6 +1685,26 @@ const ViztaChatUI = () => {
               </AnimatePresence>
             )}
 
+            {/* ✨ NUEVO: Spreadsheet Preview */}
+            <AnimatePresence>
+              {spreadsheetPreview && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <SpreadsheetPreviewTable
+                    columns={spreadsheetPreview.columns}
+                    rows={spreadsheetPreview.rows}
+                    source={spreadsheetPreview.source}
+                    onApply={handleApplyToSpreadsheet}
+                    onCancel={() => setSpreadsheetPreview(null)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Loading state */}
             <AnimatePresence>
               {isLoading && (
@@ -1746,6 +1836,29 @@ const ViztaChatUI = () => {
 
           {/* Input area */}
           <div className="border-t bg-white p-4">
+            {/* ✨ NUEVO: Badge para texto importado */}
+            {importedTextSource && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-2"
+              >
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs text-purple-700 font-medium">
+                    📄 Texto importado desde: {importedTextSource}
+                  </span>
+                  <button
+                    onClick={() => setImportedTextSource(null)}
+                    className="ml-auto text-purple-400 hover:text-purple-600 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
             <div className="flex gap-2">
               {/* Context Button */}
               <div className="relative">
@@ -1910,6 +2023,18 @@ const ViztaChatUI = () => {
                   </div>
                 )}
               </div>
+
+              {/* ✨ NUEVO: Table Button */}
+              <Button
+                size="icon"
+                onClick={handleOrganizeAsTable}
+                disabled={isLoading || (!inputValue.trim() && selectedCodex.length === 0)}
+                className="h-12 w-12 bg-purple-600 text-white hover:bg-purple-700 shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                title="Organizar en Tabla"
+              >
+                <Table className="h-4 w-4" />
+                <span className="sr-only">Organizar como tabla</span>
+              </Button>
 
               {/* Send Button */}
               <Button

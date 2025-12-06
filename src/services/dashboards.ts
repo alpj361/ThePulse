@@ -18,7 +18,7 @@ export interface Dashboard {
 export interface DashboardWidget {
   id: string;
   dashboard_id: string;
-  widget_type: 'chart' | 'emoji' | 'text';
+  widget_type: 'chart' | 'emoji' | 'text' | 'custom-chart';
   content: any; // JSON content based on widget_type
   position: WidgetPosition;
   config: Record<string, any>;
@@ -33,29 +33,29 @@ export async function getUserDashboards(): Promise<Dashboard[]> {
     .from('dashboards')
     .select('*')
     .order('created_at', { ascending: false });
-  
+
   if (error) {
     console.error('[Dashboards] Error fetching dashboards:', error);
     throw error;
   }
-  
+
   return data || [];
 }
 
 // Create new dashboard
 export async function createDashboard(title: string, description?: string): Promise<Dashboard> {
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) {
     throw new Error('User not authenticated');
   }
-  
+
   // Check user doesn't already have 3 dashboards
   const existing = await getUserDashboards();
   if (existing.length >= 3) {
     throw new Error('Maximum of 3 dashboards reached');
   }
-  
+
   const { data, error } = await supabase
     .from('dashboards')
     .insert({
@@ -66,19 +66,19 @@ export async function createDashboard(title: string, description?: string): Prom
     })
     .select()
     .single();
-  
+
   if (error) {
     console.error('[Dashboards] Error creating dashboard:', error);
     throw error;
   }
-  
+
   console.log('[Dashboards] Dashboard created:', data.id);
   return data;
 }
 
 // Update dashboard
 export async function updateDashboard(
-  dashboardId: string, 
+  dashboardId: string,
   updates: Partial<Pick<Dashboard, 'title' | 'description' | 'layout_config'>>
 ): Promise<Dashboard> {
   const { data, error } = await supabase
@@ -87,12 +87,12 @@ export async function updateDashboard(
     .eq('id', dashboardId)
     .select()
     .single();
-  
+
   if (error) {
     console.error('[Dashboards] Error updating dashboard:', error);
     throw error;
   }
-  
+
   return data;
 }
 
@@ -102,12 +102,12 @@ export async function deleteDashboard(dashboardId: string): Promise<void> {
     .from('dashboards')
     .delete()
     .eq('id', dashboardId);
-  
+
   if (error) {
     console.error('[Dashboards] Error deleting dashboard:', error);
     throw error;
   }
-  
+
   console.log('[Dashboards] Dashboard deleted:', dashboardId);
 }
 
@@ -118,19 +118,19 @@ export async function getDashboardWidgets(dashboardId: string): Promise<Dashboar
     .select('*')
     .eq('dashboard_id', dashboardId)
     .order('z_index', { ascending: true });
-  
+
   if (error) {
     console.error('[Dashboards] Error fetching widgets:', error);
     throw error;
   }
-  
+
   return data || [];
 }
 
 // Add widget to dashboard
 export async function addWidgetToDashboard(
   dashboardId: string,
-  widgetType: 'chart' | 'emoji' | 'text',
+  widgetType: 'chart' | 'emoji' | 'text' | 'custom-chart',
   content: any,
   position: WidgetPosition,
   config?: Record<string, any>
@@ -147,12 +147,12 @@ export async function addWidgetToDashboard(
     })
     .select()
     .single();
-  
+
   if (error) {
     console.error('[Dashboards] Error adding widget:', error);
     throw error;
   }
-  
+
   console.log('[Dashboards] Widget added:', data.id);
   return data;
 }
@@ -166,7 +166,7 @@ export async function updateWidgetPosition(
     .from('dashboard_widgets')
     .update({ position })
     .eq('id', widgetId);
-  
+
   if (error) {
     console.error('[Dashboards] Error updating widget position:', error);
     throw error;
@@ -182,7 +182,7 @@ export async function updateWidgetConfig(
     .from('dashboard_widgets')
     .update({ config })
     .eq('id', widgetId);
-  
+
   if (error) {
     console.error('[Dashboards] Error updating widget config:', error);
     throw error;
@@ -195,12 +195,12 @@ export async function deleteWidget(widgetId: string): Promise<void> {
     .from('dashboard_widgets')
     .delete()
     .eq('id', widgetId);
-  
+
   if (error) {
     console.error('[Dashboards] Error deleting widget:', error);
     throw error;
   }
-  
+
   console.log('[Dashboards] Widget deleted:', widgetId);
 }
 
@@ -211,7 +211,7 @@ export async function bulkUpdateWidgetPositions(
   const promises = updates.map(({ id, position }) =>
     updateWidgetPosition(id, position)
   );
-  
+
   await Promise.all(promises);
   console.log('[Dashboards] Bulk update completed:', updates.length, 'widgets');
 }

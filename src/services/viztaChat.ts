@@ -96,6 +96,14 @@ export interface ViztaChatResponse {
     processingTime?: number;
     [key: string]: any;
   };
+  // ✨ NUEVO: Datos de tabla para preview de spreadsheet
+  tableData?: {
+    columns: Array<{ id: string; title: string; type: string }>;
+    rows: Array<Record<string, any>>;
+    source?: string;
+    metadata?: Record<string, any>;
+  };
+  queryLogId?: string;  // ✨ NUEVO: ID de log de consulta
   error?: string;
 }
 

@@ -78,13 +78,14 @@ const staggerVariants = {
 const translations = {
   es: {
     socialPulse: 'Social Pulse',
-    personalPulse: 'Personal Pulse', 
+    personalPulse: 'Personal Pulse',
     myPulse: 'My Pulse',
     comingSoon: 'Coming Soon',
     trends: 'Trends',
     news: 'News',
     actividad: 'Actividad',
-    sondeos: 'Pizarras',
+    actividad: 'Actividad',
+    pizarras: 'Pizarras',
     codex: 'Codex',
     proyectos: 'Proyectos',
     sources: 'Sources',
@@ -97,12 +98,12 @@ const translations = {
   en: {
     socialPulse: 'Social Pulse',
     personalPulse: 'Personal Pulse',
-    myPulse: 'My Pulse', 
+    myPulse: 'My Pulse',
     comingSoon: 'Coming Soon',
     trends: 'Trends',
     news: 'News',
     actividad: 'Activity',
-    sondeos: 'Dashboards',
+    pizarras: 'Boards',
     codex: 'Codex',
     proyectos: 'Projects',
     sources: 'Sources',
@@ -163,9 +164,8 @@ export function SessionNavBar() {
         },
         {
           icon: <BarChart3 className="h-4 w-4" />,
-          label: t.sondeos,
-          path: "/sondeos",
-          disabled: false
+          label: t.pizarras,
+          path: "/canvas"
         }
       ]
     },
@@ -206,7 +206,7 @@ export function SessionNavBar() {
   // Build final sections; filter based on user type and append admin-only section
   const sections: NavSection[] = (() => {
     let base = [...navSections];
-    
+
     // Filter sections based on user type
     if (shouldHideProjectsAndActivity) {
       base = base.map(section => {
@@ -227,7 +227,7 @@ export function SessionNavBar() {
         return section;
       }).filter(section => section.items.length > 0); // Remove empty sections
     }
-    
+
     // Add admin section if user is admin
     if (isAdmin) {
       base.push({
@@ -241,7 +241,7 @@ export function SessionNavBar() {
         ]
       });
     }
-    
+
     return base;
   })();
 
@@ -291,7 +291,7 @@ export function SessionNavBar() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="flex w-fit items-center gap-2 px-2" 
+                      className="flex w-fit items-center gap-2 px-2"
                     >
                       <Avatar className='rounded size-4'>
                         <AvatarFallback>P</AvatarFallback>
@@ -341,20 +341,20 @@ export function SessionNavBar() {
                             {section.title}
                           </p>
                         </motion.div>
-                        
+
                         {section.items.map((item) => (
                           <div key={item.path}>
                             {item.disabled ? (
                               <div
                                 className={cn(
                                   "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5",
-                                  item.maintenanceMode 
-                                    ? "text-gray-500 cursor-not-allowed bg-gray-50" 
+                                  item.maintenanceMode
+                                    ? "text-gray-500 cursor-not-allowed bg-gray-50"
                                     : "text-muted-foreground/50 cursor-not-allowed"
                                 )}
                               >
                                 {item.icon}
-                                   <motion.li>
+                                <motion.li>
                                   {!isCollapsed && (
                                     <div className="flex items-center gap-2">
                                       <p className="ml-2 text-sm font-medium">{item.label}</p>
@@ -392,7 +392,7 @@ export function SessionNavBar() {
                                 )}
                               >
                                 {item.icon}
-                                 <motion.li>
+                                <motion.li>
                                   {!isCollapsed && (
                                     <p className="ml-2 text-sm font-medium">{item.label}</p>
                                   )}
@@ -401,7 +401,7 @@ export function SessionNavBar() {
                             )}
                           </div>
                         ))}
-                        
+
                         {sectionIndex < sections.length - 1 && (
                           <motion.div className="my-3">
                             {!isCollapsed && <Separator className="w-full" />}
@@ -412,7 +412,7 @@ export function SessionNavBar() {
                   </div>
                 </ScrollArea>
               </div>
-              
+
               <div className="flex flex-col p-2 border-t border-border">
                 <div>
                   <DropdownMenu modal={false}>
@@ -420,68 +420,68 @@ export function SessionNavBar() {
                       <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary">
                         <Avatar className="size-4">
                           <AvatarFallback>
-                            {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
-                             user?.user_metadata?.name?.charAt(0)?.toUpperCase() || 
-                             user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                            {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
+                              user?.user_metadata?.name?.charAt(0)?.toUpperCase() ||
+                              user?.email?.charAt(0)?.toUpperCase() || 'U'}
                           </AvatarFallback>
                         </Avatar>
                         <motion.li
                           variants={variants}
                           className="flex w-full items-center gap-2"
                         >
-                                                     {!isCollapsed && (
-                             <>
-                               <p className="text-sm font-medium">
-                                 {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuario'}
-                               </p>
-                               <span className="ml-auto text-xs">▼</span>
-                             </>
-                           )}
+                          {!isCollapsed && (
+                            <>
+                              <p className="text-sm font-medium">
+                                {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuario'}
+                              </p>
+                              <span className="ml-auto text-xs">▼</span>
+                            </>
+                          )}
                         </motion.li>
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent sideOffset={5}>
                       <div className="flex flex-row items-center gap-2 p-2">
-                                                 <Avatar className="size-6">
-                           <AvatarFallback>
-                             {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
-                              user?.user_metadata?.name?.charAt(0)?.toUpperCase() || 
+                        <Avatar className="size-6">
+                          <AvatarFallback>
+                            {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
+                              user?.user_metadata?.name?.charAt(0)?.toUpperCase() ||
                               user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                           </AvatarFallback>
-                         </Avatar>
-                                                 <div className="flex flex-col text-left">
-                           <span className="text-sm font-medium">
-                             {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuario'}
-                           </span>
-                           <span className="line-clamp-1 text-xs text-muted-foreground">
-                             {user?.email || 'usuario@pulsej.com'}
-                           </span>
-                         </div>
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col text-left">
+                          <span className="text-sm font-medium">
+                            {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuario'}
+                          </span>
+                          <span className="line-clamp-1 text-xs text-muted-foreground">
+                            {user?.email || 'usuario@pulsej.com'}
+                          </span>
+                        </div>
                       </div>
                       <DropdownMenuSeparator />
-                                            <DropdownMenuItem
+                      <DropdownMenuItem
                         asChild
                         className="flex items-center gap-2"
                       >
-                         <NavLink to="/profile">
-                           <span className="h-4 w-4">👤</span> Perfil
-                         </NavLink>
+                        <NavLink to="/profile">
+                          <span className="h-4 w-4">👤</span> Perfil
+                        </NavLink>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         asChild
                         className="flex items-center gap-2"
                       >
-                         <NavLink to="/settings">
-                           <span className="h-4 w-4">⚙️</span> {t.settings}
-                         </NavLink>
+                        <NavLink to="/settings">
+                          <span className="h-4 w-4">⚙️</span> {t.settings}
+                        </NavLink>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                                             <DropdownMenuSeparator />
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="flex items-center gap-2"
                         onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
                       >
-                        <span className="h-4 w-4">🌐</span> 
+                        <span className="h-4 w-4">🌐</span>
                         {language === 'es' ? 'English' : 'Español'}
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -493,7 +493,7 @@ export function SessionNavBar() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 <motion.div variants={variants} className="mt-2" id="sidebar-bottom">
                   {!isCollapsed && (
                     <>

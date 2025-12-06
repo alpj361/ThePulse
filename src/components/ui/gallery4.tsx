@@ -28,7 +28,7 @@ const data = [
     title: "Sondeos Inteligentes",
     description:
       "Descubre cómo los sondeos inteligentes transforman el análisis de datos, permitiendo análisis detallado",
-    href: "/sondeos",
+    href: "/canvas",
     image: sondeosGif,
   },
   {

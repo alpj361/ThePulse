@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  BarChart3, 
+import {
+  BarChart3,
   TrendingUp,
   ActivitySquare,
   Search,
@@ -107,9 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
     },
     {
       icon: <BarChart3 size={20} />,
-      label: language === 'es' ? 'Pizarras' : 'Dashboards',
-      path: '/sondeos',
-      disabled: false
+      label: 'Sondeos',
+      path: '/canvas'
     },
     {
       icon: <Layers size={20} />,
@@ -161,14 +160,14 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
           {t.dashboard}
         </Typography>
       </Box>
-      
+
       <List component="nav" sx={{ flex: 1, overflow: 'auto', py: 1 }}>
         {mainNavItems.map((item) => (
-          <ListItem 
-            key={item.path} 
-            disablePadding 
+          <ListItem
+            key={item.path}
+            disablePadding
             onClick={item.disabled ? (e) => e.preventDefault() : closeSidebar}
-            sx={{ 
+            sx={{
               color: item.disabled ? 'text.disabled' : 'inherit',
               pointerEvents: item.disabled ? 'none' : 'auto',
               cursor: item.disabled ? 'not-allowed' : 'pointer',
@@ -176,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
             }}
           >
             {item.disabled ? (
-              <Box 
+              <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -198,7 +197,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                 <ListItemIcon sx={{ minWidth: 36, color: item.path === '#' ? 'grey.500' : 'text.disabled' }}>
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText 
+                <ListItemText
                   primary={item.label}
                   primaryTypographyProps={{
                     fontSize: '0.875rem',
@@ -207,7 +206,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                   }}
                 />
                 {item.path === '#' ? (
-                  <Tooltip 
+                  <Tooltip
                     title={t.securityTooltip}
                     arrow
                     placement="right"
@@ -275,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                   position: 'relative',
                 }}
               >
-                <Box 
+                <Box
                   className="indicator"
                   sx={{
                     position: 'absolute',
@@ -293,7 +292,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                 <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText 
+                <ListItemText
                   primary={item.label}
                   primaryTypographyProps={{
                     fontSize: '0.875rem',
@@ -317,9 +316,9 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
           </Box>
           <List component="nav" sx={{ py: 0 }}>
             {adminNavItems.map((item) => (
-              <ListItem 
-                key={item.path} 
-                disablePadding 
+              <ListItem
+                key={item.path}
+                disablePadding
                 onClick={closeSidebar}
               >
                 <ListItemButton
@@ -358,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                     position: 'relative',
                   }}
                 >
-                  <Box 
+                  <Box
                     className="indicator"
                     sx={{
                       position: 'absolute',
@@ -376,7 +375,7 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
                   <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
+                  <ListItemText
                     primary={item.label}
                     primaryTypographyProps={{
                       fontSize: '0.875rem',
@@ -402,18 +401,18 @@ const Sidebar: React.FC<SidebarProps> = ({ closeSidebar }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
           <Typography variant="caption">{t.version}</Typography>
         </Box>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="caption" sx={{ mr: 1 }}>🌐</Typography>
           <FormControl size="small" variant="outlined" fullWidth>
             <Select
               value={language}
               onChange={handleLanguageChange}
-              sx={{ 
+              sx={{
                 fontSize: '0.75rem',
                 height: 28,
-                '& fieldset': { 
-                  borderColor: 'divider' 
+                '& fieldset': {
+                  borderColor: 'divider'
                 },
               }}
             >
