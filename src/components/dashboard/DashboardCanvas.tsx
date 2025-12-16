@@ -28,7 +28,8 @@ interface DashboardCanvasProps {
   dashboard: Dashboard;
 }
 
-export function DashboardCanvas({ dashboard }: DashboardCanvasProps) {
+function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
+  const { theme } = useDashboardTheme();
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
   const [loading, setLoading] = useState(true);
