@@ -222,12 +222,24 @@ function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
   const savedCharts = useDashboardStore.getState().savedWidgets || [];
 
   return (
-    <div className="flex h-full bg-gray-50 overflow-hidden relative">
+    <div className="flex h-full overflow-hidden relative" style={{ background: theme.colors.background }}>
+      {/* Top Bar with Theme Selector */}
+      <div 
+        className="absolute top-4 left-4 z-20 flex items-center gap-2"
+      >
+        <ThemeSelector />
+      </div>
+
       {/* Sidebar Toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className={`absolute top-4 z-20 p-1.5 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all ${sidebarOpen ? 'right-[330px]' : 'right-4'
+        className={`absolute top-4 z-20 p-1.5 rounded-lg shadow-sm hover:shadow transition-all ${sidebarOpen ? 'right-[330px]' : 'right-4'
           }`}
+        style={{
+          background: theme.colors.surface,
+          border: `1px solid ${theme.colors.border}`,
+          color: theme.colors.text
+        }}
       >
         {sidebarOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
