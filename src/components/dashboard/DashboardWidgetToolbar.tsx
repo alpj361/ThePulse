@@ -180,21 +180,37 @@ export function DashboardWidgetToolbar({
 
         {activeTab === 'emoji' && (
           <div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors mb-3"
+              className="w-full px-4 py-3 text-white rounded-xl font-medium transition-all mb-3"
+              style={{ background: theme.colors.gradient }}
             >
+              <Smile className="h-4 w-4 inline mr-2" />
               Seleccionar Emoji
-            </button>
+            </motion.button>
 
             {showEmojiPicker && (
-              <div className="mb-3">
+              <motion.div 
+                className="mb-3 rounded-xl overflow-hidden"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
                 <EmojiPicker onEmojiClick={handleEmojiClick} width="100%" />
-              </div>
+              </motion.div>
             )}
 
-            <div className="text-xs text-gray-500 mt-4">
-              <p>Haz click en un emoji para agregarlo a la pizarra</p>
+            <div 
+              className="text-xs mt-4 p-3 rounded-lg"
+              style={{ 
+                color: theme.colors.textSecondary,
+                background: `${theme.colors.primary}05`
+              }}
+            >
+              <p>💡 Haz click en un emoji para agregarlo a la pizarra</p>
+              <p className="mt-1">Los emojis tienen animaciones interactivas estilo Apple</p>
             </div>
           </div>
         )}
