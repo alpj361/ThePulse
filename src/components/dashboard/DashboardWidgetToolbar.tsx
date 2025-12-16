@@ -40,36 +40,60 @@ export function DashboardWidgetToolbar({
   return (
     <div className="h-full flex flex-col">
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex" style={{ borderBottom: `1px solid ${theme.colors.border}40` }}>
         <button
           onClick={() => setActiveTab('charts')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'charts'
-            ? 'text-purple-600 border-b-2 border-purple-600'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
+          className="flex-1 px-4 py-3 text-sm font-medium transition-all relative"
+          style={{
+            color: activeTab === 'charts' ? theme.colors.primary : theme.colors.textSecondary
+          }}
         >
           <BarChart3 className="h-4 w-4 inline mr-2" />
           Gráficos
+          {activeTab === 'charts' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ background: theme.colors.primary }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+          )}
         </button>
         <button
           onClick={() => setActiveTab('emoji')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'emoji'
-            ? 'text-purple-600 border-b-2 border-purple-600'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
+          className="flex-1 px-4 py-3 text-sm font-medium transition-all relative"
+          style={{
+            color: activeTab === 'emoji' ? theme.colors.primary : theme.colors.textSecondary
+          }}
         >
           <Smile className="h-4 w-4 inline mr-2" />
           Emojis
+          {activeTab === 'emoji' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ background: theme.colors.primary }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+          )}
         </button>
         <button
           onClick={() => setActiveTab('text')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'text'
-            ? 'text-purple-600 border-b-2 border-purple-600'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
+          className="flex-1 px-4 py-3 text-sm font-medium transition-all relative"
+          style={{
+            color: activeTab === 'text' ? theme.colors.primary : theme.colors.textSecondary
+          }}
         >
           <Type className="h-4 w-4 inline mr-2" />
           Texto
+          {activeTab === 'text' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ background: theme.colors.primary }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+          )}
         </button>
       </div>
 
