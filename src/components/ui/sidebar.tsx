@@ -84,7 +84,6 @@ const translations = {
     trends: 'Trends',
     news: 'News',
     actividad: 'Actividad',
-    actividad: 'Actividad',
     pizarras: 'Pizarras',
     codex: 'Codex',
     proyectos: 'Proyectos',

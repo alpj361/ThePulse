@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { CircularProgress, Box, Typography } from '@mui/material';
@@ -17,11 +17,11 @@ export default function AuthCallback() {
         .eq('code', code)
         .eq('used', false)
         .single();
-      
+
       if (error || !data) {
         return null;
       }
-      
+
       return {
         id: data.id,
         user_type: data.user_type,
@@ -35,7 +35,7 @@ export default function AuthCallback() {
         'PRESS-INVITE': { user_type: 'Alpha', credits: 300, description: 'Código de desarrollo para prensa' },
         'MEDIA-ACCESS': { user_type: 'Creador', credits: 500, description: 'Código de desarrollo para medios' }
       };
-      
+
       const codeData = validCodes[code.toUpperCase()];
       return codeData || null;
     }
@@ -47,28 +47,28 @@ export default function AuthCallback() {
         console.log('🔍 AuthCallback - INICIANDO VERIFICACIÓN');
         console.log('🔍 AuthCallback - Current URL:', window.location.href);
         console.log('🔍 AuthCallback - URL params:', window.location.search);
-        
+
         // Verificar si viene desde el registro con un código
         const codeParam = searchParams.get('code');
         const isFromRegister = !!codeParam;
-        
+
         console.log('🔍 AuthCallback - Code param:', codeParam);
         console.log('🔍 AuthCallback - Is from register:', isFromRegister);
-        
+
         // IMPORTANTE: Esperar a que Supabase procese el callback de OAuth
         console.log('🔍 AuthCallback - Esperando procesamiento de OAuth...');
-        
+
         // Intentar obtener la sesión con reintentos
         let sessionData = null;
         let attempts = 0;
         const maxAttempts = 5;
-        
+
         while (!sessionData && attempts < maxAttempts) {
           attempts++;
           console.log(`🔍 AuthCallback - Intento ${attempts}/${maxAttempts} obteniendo sesión`);
-          
+
           const { data, error } = await supabase.auth.getSession();
-          
+
           if (error) {
             console.error('❌ AuthCallback - Error obteniendo sesión:', error);
             if (attempts === maxAttempts) {
@@ -85,39 +85,68 @@ export default function AuthCallback() {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
-        
+
         if (!sessionData || !sessionData.session || !sessionData.session.user) {
           console.error('❌ AuthCallback - No se pudo obtener sesión después de múltiples intentos');
           navigate('/login?error=auth_failed');
           return;
         }
-        
+
         const userEmail = sessionData.session.user.email;
         const userId = sessionData.session.user.id;
         console.log('✅ AuthCallback - Usuario autenticado:', userEmail);
         console.log('🔍 AuthCallback - User ID:', userId);
-        
+
         if (!isFromRegister) {
-          // Si no viene desde registro, redirigir a verificación
-          console.log('🔍 AuthCallback - No viene desde registro, redirigiendo a verificación');
-          // Dar un momento para que la sesión se propague
-          setTimeout(() => {
-            navigate('/auth/verify');
-          }, 500);
+          // Si no viene desde registro, verificar que el usuario tenga un perfil existente
+          console.log('🔍 AuthCallback - No viene desde registro, verificando perfil existente');
+
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('id, email, user_type')
+              .eq('id', userId)
+              .single();
+
+            if (profileError || !profile) {
+              console.log('❌ AuthCallback - Usuario no tiene perfil registrado');
+              console.log('🔍 AuthCallback - Profile error:', profileError);
+
+              // Cerrar sesión ya que el usuario no está registrado
+              await supabase.auth.signOut();
+
+              // Redirigir a registro con mensaje
+              navigate('/register?error=not_registered&message=' +
+                encodeURIComponent('Tu cuenta no está registrada. Por favor, regístrate con un código de invitación.'));
+              return;
+            }
+
+            console.log('✅ AuthCallback - Perfil encontrado:', profile.email, '- Tipo:', profile.user_type);
+
+            // Dar un momento para que la sesión se propague
+            setTimeout(() => {
+              navigate('/auth/verify');
+            }, 500);
+          } catch (error) {
+            console.error('❌ AuthCallback - Error verificando perfil:', error);
+            await supabase.auth.signOut();
+            navigate('/register?error=not_registered&message=' +
+              encodeURIComponent('Error verificando tu cuenta. Por favor, intenta de nuevo.'));
+          }
           return;
         }
-        
+
         // Usuario viene desde registro con código, validar código y crear perfil
         console.log('🔍 AuthCallback - Usuario viene desde registro, validando código:', codeParam);
-        
+
         const codeData = await validateInvitationCode(codeParam);
         console.log('🔍 AuthCallback - Datos del código:', codeData);
-        
+
         if (codeData) {
           // Crear perfil del usuario con datos del código
           try {
             console.log('🔍 AuthCallback - Creando perfil del usuario con tipo:', codeData.user_type, 'y créditos:', codeData.credits);
-            
+
             await supabase.from('profiles').upsert({
               id: sessionData.session.user.id,
               email: sessionData.session.user.email,
@@ -125,17 +154,17 @@ export default function AuthCallback() {
               user_type: codeData.user_type,
               credits: codeData.credits
             });
-            
+
             // Marcar código como usado usando la nueva función que retorna JSON
             try {
               const { data: markResult, error: markError } = await supabase.rpc('mark_invitation_code_used', {
                 invitation_code: codeParam,
                 user_id: sessionData.session.user.id
               });
-              
+
               if (markError) {
                 console.log('⚠️ AuthCallback - Error marcando código como usado con RPC:', markError);
-                
+
                 // Fallback: marcar directamente en la tabla
                 const { error: directUpdateError } = await supabase
                   .from('invitation_codes')
@@ -146,7 +175,7 @@ export default function AuthCallback() {
                     current_uses: 1
                   })
                   .eq('code', codeParam);
-                  
+
                 if (directUpdateError) {
                   console.error('❌ AuthCallback - Error marcando código directamente:', directUpdateError);
                 } else {
@@ -157,7 +186,7 @@ export default function AuthCallback() {
               }
             } catch (codeError) {
               console.log('⚠️ AuthCallback - Error marcando código como usado (catch):', codeError);
-              
+
               // Fallback directo
               try {
                 const { error: directUpdateError } = await supabase
@@ -169,7 +198,7 @@ export default function AuthCallback() {
                     current_uses: 1
                   })
                   .eq('code', codeParam);
-                  
+
                 if (directUpdateError) {
                   console.error('❌ AuthCallback - Error en fallback directo:', directUpdateError);
                 } else {
@@ -179,7 +208,7 @@ export default function AuthCallback() {
                 console.error('❌ AuthCallback - Error en fallback:', fallbackError);
               }
             }
-            
+
             console.log('✅ AuthCallback - Perfil creado exitosamente con configuración personalizada, redirigiendo a verificación');
             setTimeout(() => {
               navigate('/auth/verify');

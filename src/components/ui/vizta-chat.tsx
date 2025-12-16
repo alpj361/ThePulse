@@ -48,10 +48,10 @@ import CodexSelector from "./CodexSelector";  // ✨ NUEVO: Import CodexSelector
 import { useAuth } from '../../context/AuthContext';  // ✨ NUEVO: Import useAuth
 import { useSpreadsheet } from '../../context/SpreadsheetContext';  // ✨ NUEVO: Import SpreadsheetContext
 import ProjectSelectorDialog from "./ProjectSelectorDialog";
-import { SpreadsheetPreviewTable } from "./SpreadsheetPreviewTable";  // ✨ NUEVO: Import SpreadsheetPreviewTable
 import { supabase } from "../../services/supabase";
 import type { Project } from "../../types/projects";
 import type { ViztaCapturedItem, ViztaTermSuggestion } from "../../services/viztaChat";
+import { sendViztaChatQuery } from "../../services/viztaChat";  // ✨ NUEVO: Static import instead of dynamic
 import CreateWikiModal from "../codex/wiki/CreateWikiModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
 
@@ -102,6 +102,11 @@ interface Message {
   hasUIComponents?: boolean; // Indicates if message has UI components
   capturedItems?: CapturedInsight[];
   termSuggestions?: TermInsight[];
+  tableData?: {
+    columns: Array<{ id: string; title: string; type: string }>;
+    rows: Array<Record<string, any>>;
+    source: string;
+  }; // ✨ NUEVO: Datos tabulares detectados
 }
 
 // Components
@@ -493,10 +498,11 @@ interface AssistantMessageProps {
   onSaveTermToWiki?: (term: TermInsight) => void;
   capturedSaveStatus?: Record<string, SaveStatus>;
   termSaveStatus?: Record<string, SaveStatus>;
+  onSendToSpreadsheet?: (tableData: { columns: any[]; rows: any[]; source: string }) => void; // ✨ NUEVO
 }
 
 const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>(
-  function AssistantMessage({ message, onFeedback, onRequestProjectSave, onSaveTermToWiki, capturedSaveStatus, termSaveStatus }, ref) {
+  function AssistantMessage({ message, onFeedback, onRequestProjectSave, onSaveTermToWiki, capturedSaveStatus, termSaveStatus, onSendToSpreadsheet }, ref) {
     const [activeTab, setActiveTab] = React.useState("answer");
     const [isExpanded, setIsExpanded] = React.useState(true);
     const [showSources, setShowSources] = React.useState(false);
@@ -948,6 +954,18 @@ const AssistantMessage = React.forwardRef<HTMLDivElement, AssistantMessageProps>
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </time>
 
+              {/* ✨ NUEVO: Botón para enviar datos al spreadsheet */}
+              {message.tableData && onSendToSpreadsheet && (
+                <button
+                  onClick={() => onSendToSpreadsheet(message.tableData!)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-md transition-colors border border-purple-200"
+                  title="Enviar al Spreadsheet"
+                >
+                  <Table className="h-3 w-3" />
+                  <span>Enviar a Spreadsheet</span>
+                </button>
+              )}
+
               {/* Feedback buttons */}
               {message.queryLogId && (
                 <div className="flex items-center gap-1">
@@ -1027,13 +1045,6 @@ const ViztaChatUI = () => {
   const [isWikiModalOpen, setIsWikiModalOpen] = React.useState(false);
   const [pendingTerm, setPendingTerm] = React.useState<TermInsight | null>(null);
 
-  // ✨ NUEVO: Estado para Spreadsheet Preview
-  const [spreadsheetPreview, setSpreadsheetPreview] = React.useState<{
-    columns: Array<{ id: string; title: string; type: string }>;
-    rows: Array<Record<string, any>>;
-    source: string;
-  } | null>(null);
-
   // ✨ NUEVO: Estado para funcionalidad @
   const [showMentions, setShowMentions] = React.useState(false);
   const [mentionQuery, setMentionQuery] = React.useState('');
@@ -1046,6 +1057,24 @@ const ViztaChatUI = () => {
 
   // ✨ NUEVO: Estado para texto importado desde documentos
   const [importedTextSource, setImportedTextSource] = React.useState<string | null>(null);
+
+  // ✨ NUEVO: Estado para comandos (/)
+  const [showCommands, setShowCommands] = React.useState(false);
+  const [commandQuery, setCommandQuery] = React.useState('');
+  const [selectedCommandIndex, setSelectedCommandIndex] = React.useState(0);
+
+  const availableCommands = [
+    { command: '/Organize', description: 'Organizar datos en tabla', icon: '📊' },
+    { command: '/Search', description: 'Búsqueda web rápida', icon: '🔍' },
+    { command: '/Look', description: 'Buscar en Codex y Proyectos', icon: '👁️' }
+  ];
+
+  const filteredCommands = React.useMemo(() => {
+    if (!commandQuery) return availableCommands;
+    return availableCommands.filter(c =>
+      c.command.toLowerCase().includes(commandQuery.toLowerCase())
+    );
+  }, [commandQuery]);
 
   // Save chat width to localStorage when it changes
   React.useEffect(() => {
@@ -1131,7 +1160,7 @@ const ViztaChatUI = () => {
     return () => window.removeEventListener('sendToVizta', handleSendToVizta);
   }, []);
 
-  // ✨ NUEVO: Manejar input con detección de @
+  // ✨ NUEVO: Manejar input con detección de @ y /
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPosition = e.target.selectionStart;
@@ -1141,14 +1170,23 @@ const ViztaChatUI = () => {
     // Detectar si el usuario está escribiendo después de @
     const textBeforeCursor = value.substring(0, cursorPosition);
     const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    const slashMatch = textBeforeCursor.match(/^\/(\w*)$/); // Solo si empieza con /
 
     if (atMatch) {
       setShowMentions(true);
+      setShowCommands(false);
       setMentionQuery(atMatch[1]);
       setMentionPosition(cursorPosition - atMatch[1].length - 1);
+    } else if (slashMatch) {
+      setShowCommands(true);
+      setShowMentions(false);
+      setCommandQuery(slashMatch[1]);
+      setSelectedCommandIndex(0);
     } else {
       setShowMentions(false);
+      setShowCommands(false);
       setMentionQuery('');
+      setCommandQuery('');
     }
   };
 
@@ -1163,7 +1201,21 @@ const ViztaChatUI = () => {
     setMentionQuery('');
   };
 
-  // ✨ NUEVO: Manejar navegación con teclado en menciones
+  // ✨ NUEVO: Manejar selección de comando
+  const handleCommandSelect = (cmd: typeof availableCommands[0]) => {
+    const newValue = `${cmd.command} `; // Reemplaza todo el input ya que el comando va al inicio
+    setInputValue(newValue);
+    setShowCommands(false);
+    setCommandQuery('');
+
+    // Enfocar de nuevo el textarea con timeout para asegurar render
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
+      if (textarea) textarea.focus();
+    }, 10);
+  };
+
+  // ✨ NUEVO: Manejar navegación con teclado en menciones y comandos
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showMentions && filteredCodexItems.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -1182,6 +1234,24 @@ const ViztaChatUI = () => {
       } else if (e.key === 'Escape') {
         setShowMentions(false);
         setMentionQuery('');
+      }
+    } else if (showCommands && filteredCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedCommandIndex(prev =>
+          prev < filteredCommands.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedCommandIndex(prev =>
+          prev > 0 ? prev - 1 : filteredCommands.length - 1
+        );
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleCommandSelect(filteredCommands[selectedCommandIndex]);
+      } else if (e.key === 'Escape') {
+        setShowCommands(false);
+        setCommandQuery('');
       }
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -1271,57 +1341,38 @@ const ViztaChatUI = () => {
     setIsWikiModalOpen(true);
   }, [user]);
 
-  // ✨ NUEVO: Manejar organización de datos en tabla
-  const handleOrganizeAsTable = React.useCallback(async () => {
-    if (!inputValue.trim() && selectedCodex.length === 0) {
-      console.warn('No hay datos para organizar');
-      return;
-    }
+  // ✨ NUEVO: Manejar envío de datos al spreadsheet
+  const handleSendToSpreadsheet = React.useCallback((tableData: { columns: any[]; rows: any[]; source: string }) => {
+    console.log('📊 [VIZTA-CHAT] Enviando datos al spreadsheet:', {
+      rows: tableData.rows.length,
+      cols: tableData.columns.length,
+      source: tableData.source
+    });
 
-    setIsLoading(true);
-    try {
-      const { sendViztaChatQuery } = await import('../../services/viztaChat');
+    // Convertir fechas de string a Date para el spreadsheet
+    const rowsWithConvertedDates = tableData.rows.map((row, index) => {
+      const convertedRow: Record<string, any> = {
+        ...row,
+        id: row.id || `vizta_row_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 5)}`
+      };
 
-      // Enviar consulta especial para organizar datos
-      const organizationPrompt = selectedCodex.length > 0
-        ? `Organiza los datos del Codex seleccionado en formato tabla estructurada`
-        : `Organiza los siguientes datos en formato tabla: ${inputValue}`;
+      // Convertir campos de fecha de string a Date
+      tableData.columns.forEach((col) => {
+        if (col.type === 'date' && convertedRow[col.id]) {
+          const dateValue = convertedRow[col.id];
+          if (typeof dateValue === 'string') {
+            convertedRow[col.id] = new Date(dateValue);
+          }
+        }
+      });
 
-      const response = await sendViztaChatQuery(
-        organizationPrompt,
-        sessionId,
-        mode,
-        false, // No UI generativa para esto
-        selectedCodex,
-        { action: 'organize_table' }
-      );
+      return convertedRow;
+    });
 
-      // Si la respuesta incluye datos tabulares
-      if (response.tableData) {
-        setSpreadsheetPreview({
-          columns: response.tableData.columns,
-          rows: response.tableData.rows,
-          source: response.tableData.source || 'Vizta'
-        });
-      }
-    } catch (error) {
-      console.error('Error organizando datos:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [inputValue, selectedCodex, sessionId, mode]);
-
-  // ✨ NUEVO: Aplicar datos a spreadsheet
-  const handleApplyToSpreadsheet = React.useCallback((rows: Array<Record<string, any>>, columns: Array<any>) => {
-    if (!spreadsheetPreview) return;
-
-    // Convertir a formato SpreadsheetContext
-    setSpreadsheetData(rows, columns);
+    // Enviar a spreadsheet context
+    setSpreadsheetData(rowsWithConvertedDates, tableData.columns);
     openSpreadsheet();
-
-    // Limpiar preview
-    setSpreadsheetPreview(null);
-  }, [spreadsheetPreview, setSpreadsheetData, openSpreadsheet]);
+  }, [setSpreadsheetData, openSpreadsheet]);
 
   const handleSend = async () => {
     if (!inputValue.trim()) return;
@@ -1346,9 +1397,6 @@ const ViztaChatUI = () => {
     });
 
     try {
-      // Importar dinámicamente el servicio
-      const { sendViztaChatQuery } = await import('../../services/viztaChat');
-
       // ✨ Enviar consulta al backend con el toggle de Generative UI y codex items seleccionados
       const response = await sendViztaChatQuery(currentInput, sessionId, mode, useGenerativeUI, selectedCodex);
 
@@ -1465,7 +1513,9 @@ const ViztaChatUI = () => {
             ? response.response.hasUIComponents
             : false,
           capturedItems: capturedItems.length > 0 ? capturedItems as CapturedInsight[] : undefined,
-          termSuggestions: termSuggestions.length > 0 ? termSuggestions as TermInsight[] : undefined
+          termSuggestions: termSuggestions.length > 0 ? termSuggestions as TermInsight[] : undefined,
+          // ✨ NUEVO: Datos tabulares del backend
+          tableData: response.tableData || undefined
         };
 
         if (capturedItems.length > 0) {
@@ -1492,18 +1542,8 @@ const ViztaChatUI = () => {
           });
         }
 
-        // ✨ NUEVO: Si la respuesta incluye tableData, mostrar preview
-        if (response.tableData && response.tableData.rows && response.tableData.columns) {
-          console.log('📊 [VIZTA-CHAT] Table data received:', {
-            rows: response.tableData.rows.length,
-            columns: response.tableData.columns.length
-          });
-          setSpreadsheetPreview({
-            columns: response.tableData.columns,
-            rows: response.tableData.rows,
-            source: response.tableData.source || 'Vizta'
-          });
-        }
+        // ✨ NUEVO: Si la respuesta incluye tableData, no necesitamos preview manual
+        // Los datos se pasan directamente en el mensaje
 
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
@@ -1677,6 +1717,7 @@ const ViztaChatUI = () => {
                       message={message}
                       onRequestProjectSave={handleRequestProjectSave}
                       onSaveTermToWiki={handleSaveTermToWiki}
+                      onSendToSpreadsheet={handleSendToSpreadsheet}
                       capturedSaveStatus={capturedSaveStatus}
                       termSaveStatus={termSaveStatus}
                     />
@@ -1685,25 +1726,7 @@ const ViztaChatUI = () => {
               </AnimatePresence>
             )}
 
-            {/* ✨ NUEVO: Spreadsheet Preview */}
-            <AnimatePresence>
-              {spreadsheetPreview && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <SpreadsheetPreviewTable
-                    columns={spreadsheetPreview.columns}
-                    rows={spreadsheetPreview.rows}
-                    source={spreadsheetPreview.source}
-                    onApply={handleApplyToSpreadsheet}
-                    onCancel={() => setSpreadsheetPreview(null)}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* ✨ NUEVO: Spreadsheet Preview eliminado - ahora se maneja en las burbujas */}
 
             {/* Loading state */}
             <AnimatePresence>
@@ -1955,6 +1978,32 @@ const ViztaChatUI = () => {
                   onKeyDown={handleKeyDown}
                 />
 
+                {/* ✨ NUEVO: Dropdown de comandos / */}
+                {showCommands && filteredCommands.length > 0 && (
+                  <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+                    <div className="p-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 flex items-center justify-between">
+                      <span>COMANDOS RÁPIDOS</span>
+                      <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-[10px]">Enter</kbd>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredCommands.map((cmd, index) => (
+                        <button
+                          key={cmd.command}
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-blue-50 transition-colors ${index === selectedCommandIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                            }`}
+                          onClick={() => handleCommandSelect(cmd)}
+                        >
+                          <span className="text-lg">{cmd.icon}</span>
+                          <div>
+                            <div className="font-medium">{cmd.command}</div>
+                            <div className="text-xs text-gray-500">{cmd.description}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* ✨ NUEVO: Dropdown de menciones @ */}
                 {showMentions && (
                   <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
@@ -2023,18 +2072,6 @@ const ViztaChatUI = () => {
                   </div>
                 )}
               </div>
-
-              {/* ✨ NUEVO: Table Button */}
-              <Button
-                size="icon"
-                onClick={handleOrganizeAsTable}
-                disabled={isLoading || (!inputValue.trim() && selectedCodex.length === 0)}
-                className="h-12 w-12 bg-purple-600 text-white hover:bg-purple-700 shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                title="Organizar en Tabla"
-              >
-                <Table className="h-4 w-4" />
-                <span className="sr-only">Organizar como tabla</span>
-              </Button>
 
               {/* Send Button */}
               <Button

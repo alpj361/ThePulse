@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { GOOGLE_SCOPES, getCallbackUrl } from '../config/auth';
 import Logo from '../components/common/Logo';
 import {
-  Container,
   Box,
   Typography,
   TextField,
@@ -16,7 +15,7 @@ import {
   Link,
   CircularProgress
 } from '@mui/material';
-import { Google as GoogleIcon } from '@mui/icons-material';
+import { Google as GoogleIcon, Apple as AppleIcon } from '@mui/icons-material';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -37,7 +36,7 @@ export default function Login() {
   // Verificar si hay mensajes de error en los parámetros de URL
   useEffect(() => {
     const errorParam = searchParams.get('error');
-    
+
     if (errorParam === 'auth_failed') {
       setError('Error en la autenticación. Por favor, intenta de nuevo.');
     } else if (errorParam === 'callback_failed') {
@@ -75,10 +74,10 @@ export default function Login() {
         hasSupabaseClient: !!supabase,
         timestamp: new Date().toISOString()
       });
-      
+
       // Obtener URL de callback usando la configuración centralizada
       const callbackUrl = getCallbackUrl();
-      
+
       console.log('🔧 Environment:', {
         hostname: window.location.hostname,
         protocol: window.location.protocol,
@@ -112,13 +111,13 @@ export default function Login() {
       }
 
       console.log('✅ OAuth iniciado correctamente');
-      
+
     } catch (error: any) {
       console.error('❌ Error completo en handleGoogleLogin:', error);
-      
+
       // Proporcionar mensajes de error más específicos
       let errorMessage = 'Error al iniciar sesión con Google';
-      
+
       if (error.message?.includes('Invalid redirect URL')) {
         errorMessage = 'Error de configuración: URL de redirección no autorizada. Contacta al administrador.';
       } else if (error.message?.includes('network')) {
@@ -126,7 +125,68 @@ export default function Login() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
+      setError(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Verificar configuración de Supabase
+      console.log('🍎 Apple Login - Supabase Config Check:', {
+        hasSupabaseClient: !!supabase,
+        timestamp: new Date().toISOString()
+      });
+
+      // Obtener URL de callback usando la configuración centralizada
+      const callbackUrl = getCallbackUrl();
+
+      console.log('🍎 Apple Login - Environment:', {
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        port: window.location.port,
+        origin: window.location.origin,
+        href: window.location.href
+      });
+      console.log('🍎 Apple Login - Callback URL:', callbackUrl);
+
+      // Iniciamos el flujo de OAuth con Apple
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: callbackUrl
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error en signInWithOAuth (Apple):', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status
+        });
+        throw error;
+      }
+
+      console.log('✅ Apple OAuth iniciado correctamente');
+
+    } catch (error: any) {
+      console.error('❌ Error completo en handleAppleLogin:', error);
+
+      // Proporcionar mensajes de error más específicos
+      let errorMessage = 'Error al iniciar sesión con Apple';
+
+      if (error.message?.includes('Invalid redirect URL')) {
+        errorMessage = 'Error de configuración: URL de redirección no autorizada. Contacta al administrador.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       setError(errorMessage);
       setLoading(false);
     }
@@ -235,7 +295,18 @@ export default function Login() {
           >
             Iniciar sesión con Google
           </Button>
-          
+
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<AppleIcon />}
+            onClick={handleAppleLogin}
+            disabled={loading}
+            sx={{ mt: 2, py: 1.5, bgcolor: 'black', color: 'white', '&:hover': { bgcolor: '#1a1a1a', borderColor: 'black' } }}
+          >
+            Iniciar sesión con Apple
+          </Button>
+
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
             Solo para usuarios ya registrados con código de acceso
           </Typography>

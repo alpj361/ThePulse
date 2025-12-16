@@ -54,8 +54,13 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
         (localData[0]?.col_a === undefined || localData[0]?.col_a === ''); // Check loose heuristic
 
       // Logic: Load if empty OR if we currently have the "blank init" state and real data arrived
-      if (localData.length === 0 || (contextData.length > 0 && isBlankInit)) {
-        console.log('📊 Panel: Inicializando...', { contextDataCount: contextData.length, isBlankInit });
+      // ALSO: If column configs are missing (e.g. after reopen), we MUST reload
+      if (localData.length === 0 || localColumnConfigs.length === 0 || (contextData.length > 0 && isBlankInit)) {
+        console.log('📊 Panel: Inicializando...', {
+          contextDataCount: contextData.length,
+          isBlankInit,
+          missingConfigs: localColumnConfigs.length === 0
+        });
         setIsLoading(true);
 
         const loadTimeout = setTimeout(() => {
@@ -137,7 +142,8 @@ const SpreadsheetPanel: React.FC<SpreadsheetPanelProps> = ({ isOpen, onClose }) 
 
         return () => clearTimeout(loadTimeout);
       }
-    }, [isOpen, contextData, contextColumns]); // Modified to react to data updates
+    }
+  }, [isOpen, contextData, contextColumns, localColumnConfigs.length]); // Modified to react to data updates
 
   // Limpiar datos cuando se cierra el panel
   useEffect(() => {
