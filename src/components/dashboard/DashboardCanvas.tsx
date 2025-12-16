@@ -245,7 +245,7 @@ function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
       </button>
 
       {/* Canvas Area */}
-      <div className="flex-1 overflow-auto p-8 min-h-full">
+      <div className="flex-1 overflow-auto p-8 pt-20 min-h-full">
         <div className="max-w-[1600px] mx-auto min-h-[800px]">
           <GridLayout
             className="layout"
@@ -259,7 +259,7 @@ function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
             draggableHandle=".drag-handle, .recharts-responsive-container, .emoji-widget"
           >
             {widgets.map((widget) => (
-              <div key={widget.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group">
+              <div key={widget.id} className="overflow-hidden relative">
                 {renderWidget(widget)}
               </div>
             ))}
