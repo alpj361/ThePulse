@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { BarChart3, Smile, Type, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BarChart3, Smile, Type, X, Sparkles, TrendingUp } from 'lucide-react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import type { ChartWidget } from '../../stores/dashboardStore';
+import { useDashboardTheme } from '../../context/DashboardThemeContext';
 
 interface DashboardWidgetToolbarProps {
   savedCharts: ChartWidget[];
