@@ -20,6 +20,7 @@ export function DashboardWidgetToolbar({
   onAddText,
   onAddCustomChart
 }: DashboardWidgetToolbarProps) {
+  const { theme } = useDashboardTheme();
   const [activeTab, setActiveTab] = useState<'charts' | 'emoji' | 'text'>('charts');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [newText, setNewText] = useState('');
