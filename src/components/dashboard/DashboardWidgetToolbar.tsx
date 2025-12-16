@@ -221,15 +221,37 @@ export function DashboardWidgetToolbar({
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               placeholder="Escribe tu texto aquí..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mb-3 min-h-[100px]"
+              className="w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 mb-3 min-h-[120px] transition-all"
+              style={{
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                '::placeholder': { color: theme.colors.textSecondary }
+              }}
             />
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleAddText}
               disabled={!newText.trim()}
-              className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                background: newText.trim() ? theme.colors.gradient : theme.colors.border
+              }}
             >
+              <Type className="h-4 w-4 inline mr-2" />
               Agregar Texto
-            </button>
+            </motion.button>
+
+            <div 
+              className="text-xs mt-4 p-3 rounded-lg"
+              style={{ 
+                color: theme.colors.textSecondary,
+                background: `${theme.colors.primary}05`
+              }}
+            >
+              <p>✏️ Edita el texto directamente en la pizarra haciendo doble click</p>
+            </div>
           </div>
         )}
       </div>
