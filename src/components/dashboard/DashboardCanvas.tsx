@@ -271,16 +271,25 @@ function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
       <motion.div
         initial={false}
         animate={{ width: sidebarOpen ? 320 : 0, opacity: sidebarOpen ? 1 : 0 }}
-        className="bg-white border-l border-gray-200 h-full overflow-hidden flex flex-col relative z-10"
+        className="h-full overflow-hidden flex flex-col relative z-10"
+        style={{
+          background: theme.colors.surface,
+          borderLeft: `1px solid ${theme.colors.border}`
+        }}
       >
         <div className="w-[320px] h-full flex flex-col">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <span className="font-semibold text-gray-700 flex items-center gap-2">
+          <div 
+            className="p-4 flex items-center justify-between"
+            style={{ 
+              borderBottom: `1px solid ${theme.colors.border}40`
+            }}
+          >
+            <span className="font-semibold flex items-center gap-2" style={{ color: theme.colors.text }}>
               <Sidebar className="w-4 h-4" />
               Herramientas
             </span>
             {saving && (
-              <span className="text-xs text-green-600 flex items-center gap-1">
+              <span className="text-xs flex items-center gap-1" style={{ color: theme.colors.success }}>
                 <Loader2 className="w-3 h-3 animate-spin" />
                 Guardando...
               </span>
