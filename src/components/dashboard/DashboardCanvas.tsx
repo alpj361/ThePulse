@@ -17,6 +17,8 @@ import { EmojiWidget } from './widgets/EmojiWidget';
 import { TextWidget } from './widgets/TextWidget';
 import { CustomChartWidget } from './widgets/CustomChartWidget';
 import { CustomChartModal } from './CustomChartModal';
+import { DashboardThemeProvider, useDashboardTheme } from '../../context/DashboardThemeContext';
+import { ThemeSelector } from './ThemeSelector';
 
 // Import CSS for react-grid-layout
 import 'react-grid-layout/css/styles.css';
