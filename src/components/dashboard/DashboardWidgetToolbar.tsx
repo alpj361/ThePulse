@@ -101,52 +101,78 @@ export function DashboardWidgetToolbar({
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'charts' && (
           <div className="space-y-3">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onAddCustomChart}
-              className="w-full py-2 px-3 border border-dashed border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium mb-4"
+              className="w-full py-3 px-4 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-sm font-medium mb-4 transition-all"
+              style={{
+                borderColor: `${theme.colors.primary}60`,
+                color: theme.colors.primary,
+                background: `${theme.colors.primary}05`
+              }}
             >
-              <BarChart3 className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
               Crear Gráfico Personalizado
-            </button>
+            </motion.button>
             {savedCharts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <div className="text-center py-8" style={{ color: theme.colors.textSecondary }}>
+                <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No hay gráficos guardados</p>
                 <p className="text-xs mt-1">Guarda visualizaciones desde el chat</p>
               </div>
             ) : (
-              savedCharts.map((chart) => (
-                <div
+              savedCharts.map((chart, index) => (
+                <motion.div
                   key={chart.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                   draggable={true}
                   onDragStart={(e) => {
-                    // Set data for drop
                     e.dataTransfer.setData("widgetType", "chart");
                     e.dataTransfer.setData("widgetData", JSON.stringify(chart));
-                    // Visual feedback
                     e.dataTransfer.effectAllowed = "copy";
                   }}
-                  className="w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative"
+                  className="w-full text-left p-3 rounded-xl hover:shadow-lg transition-all cursor-grab active:cursor-grabbing group relative"
+                  style={{
+                    background: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                  whileHover={{ 
+                    scale: 1.02,
+                    boxShadow: `0 10px 25px -5px ${theme.colors.primary}30`
+                  }}
                 >
-                  <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
-                    {chart.originalQuery}
+                  <div className="flex items-start gap-2">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${theme.colors.primary}15` }}
+                    >
+                      <BarChart3 className="h-4 w-4" style={{ color: theme.colors.primary }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium mb-1 line-clamp-2" style={{ color: theme.colors.text }}>
+                        {chart.originalQuery}
+                      </div>
+                      <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                        {new Date(chart.timestamp).toLocaleDateString()}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(chart.timestamp).toLocaleDateString()}
-                  </div>
-                  {/* Hint overlay */}
-                  <div className="absolute inset-0 bg-purple-50/0 group-hover:bg-purple-50/10 transition-colors rounded-lg" />
-                  <div className="absolute top-2 right-2 text-gray-300 group-hover:text-purple-400">
-                    <BarChart3 className="h-4 w-4" />
-                  </div>
-                  {/* Click to add fallback */}
-                  <button
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
                     onClick={() => onAddChart(chart)}
-                    className="absolute bottom-2 right-2 text-[10px] bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-700 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute bottom-2 right-2 text-[10px] px-2 py-1 rounded-md transition-all"
+                    style={{
+                      background: `${theme.colors.primary}20`,
+                      color: theme.colors.primary
+                    }}
                   >
                     + Agregar
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
               ))
             )}
           </div>
