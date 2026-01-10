@@ -22,7 +22,7 @@ import {
   Twitter as TwitterIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../services/supabase';
 
 interface TrendSelectorProps {
   selectedTrends: string[];
@@ -48,9 +48,7 @@ interface TweetItem {
   fecha_tweet: string;
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Using shared Supabase client from services/supabase.ts
 
 const TrendSelector: React.FC<TrendSelectorProps> = ({ selectedTrends, onTrendChange }) => {
   const [tabValue, setTabValue] = useState(0);

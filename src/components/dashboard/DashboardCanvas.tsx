@@ -293,17 +293,6 @@ function DashboardCanvasContent({ dashboard }: DashboardCanvasProps) {
                 <Loader2 className="w-3 h-3 animate-spin" />
                 Guardando...
               </span>
-
-
-// Wrapper with Theme Provider
-export function DashboardCanvas({ dashboard }: DashboardCanvasProps) {
-  return (
-    <DashboardThemeProvider dashboardId={dashboard.id}>
-      <DashboardCanvasContent dashboard={dashboard} />
-    </DashboardThemeProvider>
-  );
-}
-
             )}
           </div>
 
@@ -326,5 +315,14 @@ export function DashboardCanvas({ dashboard }: DashboardCanvasProps) {
         onAddChart={(config) => handleAddWidget('custom-chart', config)}
       />
     </div>
+  );
+}
+
+// Wrapper with Theme Provider
+export function DashboardCanvas({ dashboard }: DashboardCanvasProps) {
+  return (
+    <DashboardThemeProvider dashboardId={dashboard.id}>
+      <DashboardCanvasContent dashboard={dashboard} />
+    </DashboardThemeProvider>
   );
 }

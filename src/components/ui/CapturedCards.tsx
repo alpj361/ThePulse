@@ -3,10 +3,11 @@ import { Card, CardHeader, CardContent } from './card';
 import { FiBox, FiAlertTriangle, FiWatch, FiTrash2, FiX, FiMapPin, FiEdit, FiSave, FiChevronDown, FiChevronUp, FiGrid, FiDollarSign, FiClock, FiBarChart2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { EXTRACTORW_API_URL } from '../../services/api';
-import { deleteCapturadoCard, updateCapturadoCard, deleteAllCapturadoCards, CapturadoUpdatePayload, createCapturadoCard, CapturadoCreatePayload } from '../../services/capturados';
+import { deleteCapturadoCard, updateCapturadoCard, deleteAllCapturadoCards, CapturadoUpdatePayload, createCapturadoCard, CapturadoCreatePayload, extractCapturados } from '../../services/capturados';
 // Coberturas: eliminado botón de cobertura geográfica en UI por solicitud
 // import { createCoverageFromCard, hasValidGeographicInfo } from '../../services/coverages';
 import { DisplayCards } from '@/components/ui/display-cards';
+import CodexSelectorModal from './CodexSelectorModal';
 
 interface CapturadoCard {
   id: string;
@@ -43,6 +44,8 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createData, setCreateData] = useState<CapturadoCreatePayload>({});
   const [creating, setCreating] = useState(false);
+  const [showCodexSelector, setShowCodexSelector] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // Etiquetas en español para campos
   const editFieldLabels: Record<string, string> = {
@@ -76,14 +79,14 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
   const [durationHours, setDurationHours] = useState<number | ''>('');
   const [durationMinutes, setDurationMinutes] = useState<number | ''>('');
 
-  const [timeType, setTimeType] = useState<'day'|'year_range'|'decade'|'custom'|''>('');
+  const [timeType, setTimeType] = useState<'day' | 'year_range' | 'decade' | 'custom' | ''>('');
   const [timeDate, setTimeDate] = useState<string>('');
   const [timeStartYear, setTimeStartYear] = useState<number | ''>('');
   const [timeEndYear, setTimeEndYear] = useState<number | ''>('');
   const [timeDecadeStart, setTimeDecadeStart] = useState<number | ''>('');
   const [timeLowerDate, setTimeLowerDate] = useState<string>('');
   const [timeUpperDate, setTimeUpperDate] = useState<string>('');
-  const [timeBounds, setTimeBounds] = useState<'[]'|'[)'|'()'|'(]'|'[)' >('[)');
+  const [timeBounds, setTimeBounds] = useState<'[]' | '[)' | '()' | '(]' | '[)'>('[)');
 
   useEffect(() => {
     if (projectId) {
@@ -123,10 +126,10 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
     try {
       setDeletingCard(cardId);
       await deleteCapturadoCard(cardId, session?.access_token || '');
-      
+
       // Actualizar la lista local removiendo la tarjeta eliminada
       setCards(prevCards => prevCards.filter(card => card.id !== cardId));
-      
+
     } catch (err: any) {
       console.error('Error deleting card:', err);
       alert(`Error eliminando hallazgo: ${err.message || 'Error desconocido'}`);
@@ -176,6 +179,48 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
     }
   }
 
+  async function handleCaptureFromCodex(selectedItems: any[]) {
+    if (selectedItems.length === 0) return;
+
+    setIsCapturing(true);
+    try {
+      let totalCardsCreated = 0;
+      const newCards: CapturadoCard[] = [];
+
+      for (const item of selectedItems) {
+        try {
+          const result = await extractCapturados(item.id, projectId, session?.access_token || '');
+          if (result.success && result.cards) {
+            newCards.push(...result.cards);
+            totalCardsCreated += result.cards.length;
+          }
+        } catch (err: any) {
+          console.error(`Error capturing data from ${item.titulo}:`, err);
+        }
+      }
+
+      // Update local state with new cards
+      if (newCards.length > 0) {
+        setCards(prev => [...newCards, ...prev]);
+      }
+
+      // Show success message
+      if (totalCardsCreated > 0) {
+        alert(`✅ Se capturaron ${totalCardsCreated} hallazgo${totalCardsCreated !== 1 ? 's' : ''} de ${selectedItems.length} elemento${selectedItems.length !== 1 ? 's' : ''} del Codex`);
+      } else {
+        alert('⚠️ No se encontraron datos para capturar en los elementos seleccionados');
+      }
+
+      // Refresh the cards list
+      await fetchCards();
+    } catch (err: any) {
+      console.error('Error capturing from codex:', err);
+      alert(`Error capturando datos: ${err.message || 'Error desconocido'}`);
+    } finally {
+      setIsCapturing(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -193,15 +238,6 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
     );
   }
 
-  if (cards.length === 0) {
-    return (
-      <div className="text-center text-gray-500 py-6">
-        <FiBox className="inline mr-2" />
-        No se han registrado hallazgos capturados para este proyecto.
-      </div>
-    );
-  }
-
   // Agrupar por topic
   const groupedByTopic: Record<string, CapturadoCard[]> = cards.reduce((acc, card) => {
     const key = card.topic || 'General';
@@ -213,7 +249,7 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
   const topics = Object.keys(groupedByTopic);
 
   const toggleTopic = (topic: string) => {
-    setExpandedTopics(prev => 
+    setExpandedTopics(prev =>
       prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
     );
   };
@@ -231,6 +267,22 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
           Hallazgos Capturados
         </h2>
         <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowCodexSelector(true)}
+            disabled={isCapturing}
+            className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 shadow-md hover:shadow-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isCapturing ? (
+              <>
+                <FiWatch className="w-4 h-4 animate-spin" />
+                Capturando...
+              </>
+            ) : (
+              <>
+                Capturar del Codex
+              </>
+            )}
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-200 font-medium"
@@ -266,14 +318,27 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
         </div>
       </div>
 
+      {/* Empty State */}
+      {cards.length === 0 && (
+        <div className="text-center text-gray-500 py-12 bg-gray-50 dark:bg-gray-800/30 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <FiBox className="inline-block w-12 h-12 text-gray-400 mb-4" />
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+            No se han registrado hallazgos capturados para este proyecto
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Usa el botón "📊 Capturar del Codex" para extraer datos automáticamente
+          </p>
+        </div>
+      )}
+
       {topics.map(topic => {
         const groupCards = groupedByTopic[topic];
         const isExpanded = expandedTopics.includes(topic);
-        
-        const displayCardsData = groupCards.slice(0,3).map(c => {
+
+        const displayCardsData = groupCards.slice(0, 3).map(c => {
           // Create a more informative title
           const title = c.entity || c.discovery || 'Hallazgo';
-          
+
           // Create a more informative description
           let description = c.description || '';
           if (!description && c.amount) {
@@ -285,27 +350,27 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
           if (!description) {
             description = 'Ver detalles...';
           }
-          
+
           return {
             title,
             description,
-            date: new Date(c.created_at).toLocaleDateString('es-ES', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
+            date: new Date(c.created_at).toLocaleDateString('es-ES', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
             }),
           };
         });
 
         return (
           <div key={topic} className="p-5 border-2 border-blue-100 dark:border-blue-900/30 rounded-xl bg-gradient-to-br from-blue-50/30 to-white dark:from-blue-950/10 dark:to-gray-800/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-            <div 
+            <div
               className="flex justify-between items-center cursor-pointer group"
               onClick={() => toggleTopic(topic)}
             >
               <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
-                {topic} 
+                {topic}
                 <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 rounded-full">
                   {groupCards.length}
                 </span>
@@ -321,27 +386,27 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
                   const hasLocation = card.city || card.department;
                   const hasDuration = card.duration_days !== null;
                   const hasQuantifiable = (card as any).counter || (card as any).percentage || (card as any).quantity;
-                  
+
                   return (
-                    <Card 
-                      key={card.id} 
+                    <Card
+                      key={card.id}
                       className="relative group h-full bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-800 border-2 border-blue-100 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 transition-all duration-300 backdrop-blur-sm overflow-hidden flex flex-col"
                     >
                       {/* Gradient overlay effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                      
+
                       {/* Action buttons */}
                       <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openEditModal(card); }} 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditModal(card); }}
                           className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                           title="Editar"
                         >
                           <FiEdit className="w-3.5 h-3.5" />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} 
-                          disabled={deletingCard === card.id} 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }}
+                          disabled={deletingCard === card.id}
                           className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                           title="Eliminar"
                         >
@@ -391,14 +456,14 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
                           {card.entity || card.discovery || 'Hallazgo'}
                         </h3>
                         <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
-                          {new Date(card.created_at).toLocaleDateString('es-ES', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
+                          {new Date(card.created_at).toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
                           })}
                         </p>
                       </CardHeader>
-                      
+
                       <CardContent className="space-y-3 text-sm pb-5 flex-grow">
                         {/* Financial info */}
                         {card.amount && (
@@ -465,24 +530,24 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
           </div>
         );
       })}
-      
+
       {editingCard && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md mx-4 p-6 space-y-4">
             <h3 className="text-lg font-semibold">Editar Hallazgo</h3>
-             <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-               {(['entity','city','department','description','discovery'] as const).map(field => (
-                 <div key={field}>
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+              {(['entity', 'city', 'department', 'description', 'discovery'] as const).map(field => (
+                <div key={field}>
                   <label className="text-xs font-medium">{editFieldLabels[field] || field}</label>
-                   <input
-                      type="text"
-                      value={(editData as any)[field] || ''}
-                      onChange={e => setEditData(prev => ({ ...prev, [field]: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 border rounded-md"
-                    />
-                 </div>
-               ))}
-             </div>
+                  <input
+                    type="text"
+                    value={(editData as any)[field] || ''}
+                    onChange={e => setEditData(prev => ({ ...prev, [field]: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 border rounded-md"
+                  />
+                </div>
+              ))}
+            </div>
             <div className="flex justify-end gap-3 pt-2">
               <button onClick={() => setEditingCard(null)}>Cancelar</button>
               <button onClick={handleSaveEdit} disabled={savingEdit}>
@@ -713,6 +778,15 @@ export default function CapturedCards({ projectId, reloadKey }: Props) {
           </div>
         </div>
       )}
+
+      {/* Codex Selector Modal */}
+      <CodexSelectorModal
+        isOpen={showCodexSelector}
+        onClose={() => setShowCodexSelector(false)}
+        onSelect={handleCaptureFromCodex}
+        projectId={projectId}
+        multiSelect={true}
+      />
     </div>
   );
 } 

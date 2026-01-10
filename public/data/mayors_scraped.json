@@ -1,0 +1,62 @@
+[
+  {
+    "Departamento": "Guatemala",
+    "Municipio": "Guatemala",
+    "Alcalde": "Ricardo Quiñónez",
+    "Partido": "VAMOS"
+  },
+  {
+    "Departamento": "Guatemala",
+    "Municipio": "Santa Catarina Pinula",
+    "Alcalde": "Juan Carlos Schippers",
+    "Partido": "UNE"
+  },
+  {
+    "Departamento": "Guatemala",
+    "Municipio": "Mixco",
+    "Alcalde": "Neto Bran",
+    "Partido": "CABAL"
+  },
+  {
+    "Departamento": "Guatemala",
+    "Municipio": "Villa Nueva",
+    "Alcalde": "Edwin Escobar",
+    "Partido": "VAMOS"
+  },
+  {
+    "Departamento": "Guatemala",
+    "Municipio": "San Miguel Petapa",
+    "Alcalde": "Francisco Revolorio",
+    "Partido": "TODOS"
+  },
+  {
+    "Departamento": "Alta Verapaz",
+    "Municipio": "Cobán",
+    "Alcalde": "Roberto Arenales",
+    "Partido": "UNE"
+  },
+  {
+    "Departamento": "Alta Verapaz",
+    "Municipio": "San Pedro Carchá",
+    "Alcalde": "Carlos Pop",
+    "Partido": "WINAQ"
+  },
+  {
+    "Departamento": "Quetzaltenango",
+    "Municipio": "Quetzaltenango",
+    "Alcalde": "Juan Fernando López",
+    "Partido": "SEMILLA"
+  },
+  {
+    "Departamento": "Quetzaltenango",
+    "Municipio": "Salcajá",
+    "Alcalde": "María López",
+    "Partido": "UNE"
+  },
+  {
+    "Departamento": "Escuintla",
+    "Municipio": "Escuintla",
+    "Alcalde": "Oscar Coyoy",
+    "Partido": "VALOR"
+  }
+]

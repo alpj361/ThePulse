@@ -149,16 +149,16 @@ export const Trends = () => {
         console.log('🔄 Intentando cargar las últimas tendencias...');
         const latestData = await getLatestTrends();
         console.log('📊 Datos de tendencias recibidos:', latestData);
-        
+
         if (latestData) {
           console.log('✅ Actualizando con datos del backend...');
-          
+
           // Actualizar solo si tenemos datos válidos
           if (latestData.wordCloudData && latestData.wordCloudData.length > 0) {
-          setWordCloudData(latestData.wordCloudData);
+            setWordCloudData(latestData.wordCloudData);
           }
           if (latestData.topKeywords && latestData.topKeywords.length > 0) {
-          setTopKeywords(latestData.topKeywords);
+            setTopKeywords(latestData.topKeywords);
           }
           if (latestData.categoryData && latestData.categoryData.length > 0) {
             // Transformar formato del backend (name, value) al formato esperado por el frontend (category, count)
@@ -190,7 +190,7 @@ export const Trends = () => {
           if (latestData.controversyChartData) {
             setControversyChartData(latestData.controversyChartData);
           }
-          
+
           setLastUpdated(new Date(latestData.timestamp));
         } else {
           console.log('⚠️  No hay datos previos disponibles');
@@ -233,7 +233,7 @@ export const Trends = () => {
     console.log('🚀 Botón Buscar Tendencias clickeado');
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Obtener token de autenticación
       const authToken = session?.access_token;
@@ -242,16 +242,16 @@ export const Trends = () => {
         setError('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.');
         return;
       }
-      
+
       console.log('🔑 Token de autenticación obtenido');
       console.log('📡 Llamando a fetchAndStoreTrends() con token...');
       const data = await fetchAndStoreTrends(authToken);
       console.log('✅ Datos recibidos de fetchAndStoreTrends:', data);
-        
+
       // Validar que tenemos datos básicos mínimos
       if (data && (data.wordCloudData || data.topKeywords || data.categoryData)) {
         console.log('📊 Actualizando estado con datos básicos...');
-        
+
         // Actualizar con datos básicos inmediatamente
         if (data.wordCloudData && data.wordCloudData.length > 0) {
           setWordCloudData(data.wordCloudData);
@@ -267,7 +267,7 @@ export const Trends = () => {
           }));
           setCategoryData(transformedCategoryData);
         }
-        
+
         // Actualizar about y statistics si están disponibles
         if (data.about && Array.isArray(data.about)) {
           setAboutInfo(data.about);
@@ -291,37 +291,37 @@ export const Trends = () => {
         if (data.controversyChartData) {
           setControversyChartData(data.controversyChartData);
         }
-        
+
         setLastUpdated(new Date(data.timestamp || new Date()));
         console.log('✅ Estado actualizado exitosamente');
-        
+
         // Iniciar polling para datos completos si tenemos timestamp
         if (data.timestamp && data.processing_status === 'basic_completed') {
           console.log('🔄 Iniciando polling para datos completos...');
           setLastProcessingTimestamp(data.timestamp);
           pollForCompleteData(data.timestamp);
         }
-        
+
       } else {
         console.warn('⚠️  Datos recibidos están vacíos o tienen formato inválido');
         setError('No se pudieron obtener datos de tendencias. Intentando con datos locales...');
-        
+
         // Mantener los datos actuales en lugar de mostrar error
         console.log('📦 Manteniendo datos actuales en pantalla');
-        }
-      
-      } catch (err) {
+      }
+
+    } catch (err) {
       console.error('❌ Error en fetchTrendingData:', err);
       setError('Error al obtener datos de tendencias. Mostrando datos previos.');
-      
+
       // No limpiar los datos existentes, solo mostrar el error brevemente
       setTimeout(() => {
         setError(null);
       }, 3000);
-      } finally {
+    } finally {
       console.log('🏁 Finalizando carga...');
-        setIsLoading(false);
-      }
+      setIsLoading(false);
+    }
   };
 
   const handleWordClick = (word: string, value: number) => {
@@ -332,24 +332,24 @@ export const Trends = () => {
   const pollForCompleteData = async (timestamp: string) => {
     console.log('🔄 Iniciando polling para datos completos...');
     setIsPollingForDetails(true);
-    
+
     const maxAttempts = 15; // 15 intentos = ~150 segundos máximo
     let attempt = 0;
-    
+
     const poll = async () => {
       attempt++;
       console.log(`📡 Polling intento ${attempt}/${maxAttempts} para timestamp: ${timestamp}`);
-      
+
       try {
         const response = await fetch(`${import.meta.env.VITE_EXTRACTORW_API_URL}/processingStatus/${encodeURIComponent(timestamp)}`);
-        
+
         if (response.ok) {
           const statusData = await response.json();
           console.log('📊 Estado del procesamiento:', statusData.status);
-          
+
           if (statusData.status === 'complete' && statusData.has_about && statusData.has_statistics) {
             console.log('✅ ¡Datos completos listos!');
-            
+
             // Actualizar con datos completos - forzar re-render inmediato
             flushSync(() => {
               if (statusData.data.about && Array.isArray(statusData.data.about)) {
@@ -386,26 +386,26 @@ export const Trends = () => {
               if (statusData.data.controversyChartData) {
                 setControversyChartData(statusData.data.controversyChartData);
               }
-              
+
               setIsPollingForDetails(false);
             });
-            
+
             // Ocultar el indicador de actualización después de un momento
             setTimeout(() => setShowCategoryUpdate(false), 3500);
-            
+
             // Mostrar notificación de éxito
             console.log('🎉 Análisis IA completado - secciones expandidas automáticamente');
-            
+
             return;
           }
-          
+
           if (statusData.status === 'error') {
             console.error('❌ Error en procesamiento detectado');
             setIsPollingForDetails(false);
             return;
           }
         }
-        
+
         // Continuar polling si no está completo
         if (attempt < maxAttempts) {
           setTimeout(poll, 8000); // Esperar 8 segundos antes del siguiente intento
@@ -413,7 +413,7 @@ export const Trends = () => {
           console.log('⏰ Polling timeout - datos completos no disponibles');
           setIsPollingForDetails(false);
         }
-        
+
       } catch (error) {
         console.error(`❌ Error en polling intento ${attempt}:`, error);
         if (attempt < maxAttempts) {
@@ -423,7 +423,7 @@ export const Trends = () => {
         }
       }
     };
-    
+
     // Esperar 10 segundos antes del primer poll para dar tiempo al procesamiento
     setTimeout(poll, 10000);
   };
@@ -501,7 +501,7 @@ export const Trends = () => {
 
   // Pantalla vacía cuando no hay datos cargados
   const hasData = wordCloudData.length > 0 || topKeywords.length > 0 || categoryData.length > 0;
-  
+
   if (!hasData && !isLoading) {
     return (
       <Box sx={{ '& > *': { mb: 4 }, animation: 'fadeIn 0.4s ease-out' }}>
@@ -523,9 +523,9 @@ export const Trends = () => {
             overflow: 'hidden'
           }}
         >
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', md: 'row' }, 
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', md: 'center' },
             gap: 2,
@@ -533,15 +533,15 @@ export const Trends = () => {
             zIndex: 1
           }}>
             <Box>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
                 mb: 0.5,
                 pb: 1,
                 position: 'relative'
               }}>
-                <Box 
-                  sx={{ 
+                <Box
+                  sx={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -560,9 +560,9 @@ export const Trends = () => {
                 >
                   <LayoutDashboard size={24} color={theme.palette.primary.main} />
                 </Box>
-                <Typography 
-                  variant="h5" 
-                  fontWeight="bold" 
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
                   color="text.primary"
                   sx={{
                     background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
@@ -574,20 +574,20 @@ export const Trends = () => {
                   {t.summary}
                 </Typography>
               </Box>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
                 color: 'text.secondary',
                 ml: 1
               }}>
                 <LocationOnIcon sx={{ fontSize: '1.1rem', mr: 0.5, color: alpha(theme.palette.primary.main, 0.7) }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
+                <Typography
+                  variant="body2"
+                  sx={{
                     fontWeight: 'medium',
                     borderRadius: 10,
                     bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    px: 1.5, 
+                    px: 1.5,
                     py: 0.5
                   }}
                 >
@@ -595,15 +595,15 @@ export const Trends = () => {
                 </Typography>
               </Box>
             </Box>
-            
+
             <Button
               variant="contained"
               color="primary"
               startIcon={<SearchIcon />}
               onClick={fetchTrendingData}
               disabled={isLoading}
-              sx={{ 
-                px: 3, 
+              sx={{
+                px: 3,
                 py: 1.2,
                 boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
                 borderRadius: 3,
@@ -643,7 +643,7 @@ export const Trends = () => {
             Bienvenido al Dashboard de Tendencias
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-            Haz clic en "Buscar Tendencias" para obtener las últimas tendencias de redes sociales 
+            Haz clic en "Buscar Tendencias" para obtener las últimas tendencias de redes sociales
             con análisis detallado usando inteligencia artificial.
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -662,7 +662,7 @@ export const Trends = () => {
     const latest15About = aboutInfo.slice(0, 15);
     const latest15Keywords = topKeywords.slice(0, 15);
     const latest15WordCloud = wordCloudData.slice(0, 15);
-    
+
     if (selectedTab === 'all') {
       // Mostrar solo los últimos 15 trends
       return {
@@ -675,25 +675,25 @@ export const Trends = () => {
 
     // Filtrar por categoría según el tab (dentro de los últimos 15)
     const isDeportesFilter = selectedTab === 'sports';
-    
+
     // Filtrar about por categoría (de los últimos 15)
     const filteredAbout = latest15About.filter((item: AboutInfo) =>
       isDeportesFilter ? isDeportivo(item) : !isDeportivo(item)
     );
 
     // Limitar explícitamente: 5 deportes o 10 generales
-    const limitedAbout = isDeportesFilter 
+    const limitedAbout = isDeportesFilter
       ? filteredAbout.slice(0, 5)  // Máximo 5 deportes
       : filteredAbout.slice(0, 10); // Máximo 10 generales
-    
+
     // Filtrar keywords que estén en about filtrado
     const aboutKeywords = new Set(limitedAbout.map(a => a.trend?.toLowerCase()));
-    const filteredKeywords = latest15Keywords.filter(kw => 
+    const filteredKeywords = latest15Keywords.filter(kw =>
       aboutKeywords.has(kw.keyword?.toLowerCase())
     );
 
     // Filtrar wordCloud
-    const filteredWordCloud = latest15WordCloud.filter(wc => 
+    const filteredWordCloud = latest15WordCloud.filter(wc =>
       aboutKeywords.has(wc.text?.toLowerCase())
     );
 
@@ -728,9 +728,9 @@ export const Trends = () => {
           overflow: 'hidden'
         }}
       >
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', md: 'row' }, 
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
           justifyContent: 'space-between',
           alignItems: { xs: 'flex-start', md: 'center' },
           gap: 2,
@@ -738,15 +738,15 @@ export const Trends = () => {
           zIndex: 1
         }}>
           <Box>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
               mb: 0.5,
               pb: 1,
               position: 'relative'
             }}>
-              <Box 
-                sx={{ 
+              <Box
+                sx={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -765,9 +765,9 @@ export const Trends = () => {
               >
                 <LayoutDashboard size={24} color={theme.palette.primary.main} />
               </Box>
-              <Typography 
-                variant="h5" 
-                fontWeight="bold" 
+              <Typography
+                variant="h5"
+                fontWeight="bold"
                 color="text.primary"
                 sx={{
                   background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
@@ -779,20 +779,20 @@ export const Trends = () => {
                 {t.summary}
               </Typography>
             </Box>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
               color: 'text.secondary',
               ml: 1
             }}>
               <LocationOnIcon sx={{ fontSize: '1.1rem', mr: 0.5, color: alpha(theme.palette.primary.main, 0.7) }} />
-              <Typography 
-                variant="body2" 
-                sx={{ 
+              <Typography
+                variant="body2"
+                sx={{
                   fontWeight: 'medium',
                   borderRadius: 10,
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  px: 1.5, 
+                  px: 1.5,
                   py: 0.5
                 }}
               >
@@ -800,111 +800,75 @@ export const Trends = () => {
               </Typography>
             </Box>
           </Box>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', md: 'row' }, 
-            alignItems: { xs: 'flex-start', md: 'center' },
-            gap: 2
-          }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<SearchIcon />}
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('Evento de click en botón detectado');
-                fetchTrendingData();
-              }}
-              disabled={isLoading}
-              sx={{ 
-                px: 3, 
-                py: 1.2,
-                boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
-                borderRadius: 3,
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${alpha(theme.palette.primary.main, 0.85)})`,
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                },
-                '&:active': {
-                  transform: 'translateY(0)',
-                },
-                transition: 'all 0.3s'
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: alpha(theme.palette.secondary.main, 0.08),
+              py: 0.8,
+              px: 2,
+              borderRadius: 3
+            }}
+          >
+            <UpdateIcon sx={{
+              fontSize: '1.1rem',
+              mr: 1,
+              color: theme.palette.secondary.main,
+              animation: isLoading ? 'spin 2s linear infinite' : 'none',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' }
+              }
+            }} />
+            <Typography
+              variant="body2"
+              sx={{
+                color: alpha(theme.palette.text.secondary, 0.9),
+                fontWeight: 'medium',
+                fontSize: '0.85rem'
               }}
             >
-              {isLoading ? t.searching : t.searchTrends}
-            </Button>
-            
-            <Box 
-              sx={{ 
-                display: 'flex', 
+              {t.lastUpdate}: {new Intl.DateTimeFormat('es-ES', {
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit'
+              }).format(lastUpdated)}
+            </Typography>
+          </Box>
+
+          {/* Indicador de procesamiento de detalles */}
+          {isPollingForDetails && (
+            <Box
+              sx={{
+                display: 'flex',
                 alignItems: 'center',
-                bgcolor: alpha(theme.palette.secondary.main, 0.08),
+                bgcolor: alpha(theme.palette.info.main, 0.1),
                 py: 0.8,
                 px: 2,
-                borderRadius: 3
+                borderRadius: 3,
+                animation: 'pulse 2s infinite'
               }}
             >
-              <UpdateIcon sx={{ 
-                fontSize: '1.1rem', 
-                mr: 1, 
-                color: theme.palette.secondary.main,
-                animation: isLoading ? 'spin 2s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
-              }} />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: alpha(theme.palette.text.secondary, 0.9),
+              <CircularProgress size={16} sx={{ mr: 1 }} />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.info.main,
                   fontWeight: 'medium',
-                  fontSize: '0.85rem'
+                  fontSize: '0.8rem'
                 }}
               >
-                {t.lastUpdate}: {new Intl.DateTimeFormat('es-ES', {
-                  day: 'numeric',
-                  month: 'long',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }).format(lastUpdated)}
+                Cargando detalles...
               </Typography>
             </Box>
-            
-            {/* Indicador de procesamiento de detalles */}
-            {isPollingForDetails && (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  bgcolor: alpha(theme.palette.info.main, 0.1),
-                  py: 0.8,
-                  px: 2,
-                  borderRadius: 3,
-                  animation: 'pulse 2s infinite'
-                }}
-              >
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: theme.palette.info.main,
-                    fontWeight: 'medium',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  Cargando detalles...
-                </Typography>
-              </Box>
-            )}
-          </Box>
+          )}
         </Box>
       </Paper>
 
       {/* Word Cloud Section */}
-      <Paper
+      < Paper
         ref={containerRef}
         elevation={0}
         sx={{
@@ -926,27 +890,27 @@ export const Trends = () => {
         }}
       >
         {/* Decorative top border with gradient */}
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            height: 5, 
-            background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)' 
+        < Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 5,
+            background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)'
           }}
         />
-        
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+
+        < Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 3,
           flexWrap: 'wrap',
           gap: 1
         }}>
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             alignItems: 'center',
             pb: 1,
             borderBottom: '2px solid',
@@ -954,41 +918,43 @@ export const Trends = () => {
             px: 1
           }}>
             <TrendingUp size={20} color={theme.palette.primary.main} style={{ marginRight: 8 }} />
-            <Typography 
-              variant="h6" 
-              color="text.primary" 
+            <Typography
+              variant="h6"
+              color="text.primary"
               fontWeight="medium"
               fontFamily="Helvetica Neue, Helvetica, Arial, sans-serif"
             >
               {t.trendingKeywords}
             </Typography>
           </Box>
-          
-          {selectedKeyword && (
-            <Chip
-              label={`${t.selected}: ${selectedKeyword}`}
-              color="primary"
-              sx={{ 
-                borderRadius: 6,
-                fontWeight: 'medium',
-                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.light, 0.9)} 100%)`,
-                color: '#fff',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                '&:hover': {
-                  transform: 'scale(1.05)'
-                },
-                transition: 'transform 0.2s ease',
-                border: 'none',
-                py: 0.5,
-                '& .MuiChip-label': { 
-                  fontWeight: 'medium' 
-                }
-              }}
-            />
-          )}
-        </Box>
-        
-        <Box sx={{ 
+
+          {
+            selectedKeyword && (
+              <Chip
+                label={`${t.selected}: ${selectedKeyword}`}
+                color="primary"
+                sx={{
+                  borderRadius: 6,
+                  fontWeight: 'medium',
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.light, 0.9)} 100%)`,
+                  color: '#fff',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                  '&:hover': {
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'transform 0.2s ease',
+                  border: 'none',
+                  py: 0.5,
+                  '& .MuiChip-label': {
+                    fontWeight: 'medium'
+                  }
+                }}
+              />
+            )
+          }
+        </Box >
+
+        <Box sx={{
           width: '100%',
           height: '450px',
           minHeight: '400px',
@@ -1016,17 +982,17 @@ export const Trends = () => {
               <CircularProgress size={24} color="secondary" />
             </Box>
           )}
-          <WordCloud 
+          <WordCloud
             data={filteredData.wordCloud}
             onWordClick={(word) => {
               console.log('Clicked word:', word);
             }}
           />
         </Box>
-      </Paper>
+      </Paper >
 
       {/* Categories and Keywords Section */}
-      <Grid container spacing={3}>
+      < Grid container spacing={3} >
         <Grid item xs={12} lg={8}>
           <Paper
             elevation={0}
@@ -1075,9 +1041,9 @@ export const Trends = () => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1.5 }}>
-              <Box 
-                sx={{ 
-                  p: 1.5, 
+              <Box
+                sx={{
+                  p: 1.5,
                   borderRadius: '12px',
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                   backdropFilter: 'blur(8px)',
@@ -1089,17 +1055,17 @@ export const Trends = () => {
                   }
                 }}
               >
-                <BarChartIcon 
-                  sx={{ 
-                    fontSize: 20, 
+                <BarChartIcon
+                  sx={{
+                    fontSize: 20,
                     color: theme.palette.primary.main,
                     filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3))'
-                  }} 
+                  }}
                 />
               </Box>
-              <Typography 
-                variant="h6" 
-                color="text.primary" 
+              <Typography
+                variant="h6"
+                color="text.primary"
                 fontWeight="600"
                 letterSpacing="-0.025em"
                 sx={{
@@ -1136,24 +1102,24 @@ export const Trends = () => {
                 <BarChart data={filteredData.categories} title={t.categoryDistribution} />
               </Box>
             ) : (
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 minHeight: 180,
                 flexDirection: 'column',
                 gap: 2
               }}>
-                <CircularProgress 
-                  size={32} 
-                  sx={{ 
+                <CircularProgress
+                  size={32}
+                  sx={{
                     color: theme.palette.primary.main,
                     filter: 'drop-shadow(0 2px 8px rgba(59, 130, 246, 0.3))'
-                  }} 
+                  }}
                 />
-                <Typography 
+                <Typography
                   color="text.secondary"
-                  sx={{ 
+                  sx={{
                     fontWeight: '500',
                     letterSpacing: '-0.01em'
                   }}
@@ -1164,18 +1130,18 @@ export const Trends = () => {
             )}
           </Paper>
         </Grid>
-        
+
         <Grid item xs={12} lg={4}>
-          <KeywordListCard 
-            keywords={filteredData.keywords} 
-            title={t.mainTopics} 
+          <KeywordListCard
+            keywords={filteredData.keywords}
+            title={t.mainTopics}
           />
         </Grid>
-      </Grid>
+      </Grid >
 
       {/* About Section - Desplegable */}
-      <Accordion 
-        expanded={aboutExpanded} 
+      < Accordion
+        expanded={aboutExpanded}
         onChange={() => setAboutExpanded(!aboutExpanded)}
         elevation={0}
         sx={{
@@ -1240,11 +1206,11 @@ export const Trends = () => {
             }
           }}
         >
-          <Box 
-            component="span" 
-            sx={{ 
-              display: 'inline-flex', 
-              p: 1.5, 
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              p: 1.5,
               borderRadius: '12px',
               bgcolor: alpha(theme.palette.success.main, 0.1),
               backdropFilter: 'blur(8px)',
@@ -1256,17 +1222,17 @@ export const Trends = () => {
               }
             }}
           >
-            <InfoOutlinedIcon 
-              sx={{ 
-                fontSize: 18, 
+            <InfoOutlinedIcon
+              sx={{
+                fontSize: 18,
                 color: theme.palette.success.main,
                 filter: 'drop-shadow(0 2px 4px rgba(76, 175, 80, 0.3))'
-              }} 
+              }}
             />
           </Box>
-          <Typography 
-            variant="h6" 
-            color="text.primary" 
+          <Typography
+            variant="h6"
+            color="text.primary"
             fontWeight="600"
             letterSpacing="-0.025em"
             sx={{
@@ -1280,31 +1246,31 @@ export const Trends = () => {
             Información Detallada de Tendencias
           </Typography>
           {aboutInfo && aboutInfo.length > 0 && (
-            <Chip 
-              label={`${Math.min(aboutInfo.length, 15)} tendencias`} 
-              size="small" 
-              sx={{ 
+            <Chip
+              label={`${Math.min(aboutInfo.length, 15)} tendencias`}
+              size="small"
+              sx={{
                 bgcolor: alpha(theme.palette.success.main, 0.08),
                 color: theme.palette.success.main,
                 fontWeight: '500',
                 border: `1px solid ${alpha(theme.palette.success.main, 0.15)}`,
                 backdropFilter: 'blur(4px)'
-              }} 
+              }}
             />
           )}
         </AccordionSummary>
         <AccordionDetails sx={{ p: 3, pt: 0 }}>
           {/* NUEVO: Tabs para filtrar deportes/generales */}
-          <Box sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider', 
+          <Box sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
             mb: 3,
             bgcolor: alpha(theme.palette.background.paper, 0.5),
             borderRadius: 2,
             overflow: 'hidden'
           }}>
-            <Tabs 
-              value={selectedTab} 
+            <Tabs
+              value={selectedTab}
               onChange={(e, newValue) => setSelectedTab(newValue)}
               centered
               sx={{
@@ -1316,19 +1282,19 @@ export const Trends = () => {
                 }
               }}
             >
-              <Tab 
+              <Tab
                 label={t.all}
                 value="all"
                 icon={<TrendingUp size={18} />}
                 iconPosition="start"
               />
-              <Tab 
+              <Tab
                 label={`${t.general} (${aboutInfo.slice(0, 15).filter(item => !isDeportivo(item)).slice(0, 10).length})`}
                 value="general"
                 icon={<DashboardIcon sx={{ fontSize: 18 }} />}
                 iconPosition="start"
               />
-              <Tab 
+              <Tab
                 label={`${t.sports} (${aboutInfo.slice(0, 15).filter(item => isDeportivo(item)).slice(0, 5).length})`}
                 value="sports"
                 icon={<SportsSoccerIcon sx={{ fontSize: 18 }} />}
@@ -1343,7 +1309,7 @@ export const Trends = () => {
             const deportivosCount = latest15.filter(item => isDeportivo(item)).length;
             const generalesCount = latest15.length - deportivosCount;
             const porcentaje = Math.round((deportivosCount / latest15.length) * 100);
-            
+
             return (
               <Paper
                 elevation={0}
@@ -1360,13 +1326,13 @@ export const Trends = () => {
                   📊 {t.distribution}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <Chip 
+                  <Chip
                     label={`${t.sports}: ${deportivosCount} (${porcentaje}%)`}
                     size="small"
                     color="primary"
                     icon={<SportsSoccerIcon />}
                   />
-                  <Chip 
+                  <Chip
                     label={`${t.general}: ${generalesCount}`}
                     size="small"
                     color="secondary"
@@ -1386,9 +1352,9 @@ export const Trends = () => {
               {selectedTab !== 'all' && (
                 <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="caption" color="text.secondary">
-                    Mostrando: 
+                    Mostrando:
                   </Typography>
-                  <Chip 
+                  <Chip
                     label={selectedTab === 'sports' ? `${t.sports} (${filteredData.about.length})` : `${t.general} (${filteredData.about.length})`}
                     size="small"
                     color={selectedTab === 'sports' ? 'primary' : 'secondary'}
@@ -1396,28 +1362,28 @@ export const Trends = () => {
                   />
                 </Box>
               )}
-              
+
               <Grid container spacing={3}>
-              {filteredData.about.map((about, index) => {
-                const keyword = filteredData.keywords && filteredData.keywords[index] 
-                  ? filteredData.keywords[index].keyword 
-                  : `Tendencia ${index + 1}`;
-                return (
-                  <Grid item xs={12} md={6} lg={4} key={index}>
-                    <AboutCard 
-                      keyword={keyword}
-                      aboutInfo={about}
-                      index={index}
-                    />
-                  </Grid>
-                );
-              })}
+                {filteredData.about.map((about, index) => {
+                  const keyword = filteredData.keywords && filteredData.keywords[index]
+                    ? filteredData.keywords[index].keyword
+                    : `Tendencia ${index + 1}`;
+                  return (
+                    <Grid item xs={12} md={6} lg={4} key={index}>
+                      <AboutCard
+                        keyword={keyword}
+                        aboutInfo={about}
+                        index={index}
+                      />
+                    </Grid>
+                  );
+                })}
               </Grid>
             </>
           ) : (
-            <Box 
-              sx={{ 
-                textAlign: 'center', 
+            <Box
+              sx={{
+                textAlign: 'center',
                 py: 6,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1435,11 +1401,11 @@ export const Trends = () => {
             </Box>
           )}
         </AccordionDetails>
-      </Accordion>
+      </Accordion >
 
       {/* Statistics Section - Desplegable */}
-      <Accordion 
-        expanded={statisticsExpanded} 
+      < Accordion
+        expanded={statisticsExpanded}
         onChange={() => setStatisticsExpanded(!statisticsExpanded)}
         elevation={0}
         sx={{
@@ -1504,11 +1470,11 @@ export const Trends = () => {
             }
           }}
         >
-          <Box 
-            component="span" 
-            sx={{ 
-              display: 'inline-flex', 
-              p: 1.5, 
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              p: 1.5,
               borderRadius: '12px',
               bgcolor: alpha(theme.palette.warning.main, 0.1),
               backdropFilter: 'blur(8px)',
@@ -1520,17 +1486,17 @@ export const Trends = () => {
               }
             }}
           >
-            <BarChartIcon 
-              sx={{ 
-                fontSize: 18, 
+            <BarChartIcon
+              sx={{
+                fontSize: 18,
                 color: theme.palette.warning.main,
                 filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.3))'
-              }} 
+              }}
             />
           </Box>
-          <Typography 
-            variant="h6" 
-            color="text.primary" 
+          <Typography
+            variant="h6"
+            color="text.primary"
             fontWeight="600"
             letterSpacing="-0.025em"
             sx={{
@@ -1561,9 +1527,9 @@ export const Trends = () => {
           {statistics ? (
             <StatisticsCard statistics={statistics} />
           ) : (
-            <Box 
-              sx={{ 
-                textAlign: 'center', 
+            <Box
+              sx={{
+                textAlign: 'center',
                 py: 6,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1599,11 +1565,11 @@ export const Trends = () => {
             </Box>
           )}
         </AccordionDetails>
-      </Accordion>
+      </Accordion >
 
       {/* Trending Tweets Section - Desplegable */}
-      <Accordion 
-        expanded={tweetsExpanded} 
+      < Accordion
+        expanded={tweetsExpanded}
         onChange={() => setTweetsExpanded(!tweetsExpanded)}
         elevation={0}
         sx={{
@@ -1632,40 +1598,40 @@ export const Trends = () => {
             }
           }}
         >
-          <Box 
-            component="span" 
-            sx={{ 
-              display: 'inline-flex', 
-              p: 1, 
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              p: 1,
               borderRadius: '50%',
               bgcolor: alpha(theme.palette.secondary.main, 0.1)
             }}
           >
             <TwitterIcon sx={{ fontSize: 16, color: theme.palette.secondary.main }} />
           </Box>
-          <Typography 
-            variant="h6" 
-            color="text.primary" 
+          <Typography
+            variant="h6"
+            color="text.primary"
             fontWeight="medium"
             fontFamily="Helvetica Neue, Helvetica, Arial, sans-serif"
           >
             Lo que pasa en las redes
           </Typography>
-          <Chip 
-            label="Tweets en tiempo real" 
-            size="small" 
-            sx={{ 
+          <Chip
+            label="Tweets en tiempo real"
+            size="small"
+            sx={{
               ml: 1,
               bgcolor: alpha(theme.palette.secondary.main, 0.1),
               color: theme.palette.secondary.main
-            }} 
+            }}
           />
         </AccordionSummary>
         <AccordionDetails sx={{ p: 0 }}>
           {/* NUEVO: Tabs para filtrar deportes/generales en tweets */}
           <Box sx={{ px: 3, pt: 2, pb: 1 }}>
-            <Tabs 
-              value={selectedTab} 
+            <Tabs
+              value={selectedTab}
               onChange={(e, newValue) => setSelectedTab(newValue)}
               centered
               sx={{
@@ -1678,19 +1644,19 @@ export const Trends = () => {
                 }
               }}
             >
-              <Tab 
+              <Tab
                 label={t.all}
                 value="all"
                 icon={<TrendingUp size={16} />}
                 iconPosition="start"
               />
-              <Tab 
+              <Tab
                 label={t.general}
                 value="general"
                 icon={<DashboardIcon sx={{ fontSize: 16 }} />}
                 iconPosition="start"
               />
-              <Tab 
+              <Tab
                 label={t.sports}
                 value="sports"
                 icon={<SportsSoccerIcon sx={{ fontSize: 16 }} />}
@@ -1700,13 +1666,13 @@ export const Trends = () => {
           </Box>
           <TrendingTweetsSection />
         </AccordionDetails>
-      </Accordion>
+      </Accordion >
 
 
 
       {/* Error Dialog */}
-      <Dialog 
-        open={!!error} 
+      < Dialog
+        open={!!error}
         onClose={() => setError(null)}
         PaperProps={{
           sx: {
@@ -1721,14 +1687,14 @@ export const Trends = () => {
           timeout: 400
         }}
       >
-        <Box sx={{ 
-          bgcolor: 'error.main', 
-          py: 1.5, 
+        <Box sx={{
+          bgcolor: 'error.main',
+          py: 1.5,
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               position: 'absolute',
               width: 120,
               height: 120,
@@ -1736,10 +1702,10 @@ export const Trends = () => {
               bgcolor: alpha('#fff', 0.1),
               top: -40,
               right: -40
-            }} 
+            }}
           />
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               position: 'absolute',
               width: 80,
               height: 80,
@@ -1747,10 +1713,10 @@ export const Trends = () => {
               bgcolor: alpha('#fff', 0.1),
               bottom: -20,
               left: -20
-            }} 
+            }}
           />
-          <DialogTitle sx={{ 
-            color: '#fff', 
+          <DialogTitle sx={{
+            color: '#fff',
             textAlign: 'center',
             fontWeight: 'bold',
             py: 0,
@@ -1760,28 +1726,28 @@ export const Trends = () => {
           </DialogTitle>
         </Box>
         <DialogContent sx={{ mt: 2, mb: 1 }}>
-          <Typography 
-            color="text.secondary" 
-            textAlign="center" 
-            sx={{ 
+          <Typography
+            color="text.secondary"
+            textAlign="center"
+            sx={{
               fontSize: '0.95rem',
-              py: 1 
+              py: 1
             }}
           >
             {error}
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          justifyContent: 'center', 
-          pb: 3, 
+        <DialogActions sx={{
+          justifyContent: 'center',
+          pb: 3,
           pt: 1
         }}>
-          <Button 
+          <Button
             onClick={() => setError(null)}
-            variant="contained" 
+            variant="contained"
             color="primary"
-            sx={{ 
-              px: 4, 
+            sx={{
+              px: 4,
               py: 1,
               borderRadius: 3,
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
@@ -1796,12 +1762,12 @@ export const Trends = () => {
             {t.close}
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog >
 
       {/* Loading Backdrop */}
-      <Backdrop
-        sx={{ 
-          color: '#fff', 
+      < Backdrop
+        sx={{
+          color: '#fff',
           zIndex: (theme) => theme.zIndex.drawer + 1,
           backdropFilter: 'blur(5px)',
           backgroundColor: alpha(theme.palette.background.default, 0.7)
@@ -1831,8 +1797,8 @@ export const Trends = () => {
           }}
         >
           <Box sx={{ position: 'relative' }}>
-            <CircularProgress 
-              color="primary" 
+            <CircularProgress
+              color="primary"
               size={34}
               thickness={4}
               sx={{
@@ -1844,8 +1810,8 @@ export const Trends = () => {
               }}
             />
           </Box>
-          <Typography 
-            sx={{ 
+          <Typography
+            sx={{
               fontWeight: 'medium',
               fontSize: '0.95rem',
               background: `linear-gradient(45deg, ${theme.palette.text.primary}, ${alpha(theme.palette.text.primary, 0.7)})`,
@@ -1856,8 +1822,8 @@ export const Trends = () => {
             {t.loadingTrends}
           </Typography>
         </Paper>
-      </Backdrop>
-    </Box>
+      </Backdrop >
+    </Box >
   );
 };
 

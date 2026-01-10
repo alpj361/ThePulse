@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { FiMapPin, FiAlertTriangle, FiRefreshCw, FiChevronDown, FiGrid, FiLayers, FiMap } from 'react-icons/fi';
+import { FiMapPin, FiAlertTriangle, FiRefreshCw, FiChevronDown, FiGrid, FiLayers, FiMap, FiTarget, FiPlus } from 'react-icons/fi';
 import { getCoverages, Coverage, CoverageType, formatCoverageName, getFindingsForCoverage, CapturadoCard } from '../../services/coverages';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import CoveragesByTheme from '../ui/CoveragesByTheme';
 import CoberturaMap from './CoberturaMap';
+import CreateCoverageModal from './CreateCoverageModal';
 
 interface Props {
   projectId: string;
@@ -16,6 +17,8 @@ export default function ProjectCoverages({ projectId }: Props) {
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'standard' | 'by-theme' | 'map'>('by-theme');
+  const [isDetecting, setIsDetecting] = useState<boolean>(false);
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchCoverages() {
@@ -40,6 +43,54 @@ export default function ProjectCoverages({ projectId }: Props) {
   function handleRefresh() {
     setRefreshKey((prev) => prev + 1);
   }
+
+  async function handleAutoDetect() {
+    try {
+      setIsDetecting(true);
+      const { autoDetectCoverages } = await import('../../services/coverages');
+      const result = await autoDetectCoverages(projectId);
+
+      // Mostrar resumen
+      alert(`✅ Detección completada:\n- ${result.created_count} coberturas creadas\n- ${result.themes_count} temas procesados\n- ${result.cards_processed} hallazgos analizados`);
+
+      // Actualizar lista
+      handleRefresh();
+    } catch (err: any) {
+      console.error('Error auto-detecting coverages:', err);
+      alert(`❌ Error al detectar coberturas: ${err.message || 'Error desconocido'}`);
+    } finally {
+      setIsDetecting(false);
+    }
+  }
+
+  // Configurar función global para agregar coberturas desde el mapa
+  useEffect(() => {
+    (window as any).addCoverageFromMap = async (type: string, name: string, parentName?: string) => {
+      try {
+        const { createCoverage } = await import('../../services/coverages');
+
+        const coverageData = {
+          project_id: projectId,
+          coverage_type: type as CoverageType,
+          name: name,
+          parent_name: parentName || undefined,
+          relevance: 'medium' as const,
+          description: `Cobertura agregada desde el mapa`
+        };
+
+        await createCoverage(coverageData);
+        alert(`✅ Cobertura "${name}" agregada exitosamente`);
+        handleRefresh();
+      } catch (error: any) {
+        console.error('Error creating coverage from map:', error);
+        alert(`❌ Error al agregar cobertura: ${error.message || 'Error desconocido'}`);
+      }
+    };
+
+    return () => {
+      delete (window as any).addCoverageFromMap;
+    };
+  }, [projectId]);
 
   // Agrupar coberturas por tipo para una visualización ordenada
   const grouped: Record<CoverageType, Coverage[]> = coverages.reduce((acc, c) => {
@@ -71,47 +122,62 @@ export default function ProjectCoverages({ projectId }: Props) {
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           <button
             onClick={() => setActiveTab('by-theme')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'by-theme'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'by-theme'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
             <FiLayers className="w-4 h-4" />
             Por Tema
           </button>
           <button
             onClick={() => setActiveTab('standard')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'standard'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'standard'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
             <FiGrid className="w-4 h-4" />
             Vista Estándar
           </button>
           <button
             onClick={() => setActiveTab('map')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'map'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'map'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
             <FiMap className="w-4 h-4" />
             Mapa
           </button>
         </div>
-        
-        {(activeTab === 'standard' || activeTab === 'map') && (
+
+        <div className="flex items-center gap-2 ml-auto">
+          {(activeTab === 'standard' || activeTab === 'map') && (
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <FiRefreshCw className="w-4 h-4" /> Refrescar
+            </button>
+          )}
+
           <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-auto"
+            onClick={handleAutoDetect}
+            disabled={isDetecting}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiRefreshCw className="w-4 h-4" /> Refrescar
+            <FiTarget className="w-4 h-4" />
+            {isDetecting ? 'Detectando...' : 'Detectar desde Hallazgos'}
           </button>
-        )}
+
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
+          >
+            <FiPlus className="w-4 h-4" /> Crear Cobertura
+          </button>
+        </div>
       </div>
 
       {/* Contenido según la pestaña activa */}
@@ -119,7 +185,7 @@ export default function ProjectCoverages({ projectId }: Props) {
         <CoveragesByTheme projectId={projectId} />
       ) : activeTab === 'map' ? (
         <div className="space-y-4">
-          <CoberturaMap 
+          <CoberturaMap
             coverages={coverages}
             height="500px"
             onCoverageClick={(coverage) => {
@@ -127,15 +193,14 @@ export default function ProjectCoverages({ projectId }: Props) {
               // Aquí puedes agregar lógica adicional como mostrar detalles
             }}
           />
-          {coverages.length > 0 && (
-            <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              Total de coberturas: {coverages.length} | 
-              Con coordenadas: {coverages.filter(c => c.coordinates).length}
-            </div>
-          )}
+          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+            {coverages.length > 0
+              ? `Total de coberturas: ${coverages.length} | Con coordenadas: ${coverages.filter(c => c.coordinates).length}`
+              : 'No hay coberturas. Agrega coberturas manualmente o detecta desde hallazgos.'}
+          </div>
         </div>
       ) : (
-        <StandardCoveragesView 
+        <StandardCoveragesView
           coverages={coverages}
           loading={loading}
           error={error}
@@ -144,6 +209,14 @@ export default function ProjectCoverages({ projectId }: Props) {
           projectId={projectId}
         />
       )}
+
+      {/* Modal de Creación */}
+      <CreateCoverageModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        projectId={projectId}
+        onSuccess={handleRefresh}
+      />
     </div>
   );
 }
@@ -152,13 +225,13 @@ export default function ProjectCoverages({ projectId }: Props) {
 // Vista estándar de coberturas (componente separado para claridad)
 // ===================================================================
 
-function StandardCoveragesView({ 
-  coverages, 
-  loading, 
-  error, 
-  expandedCard, 
-  setExpandedCard, 
-  projectId 
+function StandardCoveragesView({
+  coverages,
+  loading,
+  error,
+  expandedCard,
+  setExpandedCard,
+  projectId
 }: {
   coverages: Coverage[];
   loading: boolean;
@@ -204,9 +277,9 @@ function StandardCoveragesView({
           <h3 className="text-lg font-semibold capitalize">{type}</h3>
           <div className="space-y-3">
             {list.map((coverage) => (
-              <CoverageCard 
-                key={coverage.id} 
-                coverage={coverage} 
+              <CoverageCard
+                key={coverage.id}
+                coverage={coverage}
                 projectId={projectId}
                 isExpanded={expandedCard === coverage.id}
                 onToggle={() => setExpandedCard(expandedCard === coverage.id ? null : coverage.id)}
@@ -223,13 +296,13 @@ function StandardCoveragesView({
 // CoverageCard component
 // ===================================================================
 
-function CoverageCard({ 
-  coverage, 
-  projectId, 
-  isExpanded, 
-  onToggle 
-}: { 
-  coverage: Coverage; 
+function CoverageCard({
+  coverage,
+  projectId,
+  isExpanded,
+  onToggle
+}: {
+  coverage: Coverage;
   projectId: string;
   isExpanded: boolean;
   onToggle: () => void;

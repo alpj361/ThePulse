@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { EXTRACTORW_API_URL } from './api';
-
-// Crear cliente de Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from './supabase';
 
 // ===================================================================
 // RECENT SCRAPES SERVICE

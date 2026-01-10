@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { 
-  FiPlus, 
-  FiDatabase, 
-  FiSearch, 
-  FiFilter, 
+import {
+  FiPlus,
+  FiDatabase,
+  FiSearch,
+  FiFilter,
   FiCalendar,
   FiBarChart,
   FiFileText,
@@ -42,13 +42,14 @@ import { DecisionChronology } from './DecisionChronology';
 import EnhancedProjectCard from './EnhancedProjectCard';
 import SimplifiedProjectDetail from './SimplifiedProjectDetail';
 import ProjectCarousel from './ProjectCarousel';
+import { DatasetsTab } from './DatasetsTab';
 
 import ProjectSuggestions from './ProjectSuggestions';
 import { cn } from '../../lib/utils';
-import { 
-  useProjects, 
+import {
+  useProjects,
   useRecentProjects,
-  useProjectsStats 
+  useProjectsStats
 } from '../../hooks';
 import { Project } from '../../types/projects';
 import { useTranslations } from '../../hooks/useTranslations';
@@ -128,7 +129,7 @@ const getAssetTypeIcon = (tipo: string, isDrive?: boolean) => {
   if (isDrive) {
     return <FiDatabase className="w-5 h-5 text-blue-600" />;
   }
-  
+
   switch (tipo?.toLowerCase()) {
     case 'documento':
     case 'document':
@@ -165,23 +166,23 @@ export function ProjectDashboard({
 }: ProjectDashboardProps) {
   const { t, getPriorityText, getStatusText, getVisibilityText } = useTranslations();
   const { user, session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'decisions' | 'timeline' | 'details' | 'captured' | 'coverages'>('projects');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'decisions' | 'timeline' | 'details' | 'captured' | 'coverages' | 'datasets'>('projects');
   const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'decisions' | 'timeline' | 'assets' | 'insights'>('decisions');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectForDetails, setProjectForDetails] = useState<Project | null>(null);
-  
+
   const [projectAssets, setProjectAssets] = useState<any[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [showAddAssetsModal, setShowAddAssetsModal] = useState(false);
-  
+
   const [projectDecisions, setProjectDecisions] = useState<any[]>([]);
-  
+
   // Estado para las tareas del proyecto
   const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editingData, setEditingData] = useState({
     title: '',
@@ -209,7 +210,7 @@ export function ProjectDashboard({
   const activeProjects = projects?.filter(p => p.status === 'active') || [];
   const completedProjects = projects?.filter(p => p.status === 'completed') || [];
   const pausedProjects = projects?.filter(p => p.status === 'paused') || [];
-  
+
   const metrics: Metric[] = [
     { label: "Active", value: activeProjects.length.toString(), trend: activeProjects.length > 0 ? Math.min(85, activeProjects.length * 20) : 0 },
     { label: "Paused", value: pausedProjects.length.toString(), trend: pausedProjects.length > 0 ? Math.min(70, pausedProjects.length * 15) : 0 },
@@ -217,7 +218,7 @@ export function ProjectDashboard({
   ];
 
   const handleToggleGoal = useCallback((goalId: string) => {
-    setGoals(prev => prev.map(goal => 
+    setGoals(prev => prev.map(goal =>
       goal.id === goalId ? { ...goal, isCompleted: !goal.isCompleted } : goal
     ));
   }, []);
@@ -228,19 +229,19 @@ export function ProjectDashboard({
       try {
         const newTask = createNewTask(newTaskTitle, projectForDetails.id);
         const updatedTasks = [...projectTasks, newTask];
-        
+
         // Actualizar estado local inmediatamente
         setProjectTasks(updatedTasks);
         setNewTaskTitle('');
         setShowAddTask(false);
-        
+
         // Guardar en base de datos
         const tasksResponse: TasksResponse = {
           tasks: updatedTasks,
           updatedAt: new Date().toISOString()
         };
         await saveTasksToDatabase(projectForDetails.id, tasksResponse);
-        
+
         console.log('✅ Tarea agregada y guardada exitosamente');
       } catch (error) {
         console.error('❌ Error agregando tarea:', error);
@@ -252,27 +253,27 @@ export function ProjectDashboard({
 
   const handleToggleTask = useCallback(async (taskId: string) => {
     if (!projectForDetails) return;
-    
+
     try {
-      const updatedTasks = updateTask(projectTasks, taskId, { 
-        completed: !projectTasks.find(t => t.id === taskId)?.completed 
+      const updatedTasks = updateTask(projectTasks, taskId, {
+        completed: !projectTasks.find(t => t.id === taskId)?.completed
       });
-      
+
       // Actualizar estado local inmediatamente
       setProjectTasks(updatedTasks);
-      
+
       // Guardar en base de datos
       const tasksResponse: TasksResponse = {
         tasks: updatedTasks,
         updatedAt: new Date().toISOString()
       };
       await saveTasksToDatabase(projectForDetails.id, tasksResponse);
-      
+
       console.log('✅ Estado de tarea actualizado exitosamente');
     } catch (error) {
       console.error('❌ Error actualizando tarea:', error);
       // Revertir cambio local si hay error
-      setProjectTasks(prev => prev.map(task => 
+      setProjectTasks(prev => prev.map(task =>
         task.id === taskId ? { ...task, completed: !task.completed } : task
       ));
     }
@@ -280,20 +281,20 @@ export function ProjectDashboard({
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     if (!projectForDetails) return;
-    
+
     try {
       const updatedTasks = deleteTask(projectTasks, taskId);
-      
+
       // Actualizar estado local inmediatamente
       setProjectTasks(updatedTasks);
-      
+
       // Guardar en base de datos
       const tasksResponse: TasksResponse = {
         tasks: updatedTasks,
         updatedAt: new Date().toISOString()
       };
       await saveTasksToDatabase(projectForDetails.id, tasksResponse);
-      
+
       console.log('✅ Tarea eliminada exitosamente');
     } catch (error) {
       console.error('❌ Error eliminando tarea:', error);
@@ -343,10 +344,10 @@ export function ProjectDashboard({
   const loadProjectTasks = useCallback(async (project: Project) => {
     try {
       console.log('🔄 Cargando tareas para proyecto:', project.id);
-      
+
       // Intentar cargar desde la base de datos
       const dbTasks = getTasksFromDatabase(project);
-      
+
       if (dbTasks && dbTasks.tasks.length > 0) {
         console.log('✅ Tareas cargadas desde base de datos:', dbTasks.tasks.length);
         setProjectTasks(dbTasks.tasks);
@@ -388,7 +389,22 @@ export function ProjectDashboard({
     loadProjectAssets(project.id);
     loadProjectDecisions(project.id);
     loadProjectTasks(project);
+
+    // Save to localStorage for persistence
+    localStorage.setItem('lastOpenProjectId', project.id);
   }, [loadProjectAssets, loadProjectDecisions, loadProjectTasks]);
+
+  // Restore project from localStorage on mount
+  useEffect(() => {
+    const savedProjectId = localStorage.getItem('lastOpenProjectId');
+
+    if (savedProjectId && projects && projects.length > 0 && !projectForDetails) {
+      const projectToRestore = projects.find(p => p.id === savedProjectId);
+      if (projectToRestore) {
+        handleViewProjectDetails(projectToRestore);
+      }
+    }
+  }, [projects, projectForDetails, handleViewProjectDetails]);
 
   const handleAssetsAdded = useCallback((addedAssets: any[]) => {
     setProjectAssets(prev => [...addedAssets, ...prev]);
@@ -494,7 +510,7 @@ export function ProjectDashboard({
   }, [projectForDetails, session, setActiveTab]);
 
   const [isExtractingCaptures, setIsExtractingCaptures] = useState(false);
-  
+
   // Estados para el modal de selección de documentos
   const [showDocumentSelectionModal, setShowDocumentSelectionModal] = useState(false);
   const [availableDocuments, setAvailableDocuments] = useState<any[]>([]);
@@ -504,7 +520,7 @@ export function ProjectDashboard({
   // Función para cargar documentos disponibles del proyecto
   const loadProjectDocuments = useCallback(async () => {
     if (!projectForDetails) return;
-    
+
     setLoadingDocuments(true);
     try {
       // Obtener todos los elementos del codex del proyecto (incluyendo campos de enlaces)
@@ -523,15 +539,15 @@ export function ProjectDashboard({
         const hasDocumentAnalysis = item.document_analysis && item.document_analysis.trim();
         const hasLinkDescription = item.tipo === 'enlace' && item.descripcion && item.descripcion.trim(); // 🆕 Enlaces básicos
         const isAnalyzableDocument = item.tipo === 'documento' && item.storage_path;
-        
+
         return hasAudioTranscription || hasTranscription || hasDocumentAnalysis || hasLinkDescription || isAnalyzableDocument;
       });
 
       setAvailableDocuments(analyzableItems);
-      
+
       // Por defecto, seleccionar todos los documentos
       setSelectedDocuments(analyzableItems.map((item: any) => item.id));
-      
+
     } catch (error: any) {
       console.error('Error loading project documents:', error);
       alert(`❌ Error cargando documentos: ${error.message || 'desconocido'}`);
@@ -550,19 +566,19 @@ export function ProjectDashboard({
   // Función para extraer hallazgos de documentos seleccionados
   const handleBulkExtractCapturados = useCallback(async (selectedOnly: boolean = false) => {
     if (!projectForDetails || isExtractingCaptures) return;
-    
+
     const idsToProcess = selectedOnly ? selectedDocuments : undefined;
-    
+
     setIsExtractingCaptures(true);
     try {
       const { bulkExtractCapturados } = await import('../../services/capturados');
-      
+
       const summary = await bulkExtractCapturados(projectForDetails.id, session?.access_token || '', idsToProcess);
-      
+
       alert(`✅ Proceso completado. Nuevas tarjetas: ${summary.total_cards}`);
       setCapturedReloadKey(Date.now());
       setShowDocumentSelectionModal(false);
-      
+
     } catch (error: any) {
       console.error('Error bulk extract:', error);
       alert(`❌ Error extrayendo hallazgos: ${error.message || 'desconocido'}`);
@@ -627,7 +643,7 @@ export function ProjectDashboard({
       <div className="container mx-auto px-6 py-8">
         <div className={cn("w-full max-w-7xl mx-auto")}>
           {/* No tab navigation needed - just show projects list or project details */}
-          
+
           {/* Show back button when in details view */}
           {projectForDetails && (
             <div className="mb-6">
@@ -635,6 +651,8 @@ export function ProjectDashboard({
                 onClick={() => {
                   setProjectForDetails(null);
                   setActiveTab('projects');
+                  // Clear localStorage when closing project
+                  localStorage.removeItem('lastOpenProjectId');
                 }}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
               >
@@ -645,1307 +663,1325 @@ export function ProjectDashboard({
           )}
 
           <AnimatePresence mode="wait">
-              {/* Overview tab removed as per user request */}
-              {false && activeTab === 'overview' && (
+            {/* Overview tab removed as per user request */}
+            {false && activeTab === 'overview' && (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                          <FiBarChart className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{t.totalProjects}</h3>
+                          <p className="text-2xl font-bold text-blue-600">{projects?.length || 0}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {activeProjects.length} {t.active}, {completedProjects.length} {t.completed}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                          <FiFileText className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{t.recentActivity}</h3>
+                          <p className="text-2xl font-bold text-purple-600">{recentProjects.length}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t.projectsUpdatedRecently}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{t.recentProjects}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {recentProjects.length > 0 ? recentProjects.map((project) => (
+                          <div
+                            key={project.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                            onClick={() => handleViewProjectDetails(project)}
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{project.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={cn("px-2 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
+                                  {getStatusText(project.status)}
+                                </span>
+                                <span className={cn("text-xs font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
+                                  {getPriorityText(project.priority)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {format(new Date(project.created_at), 'MMM dd')}
+                                </p>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(project.id);
+                                }}
+                                className="p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                                title={t.deleteTooltip}
+                              >
+                                <FiTrash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <FiFileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">{t.noProjectsYet}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'projects' && (
+              <motion.div
+                key="projects"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                {/* Modern Header with Stats - Glassmorphism Style */}
                 <motion.div
-                  key="overview"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
+                  transition={{ duration: 0.5 }}
+                  className="relative overflow-hidden rounded-3xl p-8 backdrop-blur-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 dark:from-blue-900/20 dark:via-cyan-900/20 dark:to-teal-900/20 border-2 border-white/20 dark:border-white/10 shadow-2xl"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                            <FiBarChart className="w-5 h-5 text-blue-600" />
+                  {/* Animated background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-cyan-400/20 to-teal-400/20 dark:from-blue-600/20 dark:via-cyan-600/20 dark:to-teal-600/20 opacity-50" />
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 90, 0],
+                    }}
+                    transition={{
+                      duration: 20,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }}
+                    className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl"
+                  />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+                          Mis Proyectos
+                        </h2>
+                        <p className="text-lg text-gray-600 dark:text-gray-300">
+                          Gestiona y organiza todos tus proyectos en un solo lugar
+                        </p>
+                      </motion.div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleCreateProject}
+                        className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg backdrop-blur-xl"
+                      >
+                        <FiPlus className="w-6 h-6" />
+                        Crear Proyecto
+                      </motion.button>
+                    </div>
+
+                    {/* Quick Stats with Glassmorphism */}
+                    <div className="grid grid-cols-4 gap-6">
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        whileHover={{ scale: 1.05, y: -4 }}
+                        className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative z-10 flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+                            <FiDatabase className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-semibold">{t.totalProjects}</h3>
-                            <p className="text-2xl font-bold text-blue-600">{projects?.length || 0}</p>
+                            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{projects?.length || 0}</p>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {activeProjects.length} {t.active}, {completedProjects.length} {t.completed}
-                        </p>
-                      </CardContent>
-                    </Card>
+                      </motion.div>
 
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                            <FiFileText className="w-5 h-5 text-purple-600" />
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        whileHover={{ scale: 1.05, y: -4 }}
+                        className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative z-10 flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 shadow-lg">
+                            <FiCheckCircle className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-semibold">{t.recentActivity}</h3>
-                            <p className="text-2xl font-bold text-purple-600">{recentProjects.length}</p>
+                            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Activos</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{activeProjects.length}</p>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t.projectsUpdatedRecently}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </motion.div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">{t.recentProjects}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {recentProjects.length > 0 ? recentProjects.map((project) => (
-                            <div
-                              key={project.id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-                              onClick={() => handleViewProjectDetails(project)}
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium text-sm">{project.title}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={cn("px-2 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
-                                    {getStatusText(project.status)}
-                                  </span>
-                                  <span className={cn("text-xs font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
-                                    {getPriorityText(project.priority)}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="text-right">
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {format(new Date(project.created_at), 'MMM dd')}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteProject(project.id);
-                                  }}
-                                  className="p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-                                  title={t.deleteTooltip}
-                                >
-                                  <FiTrash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          )) : (
-                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                              <FiFileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                              <p className="text-sm">{t.noProjectsYet}</p>
-                            </div>
-                          )}
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        whileHover={{ scale: 1.05, y: -4 }}
+                        className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative z-10 flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg">
+                            <FiTarget className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Completados</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedProjects.length}</p>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        whileHover={{ scale: 1.05, y: -4 }}
+                        className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative z-10 flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
+                            <FiClock className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pausados</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{pausedProjects.length}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
                   </div>
                 </motion.div>
-              )}
 
-              {activeTab === 'projects' && (
+                {/* Search and Filter Bar - Glassmorphism Style */}
                 <motion.div
-                  key="projects"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
+                  transition={{ delay: 0.7 }}
+                  className="flex items-center justify-between gap-6"
                 >
-                  {/* Modern Header with Stats - Glassmorphism Style */}
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative overflow-hidden rounded-3xl p-8 backdrop-blur-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 dark:from-blue-900/20 dark:via-cyan-900/20 dark:to-teal-900/20 border-2 border-white/20 dark:border-white/10 shadow-2xl"
+                  <div className="flex-1 relative group">
+                    <FiSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-500 dark:text-blue-400 transition-all group-focus-within:scale-110" />
+                    <input
+                      type="text"
+                      placeholder="Buscar proyectos por nombre, descripción o categoría..."
+                      className="w-full pl-14 pr-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl text-base text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 focus:shadow-xl transition-all duration-300"
+                    />
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-3 px-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl hover:bg-blue-500/10 dark:hover:bg-blue-500/20 hover:border-blue-500/50 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
-                    {/* Animated background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-cyan-400/20 to-teal-400/20 dark:from-blue-600/20 dark:via-cyan-600/20 dark:to-teal-600/20 opacity-50" />
+                    <FiFilter className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Filtros</span>
+                  </motion.button>
+                </motion.div>
+
+                {/* Projects Carousel */}
+                {(projects && projects.length > 0) ? (
+                  <ProjectCarousel
+                    projects={projects}
+                    onView={handleViewProjectDetails}
+                    onDelete={handleDeleteProject}
+                    decisionsCount={(projectId) => 0}
+                    assetsCount={(projectId) => 0}
+                    findingsCount={(projectId) => 0}
+                  />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="relative overflow-hidden text-center py-24 backdrop-blur-xl bg-white/40 dark:bg-gray-800/40 border-2 border-white/40 dark:border-gray-700/40 rounded-3xl shadow-2xl"
+                  >
+                    {/* Animated background gradient */}
                     <motion.div
                       animate={{
                         scale: [1, 1.2, 1],
-                        rotate: [0, 90, 0],
+                        rotate: [0, 180, 0],
                       }}
                       transition={{
                         duration: 20,
                         repeat: Infinity,
                         ease: "linear"
                       }}
-                      className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl"
+                      className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 blur-3xl"
                     />
-                    
+
                     <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-8">
-                        <motion.div
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.2 }}
-                        >
-                          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-                            Mis Proyectos
-                          </h2>
-                          <p className="text-lg text-gray-600 dark:text-gray-300">
-                            Gestiona y organiza todos tus proyectos en un solo lugar
-                          </p>
-                        </motion.div>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleCreateProject}
-                          className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg backdrop-blur-xl"
-                        >
-                          <FiPlus className="w-6 h-6" />
-                          Crear Proyecto
-                        </motion.button>
-                      </div>
-
-                      {/* Quick Stats with Glassmorphism */}
-                      <div className="grid grid-cols-4 gap-6">
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                          whileHover={{ scale: 1.05, y: -4 }}
-                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                          <div className="relative z-10 flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
-                              <FiDatabase className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total</p>
-                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{projects?.length || 0}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.4 }}
-                          whileHover={{ scale: 1.05, y: -4 }}
-                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                          <div className="relative z-10 flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 shadow-lg">
-                              <FiCheckCircle className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Activos</p>
-                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{activeProjects.length}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5 }}
-                          whileHover={{ scale: 1.05, y: -4 }}
-                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                          <div className="relative z-10 flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg">
-                              <FiTarget className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Completados</p>
-                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{completedProjects.length}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.6 }}
-                          whileHover={{ scale: 1.05, y: -4 }}
-                          className="relative overflow-hidden backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border-2 border-white/40 dark:border-gray-700/40 shadow-xl hover:shadow-2xl transition-all duration-300"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                          <div className="relative z-10 flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
-                              <FiClock className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Pausados</p>
-                              <p className="text-3xl font-bold text-gray-900 dark:text-white">{pausedProjects.length}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* Search and Filter Bar - Glassmorphism Style */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                    className="flex items-center justify-between gap-6"
-                  >
-                    <div className="flex-1 relative group">
-                      <FiSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-500 dark:text-blue-400 transition-all group-focus-within:scale-110" />
-                      <input
-                        type="text"
-                        placeholder="Buscar proyectos por nombre, descripción o categoría..."
-                        className="w-full pl-14 pr-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl text-base text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 focus:shadow-xl transition-all duration-300"
-                      />
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex items-center gap-3 px-6 py-4 backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 border-2 border-white/40 dark:border-gray-700/40 rounded-2xl hover:bg-blue-500/10 dark:hover:bg-blue-500/20 hover:border-blue-500/50 transition-all duration-300 shadow-lg hover:shadow-xl"
-                    >
-                      <FiFilter className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">Filtros</span>
-                    </motion.button>
-                  </motion.div>
-
-                  {/* Projects Carousel */}
-                  {(projects && projects.length > 0) ? (
-                    <ProjectCarousel
-                      projects={projects}
-                      onView={handleViewProjectDetails}
-                      onDelete={handleDeleteProject}
-                      decisionsCount={(projectId) => 0}
-                      assetsCount={(projectId) => 0}
-                      findingsCount={(projectId) => 0}
-                    />
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.8 }}
-                      className="relative overflow-hidden text-center py-24 backdrop-blur-xl bg-white/40 dark:bg-gray-800/40 border-2 border-white/40 dark:border-gray-700/40 rounded-3xl shadow-2xl"
-                    >
-                      {/* Animated background gradient */}
                       <motion.div
                         animate={{
-                          scale: [1, 1.2, 1],
-                          rotate: [0, 180, 0],
+                          y: [0, -10, 0],
                         }}
                         transition={{
-                          duration: 20,
+                          duration: 3,
                           repeat: Infinity,
-                          ease: "linear"
+                          ease: "easeInOut"
                         }}
-                        className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-teal-500/10 blur-3xl"
-                      />
-                      
-                      <div className="relative z-10">
-                        <motion.div
-                          animate={{
-                            y: [0, -10, 0],
-                          }}
-                          transition={{
-                            duration: 3,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 shadow-2xl mb-6"
-                        >
-                          <FiDatabase className="w-12 h-12 text-white" />
-                        </motion.div>
-                        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                          No hay proyectos aún
-                        </h3>
-                        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
-                          Comienza creando tu primer proyecto para organizar y gestionar tus investigaciones y campañas.
-                        </p>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleCreateProject}
-                          className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg"
-                        >
-                          <FiPlus className="w-6 h-6" />
-                          Crear Primer Proyecto
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
+                        className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 shadow-2xl mb-6"
+                      >
+                        <FiDatabase className="w-12 h-12 text-white" />
+                      </motion.div>
+                      <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                        No hay proyectos aún
+                      </h3>
+                      <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+                        Comienza creando tu primer proyecto para organizar y gestionar tus investigaciones y campañas.
+                      </p>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleCreateProject}
+                        className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold text-lg"
+                      >
+                        <FiPlus className="w-6 h-6" />
+                        Crear Primer Proyecto
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
 
-              {activeTab === 'decisions' && (
-                <motion.div
-                  key="decisions"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {!selectedProject ? (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold">{t.selectProject}</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t.selectProjectDescription}
-                        </p>
-                      </div>
-                      
-                      {(projects && projects.length > 0) ? (
-                        <div className="grid gap-4">
-                          {projects.map((project) => (
-                            <Card 
-                              key={project.id} 
-                              className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                              onClick={() => handleSelectProjectForDecisions(project)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h3 className="font-semibold text-lg mb-1">{project.title}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{project.description}</p>
-                                    <div className="flex items-center gap-3">
-                                      <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
-                                        {getStatusText(project.status)}
-                                      </span>
-                                      <span className={cn("text-sm font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
-                                        {getPriorityText(project.priority)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                                    {format(new Date(project.created_at), 'MMM dd, yyyy')}
+            {activeTab === 'decisions' && (
+              <motion.div
+                key="decisions"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {!selectedProject ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold">{t.selectProject}</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t.selectProjectDescription}
+                      </p>
+                    </div>
+
+                    {(projects && projects.length > 0) ? (
+                      <div className="grid gap-4">
+                        {projects.map((project) => (
+                          <Card
+                            key={project.id}
+                            className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                            onClick={() => handleSelectProjectForDecisions(project)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-lg mb-1">{project.title}</h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{project.description}</p>
+                                  <div className="flex items-center gap-3">
+                                    <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
+                                      {getStatusText(project.status)}
+                                    </span>
+                                    <span className={cn("text-sm font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
+                                      {getPriorityText(project.priority)}
+                                    </span>
                                   </div>
                                 </div>
-                              </CardContent>
-                            </Card>
-                          )) || []}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12">
-                          <FiDatabase className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
-                          <h3 className="text-lg font-semibold mb-2">{t.createProjectFirst}</h3>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setSelectedProject(null)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Back to project selection"
-                          >
-                            <FiX className="w-5 h-5" />
-                          </button>
-                          <div>
-                            <h2 className="text-xl font-semibold">{selectedProject.title}</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Decisiones</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[selectedProject.status as keyof typeof statusColors])}>
-                            {selectedProject.status}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                        <LatestDecisions projectId={selectedProject.id} />
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {activeTab === 'timeline' && (
-                <motion.div
-                  key="timeline"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {!selectedProject ? (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold">Selecciona un Proyecto</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Elige un proyecto para ver sus capas de decisiones
-                        </p>
-                      </div>
-                      
-                      {(projects && projects.length > 0) ? (
-                        <div className="grid gap-4">
-                          {projects.map((project) => (
-                            <Card 
-                              key={project.id} 
-                              className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                              onClick={() => setSelectedProject(project)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h3 className="font-semibold text-lg mb-1">{project.title}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{project.description}</p>
-                                    <div className="flex items-center gap-3">
-                                      <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
-                                        {getStatusText(project.status)}
-                                      </span>
-                                      <span className={cn("text-sm font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
-                                        {getPriorityText(project.priority)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                                    {format(new Date(project.created_at), 'MMM dd, yyyy')}
-                                  </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {format(new Date(project.created_at), 'MMM dd, yyyy')}
                                 </div>
-                              </CardContent>
-                            </Card>
-                          )) || []}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12">
-                          <FiCalendar className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
-                          <h3 className="text-lg font-semibold mb-2">No hay proyectos aún</h3>
-                          <p className="text-gray-500 dark:text-gray-400">
-                            Crea tu primer proyecto para ver las capas de decisiones
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setSelectedProject(null)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                            title="Volver a selección de proyectos"
-                          >
-                            <FiX className="w-5 h-5" />
-                          </button>
-                          <div>
-                            <h2 className="text-xl font-semibold">{selectedProject.title}</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Capas de decisiones</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[selectedProject.status as keyof typeof statusColors])}>
-                            {selectedProject.status}
-                          </span>
-                        </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )) || []}
                       </div>
-                      
-                      <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                        <DecisionChronology projectId={selectedProject.id} />
+                    ) : (
+                      <div className="text-center py-12">
+                        <FiDatabase className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
+                        <h3 className="text-lg font-semibold mb-2">{t.createProjectFirst}</h3>
                       </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {activeTab === 'captured' && (
-                <motion.div
-                  key="captured"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {projectForDetails ? (
-                    <CapturedCards projectId={projectForDetails.id} reloadKey={capturedReloadKey} />
-                  ) : (
-                    <div className="text-center text-gray-500 py-8">
-                      Selecciona un proyecto para ver hallazgos capturados.
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {activeTab === 'coverages' && (
-                <motion.div
-                  key="coverages"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {projectForDetails ? (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Coberturas del Proyecto</h2>
-                          <p className="text-gray-600 dark:text-gray-400 mt-1">
-                            Gestiona las coberturas mediáticas y análisis de cobertura para este proyecto.
-                          </p>
-                        </div>
-                        {/* Botón "Nueva Cobertura" removido según nueva lógica: las coberturas se generan automáticamente */}
-                      </div>
-                      
-                      {/* Componente real de coberturas */}
-                      <ProjectCoverages projectId={projectForDetails.id} />
-                    </div>
-                  ) : (
-                    <div className="text-center text-gray-500 py-8">
-                      Selecciona un proyecto para ver las coberturas.
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {activeTab === 'details' && projectForDetails && (
-                <SimplifiedProjectDetail
-                  project={projectForDetails}
-                  onClose={() => {
-                    setProjectForDetails(null);
-                    setActiveTab('projects');
-                  }}
-                  onEdit={() => setIsEditing(true)}
-                  decisionsCount={projectDecisions.length}
-                  assetsCount={projectAssets.length}
-                  findingsCount={0}
-                  tasksCompleted={projectTasks.filter(t => t.completed).length}
-                  totalTasks={projectTasks.length}
-                >
-                  {/* Decisions Content */}
-                  <div id="decisions-content">
-                    <LatestDecisions projectId={projectForDetails.id} />
+                    )}
                   </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setSelectedProject(null)}
+                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          title="Back to project selection"
+                        >
+                          <FiX className="w-5 h-5" />
+                        </button>
+                        <div>
+                          <h2 className="text-xl font-semibold">{selectedProject.title}</h2>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Decisiones</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[selectedProject.status as keyof typeof statusColors])}>
+                          {selectedProject.status}
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Assets Content */}
-                  <div id="assets-content">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contenido del Codex</h3>
+                    <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                      <LatestDecisions projectId={selectedProject.id} />
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'timeline' && (
+              <motion.div
+                key="timeline"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {!selectedProject ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold">Selecciona un Proyecto</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Elige un proyecto para ver sus capas de decisiones
+                      </p>
+                    </div>
+
+                    {(projects && projects.length > 0) ? (
+                      <div className="grid gap-4">
+                        {projects.map((project) => (
+                          <Card
+                            key={project.id}
+                            className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                            onClick={() => setSelectedProject(project)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-lg mb-1">{project.title}</h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{project.description}</p>
+                                  <div className="flex items-center gap-3">
+                                    <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[project.status as keyof typeof statusColors])}>
+                                      {getStatusText(project.status)}
+                                    </span>
+                                    <span className={cn("text-sm font-medium", priorityColors[project.priority as keyof typeof priorityColors])}>
+                                      {getPriorityText(project.priority)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {format(new Date(project.created_at), 'MMM dd, yyyy')}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )) || []}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <FiCalendar className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
+                        <h3 className="text-lg font-semibold mb-2">No hay proyectos aún</h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          Crea tu primer proyecto para ver las capas de decisiones
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setSelectedProject(null)}
+                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          title="Volver a selección de proyectos"
+                        >
+                          <FiX className="w-5 h-5" />
+                        </button>
+                        <div>
+                          <h2 className="text-xl font-semibold">{selectedProject.title}</h2>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Capas de decisiones</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={cn("px-3 py-1 rounded-full text-xs border", statusColors[selectedProject.status as keyof typeof statusColors])}>
+                          {selectedProject.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                      <DecisionChronology projectId={selectedProject.id} />
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'captured' && (
+              <motion.div
+                key="captured"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {projectForDetails ? (
+                  <CapturedCards projectId={projectForDetails.id} reloadKey={capturedReloadKey} />
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    Selecciona un proyecto para ver hallazgos capturados.
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'coverages' && (
+              <motion.div
+                key="coverages"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {projectForDetails ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Coberturas del Proyecto</h2>
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
+                          Gestiona las coberturas mediáticas y análisis de cobertura para este proyecto.
+                        </p>
+                      </div>
+                      {/* Botón "Nueva Cobertura" removido según nueva lógica: las coberturas se generan automáticamente */}
+                    </div>
+
+                    {/* Componente real de coberturas */}
+                    <ProjectCoverages projectId={projectForDetails.id} />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    Selecciona un proyecto para ver las coberturas.
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'datasets' && (
+              <motion.div
+                key="datasets"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {projectForDetails ? (
+                  <DatasetsTab projectId={projectForDetails.id} />
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    Selecciona un proyecto para ver los datasets.
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'details' && projectForDetails && (
+              <SimplifiedProjectDetail
+                project={projectForDetails}
+                onClose={() => {
+                  setProjectForDetails(null);
+                  setActiveTab('projects');
+                }}
+                onEdit={() => setIsEditing(true)}
+                decisionsCount={projectDecisions.length}
+                assetsCount={projectAssets.length}
+                findingsCount={0}
+                tasksCompleted={projectTasks.filter(t => t.completed).length}
+                totalTasks={projectTasks.length}
+              >
+                {/* Decisions Content */}
+                <div id="decisions-content">
+                  <LatestDecisions projectId={projectForDetails.id} />
+                </div>
+
+                {/* Assets Content */}
+                <div id="assets-content">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contenido del Codex</h3>
+                    <button
+                      onClick={() => setShowAddAssetsModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    >
+                      <FiPlus className="w-4 h-4" />
+                      Añadir del Codex
+                    </button>
+                  </div>
+                  {projectAssets.length > 0 ? (
+                    <div className="space-y-3">
+                      {projectAssets.map((asset) => (
+                        <div key={asset.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-start gap-3">
+                            {getAssetTypeIcon(asset.tipo, asset.is_from_google_drive)}
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm">{asset.titulo}</h4>
+                              {asset.metadata?.description && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.metadata.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <FiDatabase className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">No hay documentos del Codex asignados a este proyecto</p>
                       <button
                         onClick={() => setShowAddAssetsModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <FiPlus className="w-4 h-4" />
                         Añadir del Codex
                       </button>
                     </div>
-                    {projectAssets.length > 0 ? (
-                      <div className="space-y-3">
-                        {projectAssets.map((asset) => (
-                          <div key={asset.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-start gap-3">
-                              {getAssetTypeIcon(asset.tipo, asset.is_from_google_drive)}
-                              <div className="flex-1">
-                                <h4 className="font-medium text-sm">{asset.titulo}</h4>
-                                {asset.metadata?.description && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.metadata.description}</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                          <FiDatabase className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">No hay documentos del Codex asignados a este proyecto</p>
-                        <button
-                          onClick={() => setShowAddAssetsModal(true)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  )}
+                </div>
+
+                {/* Tasks Content */}
+                <div id="tasks-content">
+                  <div className="space-y-3">
+                    {projectTasks.length > 0 ? (
+                      projectTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
                         >
-                          <FiPlus className="w-4 h-4" />
-                          Añadir del Codex
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleToggleTask(task.id)}
+                            className={cn(
+                              "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                              task.completed
+                                ? "bg-green-600 border-green-600 text-white"
+                                : "border-gray-300 dark:border-gray-600 hover:border-green-500"
+                            )}
+                          >
+                            {task.completed && <FiCheck className="w-3 h-3" />}
+                          </button>
+                          <div className="flex-1">
+                            <p className={cn(
+                              "text-sm",
+                              task.completed ? "text-gray-500 line-through" : "text-gray-900 dark:text-white"
+                            )}>
+                              {task.title}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-500 py-8">No hay tareas en este proyecto</p>
                     )}
                   </div>
+                </div>
+              </SimplifiedProjectDetail>
+            )}
 
-                  {/* Tasks Content */}
-                  <div id="tasks-content">
-                    <div className="space-y-3">
-                      {projectTasks.length > 0 ? (
-                        projectTasks.map((task) => (
-                          <div
-                            key={task.id}
-                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
-                          >
-                            <button
-                              onClick={() => handleToggleTask(task.id)}
-                              className={cn(
-                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                                task.completed
-                                  ? "bg-green-600 border-green-600 text-white"
-                                  : "border-gray-300 dark:border-gray-600 hover:border-green-500"
-                              )}
-                            >
-                              {task.completed && <FiCheck className="w-3 h-3" />}
-                            </button>
-                            <div className="flex-1">
-                              <p className={cn(
-                                "text-sm",
-                                task.completed ? "text-gray-500 line-through" : "text-gray-900 dark:text-white"
-                              )}>
-                                {task.title}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                            >
-                              <FiTrash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-center text-gray-500 py-8">No hay tareas en este proyecto</p>
-                      )}
+            {/* Keep old details view for reference but commented out */}
+            {false && activeTab === 'details' && projectForDetails && (
+              <motion.div
+                key="details-old"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {/* Project Header */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{projectForDetails.title}</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">{projectForDetails.description}</p>
+                      </div>
+                      <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {isEditing ? <FiXCircle className="w-5 h-5 text-red-500" /> : <FiEdit className="w-5 h-5 text-gray-500" />}
+                      </button>
                     </div>
-                  </div>
-                </SimplifiedProjectDetail>
-              )}
+                  </CardContent>
+                </Card>
 
-              {/* Keep old details view for reference but commented out */}
-              {false && activeTab === 'details' && projectForDetails && (
-                <motion.div
-                  key="details-old"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {/* Project Header */}
+                {/* Botones de guardar/cancelar cuando está editando */}
+                {isEditing && (
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <button
+                      onClick={handleSaveProject}
+                      disabled={!editingData.title.trim() || isSaving}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSaving ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <FiSave className="w-4 h-4" />
+                      )}
+                      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
+                    <button
+                      onClick={handleCancelEditing}
+                      disabled={isSaving}
+                      className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {/* Contenido principal del proyecto en una sola vista */}
+                <div className="space-y-6">
                   <Card>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FiFileText className="w-5 h-5" />
+                        Información General
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Proyecto</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editingData.title}
+                            onChange={(e) => handleEditingChange('title', e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Ingresa el nombre del proyecto"
+                            maxLength={100}
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold mt-1">{projectForDetails.title}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
+                        {isEditing ? (
+                          <textarea
+                            value={editingData.description}
+                            onChange={(e) => handleEditingChange('description', e.target.value)}
+                            rows={4}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                            placeholder="Describe los objetivos y alcance del proyecto"
+                            maxLength={500}
+                          />
+                        ) : (
+                          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm leading-relaxed">
+                            {projectForDetails.description || 'Sin descripción disponible'}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{projectForDetails.title}</h2>
-                          <p className="text-gray-500 dark:text-gray-400 mt-1">{projectForDetails.description}</p>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
+                          {isEditing ? (
+                            <select
+                              value={editingData.status}
+                              onChange={(e) => handleEditingChange('status', e.target.value)}
+                              className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="active">Activo</option>
+                              <option value="paused">Pausado</option>
+                              <option value="completed">Completado</option>
+                              <option value="archived">Archivado</option>
+                            </select>
+                          ) : (
+                            <span className={cn("inline-block px-3 py-1 rounded-full text-sm font-medium mt-1", statusColors[projectForDetails.status as keyof typeof statusColors])}>
+                              {getStatusText(projectForDetails.status)}
+                            </span>
+                          )}
                         </div>
-                        <button
-                          onClick={() => setIsEditing(!isEditing)}
-                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          {isEditing ? <FiXCircle className="w-5 h-5 text-red-500" /> : <FiEdit className="w-5 h-5 text-gray-500" />}
-                        </button>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
+                          {isEditing ? (
+                            <select
+                              value={editingData.priority}
+                              onChange={(e) => handleEditingChange('priority', e.target.value)}
+                              className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="low">Baja</option>
+                              <option value="medium">Media</option>
+                              <option value="high">Alta</option>
+                              <option value="urgent">Urgente</option>
+                            </select>
+                          ) : (
+                            <span className={cn("inline-block px-3 py-1 rounded-full text-sm font-medium mt-1",
+                              projectForDetails.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+                                projectForDetails.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                  projectForDetails.priority === 'urgent' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' :
+                                    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                            )}>
+                              {getPriorityText(projectForDetails.priority)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categoría</label>
+                          {isEditing ? (
+                            <select
+                              value={editingData.category}
+                              onChange={(e) => handleEditingChange('category', e.target.value)}
+                              className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="">Sin categoría</option>
+                              <option value="investigacion">Investigación</option>
+                              <option value="campana">Campaña</option>
+                              <option value="fiscalizacion">Fiscalización</option>
+                              <option value="auditoria">Auditoría</option>
+                              <option value="monitoreo">Monitoreo</option>
+                              <option value="marketing">Marketing</option>
+                            </select>
+                          ) : (
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">{projectForDetails.category || 'Sin categoría'}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Visibilidad</label>
+                          {isEditing ? (
+                            <select
+                              value={editingData.visibility}
+                              onChange={(e) => handleEditingChange('visibility', e.target.value)}
+                              className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="private">Privado</option>
+                              <option value="team">Equipo</option>
+                              <option value="public">Público</option>
+                            </select>
+                          ) : (
+                            <p className="text-gray-600 dark:text-gray-400 mt-1 capitalize">
+                              {getVisibilityText(projectForDetails.visibility)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Sección de Tags */}
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
+                        {isEditing ? (
+                          <div className="mt-1 space-y-3">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newTag}
+                                onChange={(e) => setNewTag(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Agregar tag..."
+                                maxLength={30}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddTag}
+                                disabled={!newTag.trim() || editingData.tags.includes(newTag.trim())}
+                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <FiPlus className="w-4 h-4" />
+                              </button>
+                            </div>
+                            {editingData.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {editingData.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-full text-xs font-medium"
+                                  >
+                                    {tag}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveTag(tag)}
+                                      className="hover:bg-blue-200 dark:hover:bg-blue-800/30 rounded-full p-0.5 transition-colors"
+                                    >
+                                      <FiX className="w-3 h-3" />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {projectForDetails.tags && projectForDetails.tags.length > 0 ? (
+                              projectForDetails.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-full text-xs font-medium"
+                                >
+                                  {tag}
+                                </span>
+                              ))
+                            ) : (
+                              <p className="text-gray-500 dark:text-gray-400 text-sm italic">Sin tags</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Métricas del Proyecto */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">Estadísticas del Proyecto</label>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              {projectDecisions.length}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Decisiones</div>
+                          </div>
+                          <div className="text-center p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              {projectTasks.filter(task => task.completed).length}/{projectTasks.length}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Tareas</div>
+                          </div>
+                          <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg">
+                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                              {projectAssets.length}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Activos</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progreso del Proyecto */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">Progreso General</label>
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                              <span>Tareas Completadas</span>
+                              <span>{projectTasks.length > 0 ? Math.round((projectTasks.filter(task => task.completed).length / projectTasks.length) * 100) : 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${projectTasks.length > 0 ? (projectTasks.filter(task => task.completed).length / projectTasks.length) * 100 : 0}%`
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                              <span>Tiempo Transcurrido</span>
+                              <span>
+                                {projectForDetails.start_date && projectForDetails.target_date ?
+                                  Math.round(((new Date().getTime() - new Date(projectForDetails.start_date).getTime()) /
+                                    (new Date(projectForDetails.target_date).getTime() - new Date(projectForDetails.start_date).getTime())) * 100) : 0}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${projectForDetails.start_date && projectForDetails.target_date ?
+                                    Math.min(100, Math.max(0, ((new Date().getTime() - new Date(projectForDetails.start_date).getTime()) /
+                                      (new Date(projectForDetails.target_date).getTime() - new Date(projectForDetails.start_date).getTime())) * 100)) : 0}%`
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Botones de guardar/cancelar cuando está editando */}
-                  {isEditing && (
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <button
-                        onClick={handleSaveProject}
-                        disabled={!editingData.title.trim() || isSaving}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSaving ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <FiSave className="w-4 h-4" />
-                        )}
-                        {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                      </button>
-                      <button
-                        onClick={handleCancelEditing}
-                        disabled={isSaving}
-                        className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
+                  {/* Sugerencias Inteligentes */}
+                  <ProjectSuggestions
+                    project={projectForDetails}
+                    decisions={projectDecisions}
+                  />
 
-                  {/* Contenido principal del proyecto en una sola vista */}
-                  <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <FiFileText className="w-5 h-5" />
-                            Información General
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Proyecto</label>
-                            {isEditing ? (
+                  {/* Tareas del Proyecto */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FiCheckSquare className="w-5 h-5" />
+                          Tareas del Proyecto
+                          {projectTasks.length > 0 && (
+                            <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                              {projectTasks.filter(task => task.completed).length}/{projectTasks.length}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowAddTask(true)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          title="Agregar nueva tarea"
+                        >
+                          <FiPlus className="w-4 h-4" />
+                          Agregar
+                        </button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {/* Formulario para agregar nueva tarea */}
+                        {showAddTask && (
+                          <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                            <div className="flex items-center gap-3">
                               <input
                                 type="text"
-                                value={editingData.title}
-                                onChange={(e) => handleEditingChange('title', e.target.value)}
-                                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="Ingresa el nombre del proyecto"
-                                maxLength={100}
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                                placeholder="Descripción de la tarea..."
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+                                autoFocus
                               />
-                            ) : (
-                              <p className="text-lg font-semibold mt-1">{projectForDetails.title}</p>
-                            )}
+                              <button
+                                onClick={handleAddTask}
+                                disabled={!newTaskTitle.trim()}
+                                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                              >
+                                <FiCheck className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowAddTask(false);
+                                  setNewTaskTitle('');
+                                }}
+                                className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                              >
+                                <FiX className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
-                          
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
-                            {isEditing ? (
-                              <textarea
-                                value={editingData.description}
-                                onChange={(e) => handleEditingChange('description', e.target.value)}
-                                rows={4}
-                                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-                                placeholder="Describe los objetivos y alcance del proyecto"
-                                maxLength={500}
-                              />
-                            ) : (
-                              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm leading-relaxed">
-                                {projectForDetails.description || 'Sin descripción disponible'}
-                              </p>
-                            )}
-                          </div>
+                        )}
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
-                              {isEditing ? (
-                                <select
-                                  value={editingData.status}
-                                  onChange={(e) => handleEditingChange('status', e.target.value)}
-                                  className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        {/* Lista de tareas */}
+                        {projectTasks.length > 0 ? (
+                          <div className="space-y-2">
+                            {projectTasks.map((task) => (
+                              <div
+                                key={task.id}
+                                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors"
+                              >
+                                <button
+                                  onClick={() => handleToggleTask(task.id)}
+                                  className={cn(
+                                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                    task.completed
+                                      ? "bg-green-600 border-green-600 text-white"
+                                      : "border-gray-300 dark:border-gray-600 hover:border-green-500"
+                                  )}
                                 >
-                                  <option value="active">Activo</option>
-                                  <option value="paused">Pausado</option>
-                                  <option value="completed">Completado</option>
-                                  <option value="archived">Archivado</option>
-                                </select>
-                              ) : (
-                                <span className={cn("inline-block px-3 py-1 rounded-full text-sm font-medium mt-1", statusColors[projectForDetails.status as keyof typeof statusColors])}>
-                                  {getStatusText(projectForDetails.status)}
-                                </span>
-                              )}
-                            </div>
+                                  {task.completed && <FiCheck className="w-3 h-3" />}
+                                </button>
 
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
-                              {isEditing ? (
-                                <select
-                                  value={editingData.priority}
-                                  onChange={(e) => handleEditingChange('priority', e.target.value)}
-                                  className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn(
+                                    "text-sm",
+                                    task.completed
+                                      ? "text-gray-500 dark:text-gray-400 line-through"
+                                      : "text-gray-900 dark:text-white"
+                                  )}>
+                                    {task.title}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {format(new Date(task.created_at), 'dd MMM yyyy')}
+                                  </p>
+                                </div>
+
+                                <button
+                                  onClick={() => handleDeleteTask(task.id)}
+                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                  title="Eliminar tarea"
                                 >
-                                  <option value="low">Baja</option>
-                                  <option value="medium">Media</option>
-                                  <option value="high">Alta</option>
-                                  <option value="urgent">Urgente</option>
-                                </select>
-                              ) : (
-                                <span className={cn("inline-block px-3 py-1 rounded-full text-sm font-medium mt-1", 
-                                  projectForDetails.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
-                                  projectForDetails.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
-                                  projectForDetails.priority === 'urgent' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' :
-                                  'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                                )}>
-                                  {getPriorityText(projectForDetails.priority)}
-                                </span>
-                              )}
-                            </div>
+                                  <FiTrash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categoría</label>
-                              {isEditing ? (
-                                <select
-                                  value={editingData.category}
-                                  onChange={(e) => handleEditingChange('category', e.target.value)}
-                                  className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                  <option value="">Sin categoría</option>
-                                  <option value="investigacion">Investigación</option>
-                                  <option value="campana">Campaña</option>
-                                  <option value="fiscalizacion">Fiscalización</option>
-                                  <option value="auditoria">Auditoría</option>
-                                  <option value="monitoreo">Monitoreo</option>
-                                  <option value="marketing">Marketing</option>
-                                </select>
-                              ) : (
-                                <p className="text-gray-600 dark:text-gray-400 mt-1">{projectForDetails.category || 'Sin categoría'}</p>
-                              )}
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                              <FiCheckSquare className="w-8 h-8 text-gray-400" />
                             </div>
-
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Visibilidad</label>
-                              {isEditing ? (
-                                <select
-                                  value={editingData.visibility}
-                                  onChange={(e) => handleEditingChange('visibility', e.target.value)}
-                                  className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                  <option value="private">Privado</option>
-                                  <option value="team">Equipo</option>
-                                  <option value="public">Público</option>
-                                </select>
-                              ) : (
-                                <p className="text-gray-600 dark:text-gray-400 mt-1 capitalize">
-                                  {getVisibilityText(projectForDetails.visibility)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Sección de Tags */}
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
-                            {isEditing ? (
-                              <div className="mt-1 space-y-3">
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={newTag}
-                                    onChange={(e) => setNewTag(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Agregar tag..."
-                                    maxLength={30}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={handleAddTag}
-                                    disabled={!newTag.trim() || editingData.tags.includes(newTag.trim())}
-                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    <FiPlus className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                {editingData.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-2">
-                                    {editingData.tags.map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-full text-xs font-medium"
-                                      >
-                                        {tag}
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveTag(tag)}
-                                          className="hover:bg-blue-200 dark:hover:bg-blue-800/30 rounded-full p-0.5 transition-colors"
-                                        >
-                                          <FiX className="w-3 h-3" />
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {projectForDetails.tags && projectForDetails.tags.length > 0 ? (
-                                  projectForDetails.tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-full text-xs font-medium"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <p className="text-gray-500 dark:text-gray-400 text-sm italic">Sin tags</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Métricas del Proyecto */}
-                          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">Estadísticas del Proyecto</label>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                  {projectDecisions.length}
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Decisiones</div>
-                              </div>
-                              <div className="text-center p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">
-                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                  {projectTasks.filter(task => task.completed).length}/{projectTasks.length}
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Tareas</div>
-                              </div>
-                              <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg">
-                                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                  {projectAssets.length}
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Activos</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Progreso del Proyecto */}
-                          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">Progreso General</label>
-                            <div className="space-y-3">
-                              <div>
-                                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                  <span>Tareas Completadas</span>
-                                  <span>{projectTasks.length > 0 ? Math.round((projectTasks.filter(task => task.completed).length / projectTasks.length) * 100) : 0}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                  <div 
-                                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                                    style={{ 
-                                      width: `${projectTasks.length > 0 ? (projectTasks.filter(task => task.completed).length / projectTasks.length) * 100 : 0}%` 
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                  <span>Tiempo Transcurrido</span>
-                                  <span>
-                                    {projectForDetails.start_date && projectForDetails.target_date ? 
-                                      Math.round(((new Date().getTime() - new Date(projectForDetails.start_date).getTime()) / 
-                                      (new Date(projectForDetails.target_date).getTime() - new Date(projectForDetails.start_date).getTime())) * 100) : 0}%
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                  <div 
-                                    className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                                    style={{ 
-                                      width: `${projectForDetails.start_date && projectForDetails.target_date ? 
-                                        Math.min(100, Math.max(0, ((new Date().getTime() - new Date(projectForDetails.start_date).getTime()) / 
-                                        (new Date(projectForDetails.target_date).getTime() - new Date(projectForDetails.start_date).getTime())) * 100)) : 0}%` 
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Sugerencias Inteligentes */}
-                      <ProjectSuggestions 
-                        project={projectForDetails} 
-                        decisions={projectDecisions}
-                      />
-
-                      {/* Tareas del Proyecto */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <FiCheckSquare className="w-5 h-5" />
-                              Tareas del Proyecto
-                              {projectTasks.length > 0 && (
-                                <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                                  {projectTasks.filter(task => task.completed).length}/{projectTasks.length}
-                                </span>
-                              )}
-                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                              No hay tareas creadas
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                              Organiza el trabajo del proyecto con tareas específicas
+                            </p>
                             <button
                               onClick={() => setShowAddTask(true)}
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                              title="Agregar nueva tarea"
+                              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                             >
                               <FiPlus className="w-4 h-4" />
-                              Agregar
+                              Crear primera tarea
                             </button>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Activos del Proyecto */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FiDatabase className="w-5 h-5" />
+                          Activos del Proyecto
+                          {projectAssets.length > 0 && (
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
+                              {projectAssets.length}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowAddAssetsModal(true)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          title="Agregar activos desde el Codex"
+                        >
+                          <FiPlus className="w-4 h-4" />
+                          Agregar
+                        </button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {loadingAssets ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          </div>
+                        ) : projectAssets.length > 0 ? (
                           <div className="space-y-3">
-                            {/* Formulario para agregar nueva tarea */}
-                            {showAddTask && (
-                              <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
-                                <div className="flex items-center gap-3">
-                                  <input
-                                    type="text"
-                                    value={newTaskTitle}
-                                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                                    placeholder="Descripción de la tarea..."
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
-                                    autoFocus
-                                  />
+                            {projectAssets.map((asset) => (
+                              <div key={asset.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                      {getAssetTypeIcon(asset.tipo, asset.is_drive)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {asset.titulo}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                          {new Date(asset.fecha).toLocaleDateString()}
+                                        </p>
+                                        <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full capitalize">
+                                          {asset.tipo}
+                                        </span>
+                                        {asset.is_drive && (
+                                          <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                                            Drive
+                                          </span>
+                                        )}
+                                      </div>
+                                      {asset.descripcion && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                          {asset.descripcion}
+                                        </p>
+                                      )}
+                                      {asset.etiquetas && asset.etiquetas.length > 0 && (
+                                        <div className="flex gap-1 mt-2">
+                                          {asset.etiquetas.slice(0, 3).map((tag: string, idx: number) => (
+                                            <span key={idx} className="text-xs bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                                              {tag}
+                                            </span>
+                                          ))}
+                                          {asset.etiquetas.length > 3 && (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                              +{asset.etiquetas.length - 3}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-3">
+                                    {asset.url && (
+                                      <a
+                                        href={asset.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                        title="Ver archivo"
+                                      >
+                                        <FiEye className="w-4 h-4" />
+                                      </a>
+                                    )}
+                                    <button
+                                      onClick={() => handleRemoveAsset(asset.id)}
+                                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                      title="Remover del proyecto"
+                                    >
+                                      <FiX className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                              <FiDatabase className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                              No hay activos agregados
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                              Conecta documentos, audios, videos y enlaces desde tu Codex
+                            </p>
+                            <button
+                              onClick={() => setShowAddAssetsModal(true)}
+                              className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                            >
+                              <FiPlus className="w-4 h-4" />
+                              Agregar primer activo
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Monitoreos Asociados */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FiLayers className="w-5 h-5" />
+                          Monitoreos Asociados
+                          {projectMonitoreos.length > 0 && (
+                            <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">
+                              {projectMonitoreos.length}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={loadProjectMonitoreos}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800/40 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          title="Refrescar monitoreos"
+                        >
+                          <FiRefreshCw className="w-4 h-4" />
+                          Refrescar
+                        </button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {loadingMonitoreos ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                          </div>
+                        ) : projectMonitoreos.length > 0 ? (
+                          <div className="space-y-3">
+                            {projectMonitoreos.map((link) => (
+                              <div key={link.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                      {link.scrape?.generated_title || link.scrape?.query_original || link.scrape_id}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                      {link.scrape?.tweet_count || 0} tweets • {new Date(link.scrape?.created_at || link.added_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
                                   <button
-                                    onClick={handleAddTask}
-                                    disabled={!newTaskTitle.trim()}
-                                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                                  >
-                                    <FiCheck className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setShowAddTask(false);
-                                      setNewTaskTitle('');
-                                    }}
-                                    className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                                    onClick={() => handleRemoveMonitoreo(link.scrape_id)}
+                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                    title="Quitar del proyecto"
                                   >
                                     <FiX className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
-                            )}
-
-                            {/* Lista de tareas */}
-                            {projectTasks.length > 0 ? (
-                              <div className="space-y-2">
-                                {projectTasks.map((task) => (
-                                  <div
-                                    key={task.id}
-                                    className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors"
-                                  >
-                                    <button
-                                      onClick={() => handleToggleTask(task.id)}
-                                      className={cn(
-                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                                        task.completed
-                                          ? "bg-green-600 border-green-600 text-white"
-                                          : "border-gray-300 dark:border-gray-600 hover:border-green-500"
-                                      )}
-                                    >
-                                      {task.completed && <FiCheck className="w-3 h-3" />}
-                                    </button>
-                                    
-                                    <div className="flex-1 min-w-0">
-                                      <p className={cn(
-                                        "text-sm",
-                                        task.completed
-                                          ? "text-gray-500 dark:text-gray-400 line-through"
-                                          : "text-gray-900 dark:text-white"
-                                      )}>
-                                        {task.title}
-                                      </p>
-                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {format(new Date(task.created_at), 'dd MMM yyyy')}
-                                      </p>
-                                    </div>
-
-                                    <button
-                                      onClick={() => handleDeleteTask(task.id)}
-                                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                      title="Eliminar tarea"
-                                    >
-                                      <FiTrash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-8">
-                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                  <FiCheckSquare className="w-8 h-8 text-gray-400" />
-                                </div>
-                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                  No hay tareas creadas
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                                  Organiza el trabajo del proyecto con tareas específicas
-                                </p>
-                                <button
-                                  onClick={() => setShowAddTask(true)}
-                                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                >
-                                  <FiPlus className="w-4 h-4" />
-                                  Crear primera tarea
-                                </button>
-                              </div>
-                            )}
+                            ))}
                           </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Activos del Proyecto */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <FiDatabase className="w-5 h-5" />
-                              Activos del Proyecto
-                              {projectAssets.length > 0 && (
-                                <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-                                  {projectAssets.length}
-                                </span>
-                              )}
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                              <FiLayers className="w-8 h-8 text-gray-400" />
                             </div>
-                            <button
-                              onClick={() => setShowAddAssetsModal(true)}
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                              title="Agregar activos desde el Codex"
-                            >
-                              <FiPlus className="w-4 h-4" />
-                              Agregar
-                            </button>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {loadingAssets ? (
-                              <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                              </div>
-                            ) : projectAssets.length > 0 ? (
-                              <div className="space-y-3">
-                                {projectAssets.map((asset) => (
-                                  <div key={asset.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                          {getAssetTypeIcon(asset.tipo, asset.is_drive)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                            {asset.titulo}
-                                          </p>
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                              {new Date(asset.fecha).toLocaleDateString()}
-                                            </p>
-                                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full capitalize">
-                                              {asset.tipo}
-                                            </span>
-                                            {asset.is_drive && (
-                                              <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                                                Drive
-                                              </span>
-                                            )}
-                                          </div>
-                                          {asset.descripcion && (
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                                              {asset.descripcion}
-                                            </p>
-                                          )}
-                                          {asset.etiquetas && asset.etiquetas.length > 0 && (
-                                            <div className="flex gap-1 mt-2">
-                                              {asset.etiquetas.slice(0, 3).map((tag: string, idx: number) => (
-                                                <span key={idx} className="text-xs bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                                                  {tag}
-                                                </span>
-                                              ))}
-                                              {asset.etiquetas.length > 3 && (
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                  +{asset.etiquetas.length - 3}
-                                                </span>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 ml-3">
-                                        {asset.url && (
-                                          <a
-                                            href={asset.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                            title="Ver archivo"
-                                          >
-                                            <FiEye className="w-4 h-4" />
-                                          </a>
-                                        )}
-                                        <button
-                                          onClick={() => handleRemoveAsset(asset.id)}
-                                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                          title="Remover del proyecto"
-                                        >
-                                          <FiX className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-8">
-                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                  <FiDatabase className="w-8 h-8 text-gray-400" />
-                                </div>
-                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                  No hay activos agregados
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                                  Conecta documentos, audios, videos y enlaces desde tu Codex
-                                </p>
-                                <button
-                                  onClick={() => setShowAddAssetsModal(true)}
-                                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                >
-                                  <FiPlus className="w-4 h-4" />
-                                  Agregar primer activo
-                                </button>
-                              </div>
-                            )}
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                              No hay monitoreos asociados
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Agrega monitoreos desde la sección "Monitoreos" para analizarlos dentro del proyecto.
+                            </p>
                           </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Monitoreos Asociados */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <FiLayers className="w-5 h-5" />
-                              Monitoreos Asociados
-                              {projectMonitoreos.length > 0 && (
-                                <span className="text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">
-                                  {projectMonitoreos.length}
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              onClick={loadProjectMonitoreos}
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800/40 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                              title="Refrescar monitoreos"
-                            >
-                              <FiRefreshCw className="w-4 h-4" />
-                              Refrescar
-                            </button>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {loadingMonitoreos ? (
-                              <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                              </div>
-                            ) : projectMonitoreos.length > 0 ? (
-                              <div className="space-y-3">
-                                {projectMonitoreos.map((link) => (
-                                  <div key={link.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                          {link.scrape?.generated_title || link.scrape?.query_original || link.scrape_id}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                          {link.scrape?.tweet_count || 0} tweets • {new Date(link.scrape?.created_at || link.added_at).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() => handleRemoveMonitoreo(link.scrape_id)}
-                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                        title="Quitar del proyecto"
-                                      >
-                                        <FiX className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-8">
-                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                  <FiLayers className="w-8 h-8 text-gray-400" />
-                                </div>
-                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                  No hay monitoreos asociados
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  Agrega monitoreos desde la sección "Monitoreos" para analizarlos dentro del proyecto.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                  </div>
-                </motion.div>
-              )}
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </div>
@@ -1962,11 +1998,11 @@ export function ProjectDashboard({
                 Eliminar Proyecto
               </h3>
             </div>
-            
+
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               ¿Estás seguro de que quieres eliminar este proyecto? Esta acción no se puede deshacer.
             </p>
-            
+
             <div className="flex gap-3 justify-end">
               <button
                 onClick={cancelDeleteProject}
@@ -2066,10 +2102,10 @@ export function ProjectDashboard({
                     const hasDocumentAnalysis = item.document_analysis && item.document_analysis.trim();
                     const hasLinkDescription = item.tipo === 'enlace' && item.descripcion && item.descripcion.trim(); // 🆕 Enlaces básicos
                     const isAnalyzableDocument = item.tipo === 'documento' && item.storage_path;
-                    
+
                     let statusText = '';
                     let statusColor = '';
-                    
+
                     if (hasAudioTranscription) {
                       statusText = 'Con transcripción de audio';
                       statusColor = 'text-green-600 bg-green-50';
@@ -2090,11 +2126,10 @@ export function ProjectDashboard({
                     return (
                       <div
                         key={item.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                          isSelected
-                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${isSelected
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
                         onClick={() => {
                           if (isSelected) {
                             setSelectedDocuments(prev => prev.filter(id => id !== item.id));
@@ -2111,7 +2146,7 @@ export function ProjectDashboard({
                               <FiSquare className="w-5 h-5 text-gray-400" />
                             )}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -2125,7 +2160,7 @@ export function ProjectDashboard({
                                   {new Date(item.created_at).toLocaleDateString()}
                                 </p>
                               </div>
-                              
+
                               <span className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>
                                 {statusText}
                               </span>
@@ -2143,12 +2178,12 @@ export function ProjectDashboard({
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {selectedDocuments.length > 0 
+                  {selectedDocuments.length > 0
                     ? `${selectedDocuments.length} elemento(s) seleccionado(s)`
                     : 'Selecciona al menos un elemento'
                   }
                 </div>
-                
+
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDocumentSelectionModal(false)}
@@ -2156,7 +2191,7 @@ export function ProjectDashboard({
                   >
                     Cancelar
                   </button>
-                  
+
                   <button
                     onClick={() => handleBulkExtractCapturados(true)}
                     disabled={selectedDocuments.length === 0 || isExtractingCaptures}

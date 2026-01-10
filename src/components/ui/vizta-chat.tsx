@@ -1018,7 +1018,7 @@ AssistantMessage.displayName = "AssistantMessage";
 
 // Main component
 const ViztaChatUI = () => {
-  const { user, session } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado
+  const { user, session, isAdmin } = useAuth();  // ✨ NUEVO: Obtener usuario autenticado y función isAdmin
   const { setSpreadsheetData, openSpreadsheet } = useSpreadsheet();  // ✨ NUEVO: Spreadsheet context
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [inputValue, setInputValue] = React.useState("");
@@ -1063,6 +1063,10 @@ const ViztaChatUI = () => {
   const [commandQuery, setCommandQuery] = React.useState('');
   const [selectedCommandIndex, setSelectedCommandIndex] = React.useState(0);
 
+  // ✨ NUEVO: Estado para verificar si el usuario es admin
+  const [userIsAdmin, setUserIsAdmin] = React.useState<boolean>(false);
+  const [checkingAdmin, setCheckingAdmin] = React.useState<boolean>(true);
+
   const availableCommands = [
     { command: '/Organize', description: 'Organizar datos en tabla', icon: '📊' },
     { command: '/Search', description: 'Búsqueda web rápida', icon: '🔍' },
@@ -1075,6 +1079,29 @@ const ViztaChatUI = () => {
       c.command.toLowerCase().includes(commandQuery.toLowerCase())
     );
   }, [commandQuery]);
+
+  // ✨ NUEVO: Verificar si el usuario es admin
+  React.useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setUserIsAdmin(false);
+        setCheckingAdmin(false);
+        return;
+      }
+
+      try {
+        const adminStatus = await isAdmin();
+        setUserIsAdmin(adminStatus);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setUserIsAdmin(false);
+      } finally {
+        setCheckingAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user, isAdmin]);
 
   // Save chat width to localStorage when it changes
   React.useEffect(() => {
@@ -1591,500 +1618,541 @@ const ViztaChatUI = () => {
       <ViztaChat>
         <ViztaChatTrigger />
         <ViztaChatContent chatWidth={chatWidth} onWidthChange={setChatWidth}>
-          <div className="flex flex-col space-y-4">
-            {/* Mode toggle */}
-            <motion.div
-              className="flex flex-col gap-2 mb-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-600 font-medium">Modo</div>
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
-                  <button
-                    onClick={() => setMode('chat')}
-                    className={cn(
-                      'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                      mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    Chat
-                  </button>
-                  <button
-                    onClick={() => setMode('agentic')}
-                    className={cn(
-                      'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
-                      mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    Agéntico
-                  </button>
-                </div>
-              </div>
-
-              {/* Generative UI Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-600 font-medium">Visualización</div>
-                <button
-                  onClick={() => setUseGenerativeUI(!useGenerativeUI)}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
-                    useGenerativeUI
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                  )}
-                >
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  {useGenerativeUI ? 'UI Generativa' : 'Texto Simple'}
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Welcome screen */}
-            {messages.length === 0 ? (
+          {/* Show loading state while checking admin status */}
+          {checkingAdmin ? (
+            <div className="flex flex-col items-center justify-center h-full p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e40af] mb-4"></div>
+              <p className="text-gray-600 text-sm">Verificando permisos...</p>
+            </div>
+          ) : !userIsAdmin ? (
+            /* Non-admin users see "coming soon" message */
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
               <motion.div
-                className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="max-w-md"
+              >
+                <div className="mb-6">
+                  <div className="h-20 w-20 mx-auto border-4 border-[#1e40af] rounded-lg flex items-center justify-center mb-4">
+                    <span className="text-3xl font-bold text-[#1e40af]">V</span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                  Vizta Chat
+                </h2>
+                <p className="text-lg text-gray-700 mb-2">
+                  Pronto conversaciones inteligentes con tus datos
+                </p>
+                <p className="text-sm text-gray-500">
+                  Esta funcionalidad estará disponible próximamente
+                </p>
+                <div className="mt-8 flex items-center justify-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[#1e40af] animate-pulse" />
+                  <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">
+                    Próximamente
+                  </span>
+                  <Sparkles className="h-5 w-5 text-[#1e40af] animate-pulse" />
+                </div>
+              </motion.div>
+            </div>
+          ) : (
+            /* Admin users see full chat interface */
+            <div className="flex flex-col space-y-4">
+              {/* Mode toggle */}
+              <motion.div
+                className="flex flex-col gap-2 mb-2"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.15 }}
               >
-                {/* Logo */}
-                <div className="mb-6">
-                  <div className="h-16 w-16 border-2 border-[#1e40af] rounded-lg bg-white flex items-center justify-center shadow-sm">
-                    <span className="text-2xl font-bold text-[#1e40af]">V</span>
-                  </div>
-                </div>
-
-                <h3 className="text-2xl font-semibold mb-2 text-gray-900">
-                  Vizta
-                </h3>
-                <p className="text-sm text-gray-600 mb-8 max-w-sm leading-relaxed">
-                  Asistente de análisis de noticias y tendencias de Guatemala
-                </p>
-
-                {/* Quick prompts */}
-                <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
-                  {quickPrompts.map((prompt, index) => (
-                    <motion.button
-                      key={index}
-                      onClick={() => setInputValue(prompt.text)}
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-600 font-medium">Modo</div>
+                  <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200">
+                    <button
+                      onClick={() => setMode('chat')}
                       className={cn(
-                        "group relative overflow-hidden rounded-lg p-4 text-left text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200",
-                        `bg-gradient-to-r ${prompt.gradient}`
+                        'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                        mode === 'chat' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
                       )}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + index * 0.05 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <div className="relative z-10 flex items-center gap-3">
-                        {prompt.icon}
-                        <span className="flex-1">{prompt.text}</span>
-                      </div>
-                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                    </motion.button>
-                  ))}
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => setMode('agentic')}
+                      className={cn(
+                        'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                        mode === 'agentic' ? 'bg-[#1e40af] text-white' : 'text-gray-600 hover:bg-gray-100'
+                      )}
+                    >
+                      Agéntico
+                    </button>
+                  </div>
                 </div>
-              </motion.div>
-            ) : (
-              <AnimatePresence mode="popLayout">
-                {messages.map((message, index) => (
-                  message.sender === "user" ? (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-start gap-3 ml-auto max-w-[85%]"
-                    >
-                      <div className="flex-1 rounded-lg p-4 bg-[#1e40af] text-white shadow-sm">
-                        <p className="text-sm leading-relaxed">{message.content}</p>
-                        <time className="text-xs text-white/70 mt-2 block">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </time>
-                      </div>
-                      <Avatar className="h-9 w-9 shadow-sm">
-                        <AvatarFallback className="bg-gray-200 text-gray-700">
-                          <MessageCircle className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    </motion.div>
-                  ) : (
-                    <AssistantMessage
-                      key={message.id}
-                      message={message}
-                      onRequestProjectSave={handleRequestProjectSave}
-                      onSaveTermToWiki={handleSaveTermToWiki}
-                      onSendToSpreadsheet={handleSendToSpreadsheet}
-                      capturedSaveStatus={capturedSaveStatus}
-                      termSaveStatus={termSaveStatus}
-                    />
-                  )
-                ))}
-              </AnimatePresence>
-            )}
 
-            {/* ✨ NUEVO: Spreadsheet Preview eliminado - ahora se maneja en las burbujas */}
-
-            {/* Loading state */}
-            <AnimatePresence>
-              {isLoading && (
-                <motion.div
-                  className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <Avatar className="h-9 w-9 shadow-sm">
-                    <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
-                      <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
-                        V
-                      </div>
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <TypingIndicator />
-                      <span className="text-sm text-gray-600">Analizando...</span>
-                    </div>
-                    <SkeletonLoader lines={3} />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div ref={scrollRef} />
-          </div>
-
-          {/* Context Modal - Full screen */}
-          <AnimatePresence>
-            {isContextModalOpen && (
-              <>
-                <motion.div
-                  className="fixed inset-0 bg-black/50 z-[60]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setIsContextModalOpen(false)}
-                />
-                <motion.div
-                  className="fixed inset-4 md:inset-12 bg-white rounded-lg shadow-2xl z-[70] flex flex-col"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {/* Modal Header */}
-                  <div className="flex items-center justify-between px-6 py-4 border-b">
-                    <h2 className="text-xl font-semibold text-gray-900">Contexto</h2>
-                    <button
-                      onClick={() => setIsContextModalOpen(false)}
-                      className="h-8 w-8 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* ✨ Modal Content - CodexSelector funcional */}
-                  <div className="flex-1 overflow-auto p-6">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">📚 Selecciona items del Codex</h3>
-                      <p className="text-sm text-gray-600">
-                        Selecciona documentos, Wiki items, o monitoreos para que Vizta los use como contexto en su respuesta.
-                      </p>
-                      {selectedCodex.length > 0 && (
-                        <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                            <p className="text-sm text-blue-800 font-medium">
-                              {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            {selectedCodex.slice(0, 3).map((itemId, index) => (
-                              <div key={itemId} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                                {index + 1}. {itemId}
-                              </div>
-                            ))}
-                            {selectedCodex.length > 3 && (
-                              <div className="text-xs text-blue-600 italic">
-                                +{selectedCodex.length - 3} más...
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ✨ Usar CodexSelector real */}
-                    <CodexSelector
-                      selectedCodex={selectedCodex}
-                      onCodexChange={setSelectedCodex}
-                    />
-                  </div>
-
-                  {/* Modal Actions */}
-                  <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
-                    <button
-                      onClick={() => setSelectedCodex([])}
-                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                      Limpiar selección
-                    </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setIsContextModalOpen(false)}
-                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsContextModalOpen(false);
-                          setIsContextOpen(false);
-                        }}
-                        className="px-6 py-2 bg-[#1e40af] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-sm font-medium"
-                      >
-                        Aplicar ({selectedCodex.length})
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* Input area */}
-          <div className="border-t bg-white p-4">
-            {/* ✨ NUEVO: Badge para texto importado */}
-            {importedTextSource && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-2"
-              >
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                  <span className="text-xs text-purple-700 font-medium">
-                    📄 Texto importado desde: {importedTextSource}
-                  </span>
+                {/* Generative UI Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-600 font-medium">Visualización</div>
                   <button
-                    onClick={() => setImportedTextSource(null)}
-                    className="ml-auto text-purple-400 hover:text-purple-600 transition-colors"
+                    onClick={() => setUseGenerativeUI(!useGenerativeUI)}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
+                      useGenerativeUI
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    )}
                   >
-                    <X className="h-3 w-3" />
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    {useGenerativeUI ? 'UI Generativa' : 'Texto Simple'}
                   </button>
                 </div>
               </motion.div>
-            )}
 
-            <div className="flex gap-2">
-              {/* Context Button */}
-              <div className="relative">
-                <button
-                  ref={contextButtonRef}
-                  onClick={() => setIsContextOpen(!isContextOpen)}
-                  className="h-12 w-12 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
-                  title="Contexto"
+              {/* Welcome screen */}
+              {messages.length === 0 ? (
+                <motion.div
+                  className="flex flex-col items-center justify-center min-h-[500px] text-center p-6 select-none"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <Info className="h-5 w-5 text-gray-600" />
-                </button>
-
-                {/* Context Dropdown */}
-                <AnimatePresence>
-                  {isContextOpen && (
-                    <>
-                      {/* Backdrop */}
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsContextOpen(false)}
-                      />
-
-                      {/* Dropdown Menu */}
-                      <motion.div
-                        className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {/* Dropdown Header */}
-                        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                          <h3 className="font-semibold text-gray-900">Contexto</h3>
-                          <button
-                            onClick={() => {
-                              setIsContextOpen(false);
-                              setIsContextModalOpen(true);
-                            }}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            title="Expandir"
-                          >
-                            <Maximize2 className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
-
-                        {/* Dropdown Content */}
-                        <div className="p-3 space-y-2 max-h-96 overflow-auto">
-                          {/* ✨ Codex - Abrir modal completo */}
-                          <button
-                            className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
-                            onClick={() => {
-                              setIsContextOpen(false);
-                              setIsContextModalOpen(true);
-                            }}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <FileUp className="h-4 w-4 text-[#1e40af]" />
-                              <span className="text-sm font-medium text-gray-900">📚 Codex</span>
-                              {selectedCodex.length > 0 && (
-                                <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                  {selectedCodex.length}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500">
-                              {selectedCodex.length > 0
-                                ? `${selectedCodex.length} items seleccionados`
-                                : 'Docs, Wiki, Monitoreos'}
-                            </p>
-                          </button>
-
-                        </div>
-
-                        {/* Dropdown Footer */}
-                        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                          <p className="text-xs text-gray-500">
-                            Agrega contexto para mejorar las respuestas
-                          </p>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Input Field */}
-              <div className="flex-1 relative">
-                <Textarea
-                  placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400"
-                  style={{ fontSize: '16px', WebkitTextSizeAdjust: '100%' }}
-                  onKeyDown={handleKeyDown}
-                />
-
-                {/* ✨ NUEVO: Dropdown de comandos / */}
-                {showCommands && filteredCommands.length > 0 && (
-                  <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
-                    <div className="p-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 flex items-center justify-between">
-                      <span>COMANDOS RÁPIDOS</span>
-                      <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-[10px]">Enter</kbd>
-                    </div>
-                    <div className="max-h-48 overflow-y-auto">
-                      {filteredCommands.map((cmd, index) => (
-                        <button
-                          key={cmd.command}
-                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-blue-50 transition-colors ${index === selectedCommandIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                            }`}
-                          onClick={() => handleCommandSelect(cmd)}
-                        >
-                          <span className="text-lg">{cmd.icon}</span>
-                          <div>
-                            <div className="font-medium">{cmd.command}</div>
-                            <div className="text-xs text-gray-500">{cmd.description}</div>
-                          </div>
-                        </button>
-                      ))}
+                  {/* Logo */}
+                  <div className="mb-6">
+                    <div className="h-16 w-16 border-2 border-[#1e40af] rounded-lg bg-white flex items-center justify-center shadow-sm">
+                      <span className="text-2xl font-bold text-[#1e40af]">V</span>
                     </div>
                   </div>
+
+                  <h3 className="text-2xl font-semibold mb-2 text-gray-900">
+                    Vizta
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-8 max-w-sm leading-relaxed">
+                    Asistente de análisis de noticias y tendencias de Guatemala
+                  </p>
+
+                  {/* Quick prompts */}
+                  <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
+                    {quickPrompts.map((prompt, index) => (
+                      <motion.button
+                        key={index}
+                        onClick={() => setInputValue(prompt.text)}
+                        className={cn(
+                          "group relative overflow-hidden rounded-lg p-4 text-left text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200",
+                          `bg-gradient-to-r ${prompt.gradient}`
+                        )}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + index * 0.05 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="relative z-10 flex items-center gap-3">
+                          {prompt.icon}
+                          <span className="flex-1">{prompt.text}</span>
+                        </div>
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {messages.map((message, index) => (
+                    message.sender === "user" ? (
+                      <motion.div
+                        key={message.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-start gap-3 ml-auto max-w-[85%]"
+                      >
+                        <div className="flex-1 rounded-lg p-4 bg-[#1e40af] text-white shadow-sm">
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                          <time className="text-xs text-white/70 mt-2 block">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </time>
+                        </div>
+                        <Avatar className="h-9 w-9 shadow-sm">
+                          <AvatarFallback className="bg-gray-200 text-gray-700">
+                            <MessageCircle className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                      </motion.div>
+                    ) : (
+                      <AssistantMessage
+                        key={message.id}
+                        message={message}
+                        onRequestProjectSave={handleRequestProjectSave}
+                        onSaveTermToWiki={handleSaveTermToWiki}
+                        onSendToSpreadsheet={handleSendToSpreadsheet}
+                        capturedSaveStatus={capturedSaveStatus}
+                        termSaveStatus={termSaveStatus}
+                      />
+                    )
+                  ))}
+                </AnimatePresence>
+              )}
+
+              {/* ✨ NUEVO: Spreadsheet Preview eliminado - ahora se maneja en las burbujas */}
+
+              {/* Loading state */}
+              <AnimatePresence>
+                {isLoading && (
+                  <motion.div
+                    className="flex items-start gap-3 rounded-lg p-4 bg-white border border-gray-200 shadow-sm"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Avatar className="h-9 w-9 shadow-sm">
+                      <AvatarFallback className="bg-[#1e40af] text-white border border-[#1e3a8a]">
+                        <div className="w-6 h-6 border border-white rounded flex items-center justify-center text-xs font-bold">
+                          V
+                        </div>
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <TypingIndicator />
+                        <span className="text-sm text-gray-600">Analizando...</span>
+                      </div>
+                      <SkeletonLoader lines={3} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div ref={scrollRef} />
+
+              {/* Context Modal - Full screen */}
+              <AnimatePresence>
+                {isContextModalOpen && (
+                  <>
+                    <motion.div
+                      className="fixed inset-0 bg-black/50 z-[60]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setIsContextModalOpen(false)}
+                    />
+                    <motion.div
+                      className="fixed inset-4 md:inset-12 bg-white rounded-lg shadow-2xl z-[70] flex flex-col"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between px-6 py-4 border-b">
+                        <h2 className="text-xl font-semibold text-gray-900">Contexto</h2>
+                        <button
+                          onClick={() => setIsContextModalOpen(false)}
+                          className="h-8 w-8 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* ✨ Modal Content - CodexSelector funcional */}
+                      <div className="flex-1 overflow-auto p-6">
+                        <div className="mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">📚 Selecciona items del Codex</h3>
+                          <p className="text-sm text-gray-600">
+                            Selecciona documentos, Wiki items, o monitoreos para que Vizta los use como contexto en su respuesta.
+                          </p>
+                          {selectedCodex.length > 0 && (
+                            <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                                <p className="text-sm text-blue-800 font-medium">
+                                  {selectedCodex.length} {selectedCodex.length === 1 ? 'item seleccionado' : 'items seleccionados'}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                {selectedCodex.slice(0, 3).map((itemId, index) => (
+                                  <div key={itemId} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                                    {index + 1}. {itemId}
+                                  </div>
+                                ))}
+                                {selectedCodex.length > 3 && (
+                                  <div className="text-xs text-blue-600 italic">
+                                    +{selectedCodex.length - 3} más...
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ✨ Usar CodexSelector real */}
+                        <CodexSelector
+                          selectedCodex={selectedCodex}
+                          onCodexChange={setSelectedCodex}
+                        />
+                      </div>
+
+                      {/* Modal Actions */}
+                      <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
+                        <button
+                          onClick={() => setSelectedCodex([])}
+                          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                          Limpiar selección
+                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setIsContextModalOpen(false)}
+                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsContextModalOpen(false);
+                              setIsContextOpen(false);
+                            }}
+                            className="px-6 py-2 bg-[#1e40af] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-sm font-medium"
+                          >
+                            Aplicar ({selectedCodex.length})
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+
+              {/* Input area */}
+              <div className="border-t bg-white p-4">
+                {/* ✨ NUEVO: Badge para texto importado */}
+                {importedTextSource && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-2"
+                  >
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs text-purple-700 font-medium">
+                        📄 Texto importado desde: {importedTextSource}
+                      </span>
+                      <button
+                        onClick={() => setImportedTextSource(null)}
+                        className="ml-auto text-purple-400 hover:text-purple-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
 
-                {/* ✨ NUEVO: Dropdown de menciones @ */}
-                {showMentions && (
-                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-2">
-                      <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                      <span>Elementos del Codex disponibles:</span>
-                      <span className="text-blue-600 font-medium">{filteredCodexItems.length} encontrados</span>
-                    </div>
+                <div className="flex gap-2">
+                  {/* Context Button */}
+                  <div className="relative">
+                    <button
+                      ref={contextButtonRef}
+                      onClick={() => setIsContextOpen(!isContextOpen)}
+                      className="h-12 w-12 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
+                      title="Contexto"
+                    >
+                      <Info className="h-5 w-5 text-gray-600" />
+                    </button>
 
-                    {filteredCodexItems.length > 0 ? (
-                      <>
-                        {filteredCodexItems.map((item, index) => (
-                          <button
-                            key={item.id}
-                            onClick={() => handleMentionSelect(item)}
-                            className={`w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3 ${index === selectedMentionIndex ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'text-gray-700'
-                              }`}
+                    {/* Context Dropdown */}
+                    <AnimatePresence>
+                      {isContextOpen && (
+                        <>
+                          {/* Backdrop */}
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsContextOpen(false)}
+                          />
+
+                          {/* Dropdown Menu */}
+                          <motion.div
+                            className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            transition={{ duration: 0.15 }}
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate flex items-center gap-2">
-                                <span className="text-blue-600">@</span>
-                                {item.title}
-                              </div>
-                              {item.content && (
-                                <div className="text-xs text-gray-500 truncate mt-1">
-                                  {item.content.substring(0, 60)}...
-                                </div>
-                              )}
+                            {/* Dropdown Header */}
+                            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                              <h3 className="font-semibold text-gray-900">Contexto</h3>
+                              <button
+                                onClick={() => {
+                                  setIsContextOpen(false);
+                                  setIsContextModalOpen(true);
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Expandir"
+                              >
+                                <Maximize2 className="h-4 w-4 text-gray-600" />
+                              </button>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {item.type || 'documento'}
-                              </div>
-                              {index === selectedMentionIndex && (
-                                <div className="text-xs text-blue-600 font-medium">
-                                  ← Seleccionado
+
+                            {/* Dropdown Content */}
+                            <div className="p-3 space-y-2 max-h-96 overflow-auto">
+                              {/* ✨ Codex - Abrir modal completo */}
+                              <button
+                                className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                                onClick={() => {
+                                  setIsContextOpen(false);
+                                  setIsContextModalOpen(true);
+                                }}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <FileUp className="h-4 w-4 text-[#1e40af]" />
+                                  <span className="text-sm font-medium text-gray-900">📚 Codex</span>
+                                  {selectedCodex.length > 0 && (
+                                    <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                                      {selectedCodex.length}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+                                <p className="text-xs text-gray-500">
+                                  {selectedCodex.length > 0
+                                    ? `${selectedCodex.length} items seleccionados`
+                                    : 'Docs, Wiki, Monitoreos'}
+                                </p>
+                              </button>
+
                             </div>
-                          </button>
-                        ))}
-                        <div className="p-2 text-xs text-gray-400 border-t bg-gray-50">
-                          <div className="flex items-center gap-4">
-                            <span>↑↓ navegar</span>
-                            <span>Enter seleccionar</span>
-                            <span>Esc cancelar</span>
-                          </div>
+
+                            {/* Dropdown Footer */}
+                            <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                              <p className="text-xs text-gray-500">
+                                Agrega contexto para mejorar las respuestas
+                              </p>
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Input Field */}
+                  <div className="flex-1 relative">
+                    <Textarea
+                      placeholder="Escribe tu consulta sobre Guatemala... (usa @ para referenciar elementos del codex)"
+                      value={inputValue}
+                      onChange={handleInputChange}
+                      className="h-12 w-full resize-none rounded-lg bg-white border border-gray-300 px-4 py-3 focus-visible:ring-1 focus-visible:ring-[#1e40af] focus-visible:border-[#1e40af] focus-visible:outline-none placeholder:text-gray-400"
+                      style={{ fontSize: '16px', WebkitTextSizeAdjust: '100%' }}
+                      onKeyDown={handleKeyDown}
+                    />
+
+                    {/* ✨ NUEVO: Dropdown de comandos / */}
+                    {showCommands && filteredCommands.length > 0 && (
+                      <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+                        <div className="p-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 flex items-center justify-between">
+                          <span>COMANDOS RÁPIDOS</span>
+                          <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-[10px]">Enter</kbd>
                         </div>
-                      </>
-                    ) : (
-                      <div className="p-4 text-center text-gray-500">
-                        <div className="text-sm">No se encontraron elementos</div>
-                        <div className="text-xs mt-1">
-                          {availableCodexItems.length === 0
-                            ? "No hay elementos en tu Codex. Crea algunos documentos primero."
-                            : "Intenta con otro término de búsqueda"
-                          }
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredCommands.map((cmd, index) => (
+                            <button
+                              key={cmd.command}
+                              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-blue-50 transition-colors ${index === selectedCommandIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                }`}
+                              onClick={() => handleCommandSelect(cmd)}
+                            >
+                              <span className="text-lg">{cmd.icon}</span>
+                              <div>
+                                <div className="font-medium">{cmd.command}</div>
+                                <div className="text-xs text-gray-500">{cmd.description}</div>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                        {availableCodexItems.length === 0 && (
-                          <div className="text-xs mt-2 text-blue-600">
-                            💡 Ve a "Conocimiento" para crear elementos del Codex
+                      </div>
+                    )}
+
+                    {/* ✨ NUEVO: Dropdown de menciones @ */}
+                    {showMentions && (
+                      <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-2">
+                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                          <span>Elementos del Codex disponibles:</span>
+                          <span className="text-blue-600 font-medium">{filteredCodexItems.length} encontrados</span>
+                        </div>
+
+                        {filteredCodexItems.length > 0 ? (
+                          <>
+                            {filteredCodexItems.map((item, index) => (
+                              <button
+                                key={item.id}
+                                onClick={() => handleMentionSelect(item)}
+                                className={`w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3 ${index === selectedMentionIndex ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'text-gray-700'
+                                  }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate flex items-center gap-2">
+                                    <span className="text-blue-600">@</span>
+                                    {item.title}
+                                  </div>
+                                  {item.content && (
+                                    <div className="text-xs text-gray-500 truncate mt-1">
+                                      {item.content.substring(0, 60)}...
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                    {item.type || 'documento'}
+                                  </div>
+                                  {index === selectedMentionIndex && (
+                                    <div className="text-xs text-blue-600 font-medium">
+                                      ← Seleccionado
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                            <div className="p-2 text-xs text-gray-400 border-t bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <span>↑↓ navegar</span>
+                                <span>Enter seleccionar</span>
+                                <span>Esc cancelar</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-4 text-center text-gray-500">
+                            <div className="text-sm">No se encontraron elementos</div>
+                            <div className="text-xs mt-1">
+                              {availableCodexItems.length === 0
+                                ? "No hay elementos en tu Codex. Crea algunos documentos primero."
+                                : "Intenta con otro término de búsqueda"
+                              }
+                            </div>
+                            {availableCodexItems.length === 0 && (
+                              <div className="text-xs mt-2 text-blue-600">
+                                💡 Ve a "Conocimiento" para crear elementos del Codex
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Send Button */}
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={isLoading || !inputValue.trim()}
-                className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Enviar mensaje</span>
-              </Button>
+                  {/* Send Button */}
+                  <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={isLoading || !inputValue.trim()}
+                    className="h-12 w-12 bg-[#1e40af] text-white hover:bg-[#1e3a8a] shadow-md hover:shadow-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Enviar mensaje</span>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </ViztaChatContent>
         <ProjectSelectorDialog
           open={isProjectSelectorOpen}
@@ -2121,7 +2189,7 @@ const ViztaChatUI = () => {
         initialTags={pendingTerm?.category ? [pendingTerm.category, 'vizta_chat'] : ['vizta_chat']}
         initialMetadata={{ source: 'vizta_chat', confidence: pendingTerm?.confidence ?? null }}
       />
-    </ThemeProvider>
+    </ThemeProvider >
   );
 };
 

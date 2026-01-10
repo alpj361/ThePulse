@@ -36,6 +36,7 @@ import { DecisionTimelineDemo } from './pages/DecisionTimelineDemo';
 import SidebarDemoPage from './pages/SidebarDemo';
 import DesignSettingsDemo from './pages/DesignSettingsDemo';
 import Knowledge from './pages/Knowledge';
+import TestDatasets from './pages/TestDatasets';
 
 // Componente para configurar LogRocket automáticamente
 const LogRocketConfig = () => {
@@ -190,6 +191,13 @@ function App() {
             <Route path="/test-hashtag" element={
               <Layout>
                 <TestHashtagCard />
+              </Layout>
+            } />
+
+            {/* Ruta de prueba para Datasets feature */}
+            <Route path="/test-datasets" element={
+              <Layout>
+                <TestDatasets />
               </Layout>
             } />
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiEdit,
   FiCheckCircle,
@@ -7,13 +7,16 @@ import {
   FiBox,
   FiLayers,
   FiArrowLeft,
-  FiGrid
+  FiGrid,
+  FiMap
 } from 'react-icons/fi';
 import { Card } from './card';
 import { Project } from '../../types/projects';
 import ProjectInsights from './ProjectInsights';
 import CapturedCards from './CapturedCards';
 import ProjectCoverages from '../coverages/ProjectCoverages';
+import { DatasetsTab } from './DatasetsTab';
+import { MappingsTab } from './MappingsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SimplifiedProjectDetailProps {
@@ -40,6 +43,24 @@ export function SimplifiedProjectDetail({
   children
 }: SimplifiedProjectDetailProps) {
   const [activeTab, setActiveTab] = useState('general');
+
+  // Restore tab from localStorage on mount
+  useEffect(() => {
+    const savedTab = localStorage.getItem('lastActiveTab');
+    const savedProjectId = localStorage.getItem('lastActiveProjectId');
+
+    // Only restore if it's the same project
+    if (savedTab && savedProjectId === project.id) {
+      setActiveTab(savedTab);
+    }
+  }, [project.id]);
+
+  // Save tab to localStorage when it changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    localStorage.setItem('lastActiveTab', newTab);
+    localStorage.setItem('lastActiveProjectId', project.id);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -118,7 +139,7 @@ export function SimplifiedProjectDetail({
         </Card>
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
           <TabsList className="w-full justify-start h-auto p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
             <TabsTrigger
               value="general"
@@ -145,6 +166,24 @@ export function SimplifiedProjectDetail({
               <div className="flex items-center gap-2">
                 <FiLayers className="w-4 h-4" />
                 <span>Coberturas</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger
+              value="datasets"
+              className="flex-1 py-3 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/20 dark:data-[state=active]:text-purple-300 rounded-lg transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <FiDatabase className="w-4 h-4" />
+                <span>Datasets</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger
+              value="mappings"
+              className="flex-1 py-3 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 dark:data-[state=active]:bg-green-900/20 dark:data-[state=active]:text-green-300 rounded-lg transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <FiMap className="w-4 h-4" />
+                <span>Mapeos</span>
               </div>
             </TabsTrigger>
           </TabsList>
@@ -217,6 +256,16 @@ export function SimplifiedProjectDetail({
           {/* Coberturas Tab Content */}
           <TabsContent value="coverages" className="pb-12 focus-visible:outline-none">
             <ProjectCoverages projectId={project.id} />
+          </TabsContent>
+
+          {/* Datasets Tab Content */}
+          <TabsContent value="datasets" className="pb-12 focus-visible:outline-none">
+            <DatasetsTab projectId={project.id} />
+          </TabsContent>
+
+          {/* Mapeos Tab Content */}
+          <TabsContent value="mappings" className="pb-12 focus-visible:outline-none">
+            <MappingsTab projectId={project.id} />
           </TabsContent>
         </Tabs>
       </div>

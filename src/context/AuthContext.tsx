@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔍 AuthContext - Auth state change:', event, session?.user?.email);
-      
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -47,14 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Limpiar estado inmediatamente
       setSession(null);
       setUser(null);
-      
+
       // Llamar a signOut de Supabase
       await supabase.auth.signOut();
-      
+
       // Limpiar almacenamiento local
       localStorage.clear();
       sessionStorage.clear();
-      
+
     } catch (error) {
       console.error("Error en signOut de Supabase:", error);
       // Incluso si hay error, limpiar estado local
@@ -71,19 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     try {
-      // Consultar el perfil del usuario en Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      // Use the is_admin RPC function from database
+      const { data, error } = await supabase.rpc('is_admin', {
+        check_user_id: user.id
+      });
 
       if (error) {
         console.error('Error verificando rol de admin:', error);
         return false;
       }
 
-      return data?.role === 'admin';
+      return data === true;
     } catch (error) {
       console.error('Error en verificación de admin:', error);
       return false;
