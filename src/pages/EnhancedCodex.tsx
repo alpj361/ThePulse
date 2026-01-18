@@ -17,40 +17,13 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import Folder from 'lucide-react/dist/esm/icons/folder';
-import MoreVertical from 'lucide-react/dist/esm/icons/more-vertical';
-import Edit from 'lucide-react/dist/esm/icons/edit';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
-import FolderPlus from 'lucide-react/dist/esm/icons/folder-plus';
-import FileText from 'lucide-react/dist/esm/icons/file-text';
-import Headphones from 'lucide-react/dist/esm/icons/headphones';
-import Video from 'lucide-react/dist/esm/icons/video';
-import Link from 'lucide-react/dist/esm/icons/link';
-import Plus from 'lucide-react/dist/esm/icons/plus';
-import Filter from 'lucide-react/dist/esm/icons/filter';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
-import Tag from 'lucide-react/dist/esm/icons/tag';
-import Eye from 'lucide-react/dist/esm/icons/eye';
-import Download from 'lucide-react/dist/esm/icons/download';
-import Share2 from 'lucide-react/dist/esm/icons/share-2';
-import Archive from 'lucide-react/dist/esm/icons/archive';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import Upload from 'lucide-react/dist/esm/icons/upload';
-import Cloud from 'lucide-react/dist/esm/icons/cloud';
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
-import Mic from 'lucide-react/dist/esm/icons/mic';
-import Users from 'lucide-react/dist/esm/icons/users';
-import StickyNote from 'lucide-react/dist/esm/icons/sticky-note';
-import LinkIcon from 'lucide-react/dist/esm/icons/link';
-import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
-import Zap from 'lucide-react/dist/esm/icons/zap';
-import Search from 'lucide-react/dist/esm/icons/search';
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
-import Save from 'lucide-react/dist/esm/icons/save';
+import {
+  Folder, MoreVertical, Edit, Trash2, FolderPlus, FileText, Headphones, Video, Link, Plus, Filter, Calendar, Tag, Eye, Download, Share2, Archive, RefreshCw, AlertCircle, Upload, Cloud, ChevronDown, ChevronUp, Mic, Users, StickyNote, ExternalLink, Search, ChevronLeft, Save,
+
+} from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../context/AuthContext"
+import { useViewMode } from "../context/ViewModeContext"
 import { useGoogleDrive } from "../hooks/useGoogleDrive"
 import {
   supabase,
@@ -69,7 +42,7 @@ import {
   getLinksForParentItem,
 } from "../services/supabase.ts"
 // URL dinámico del backend ExtractorW y ExtractorT
-import { EXTRACTORW_API_URL, EXTRACTORT_API_URL } from "../services/api";
+import { EXTRACTORW_API_URL, EXTRACTORT_API_URL, executeMcpTool } from "../services/api";
 import Checkbox from "@mui/material/Checkbox";
 import MonitoringCard from "../components/codex/monitoring/MonitoringCard";
 import MiniModal, { MiniModalLink } from "@/components/ui/MiniModal";
@@ -80,11 +53,13 @@ import WikiItemCard from "../components/codex/wiki/WikiItemCard";
 import WikiStatsPanel from "../components/codex/wiki/WikiStatsPanel";
 import CreateWikiModal from "../components/codex/wiki/CreateWikiModal";
 import EditWikiModal from "../components/codex/wiki/EditWikiModal";
-import { getWikiItems, deleteWikiItem, type WikiItem } from "../services/wikiService";
+import { getWikiItems, deleteWikiItem, deleteWikiItems, searchWikiItems, createWikiItem, updateWikiItem, upsertWikiItems, type WikiItem } from "../services/wikiService";
+import { datasetsService } from "../services/datasets";
 import RichTextEditor from "../components/ui/RichTextEditor";
 
 // Iconos temporales que pueden recibir props
 // (bloque eliminado - ahora se usan directamente los íconos de lucide-react)
+
 
 interface CodexItem {
   id: string
@@ -612,6 +587,7 @@ export default function EnhancedCodex() {
   const [topLevelItems, setTopLevelItems] = useState<CodexItem[]>([])
 
   const { user, session } = useAuth()
+  const { isBetaView } = useViewMode()
   const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(null)
   const [pickerReady, setPickerReady] = useState(false)
 
@@ -670,6 +646,20 @@ export default function EnhancedCodex() {
   const [showCreateWikiModal, setShowCreateWikiModal] = useState(false);
   const [showEditWikiModal, setShowEditWikiModal] = useState(false);
   const [editingWikiItem, setEditingWikiItem] = useState<WikiItem | null>(null);
+  const [syncingActors, setSyncingActors] = useState(false);
+  const [syncingEntities, setSyncingEntities] = useState(false);
+  const [wikiDatasetFilter, setWikiDatasetFilter] = useState<string | null>(null);
+  const [availableDatasets, setAvailableDatasets] = useState<{ id: string, name: string }[]>([]);
+
+  // AI Enrichment State
+  const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
+  const [enrichmentQueryTemplate, setEnrichmentQueryTemplate] = useState("¿Qué es {name}?");
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichmentProgress, setEnrichmentProgress] = useState(0);
+  const [enrichmentTotal, setEnrichmentTotal] = useState(0);
+  const [enrichmentStatus, setEnrichmentStatus] = useState("");
+
+
 
   // ====== DOCUMENT EDITOR STATES ======
   const [showDocumentEditor, setShowDocumentEditor] = useState(false);
@@ -681,6 +671,13 @@ export default function EnhancedCodex() {
   const [isDocumentFullscreen, setIsDocumentFullscreen] = useState(false);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+
+  // Reset categoryFilter if wiki is selected in Beta View
+  useEffect(() => {
+    if (isBetaView && categoryFilter === 'wiki') {
+      setCategoryFilter('all');
+    }
+  }, [isBetaView, categoryFilter]);
 
   // Handler to toggle selection of an item
   const toggleSelectItem = (id: string) => {
@@ -716,11 +713,73 @@ export default function EnhancedCodex() {
     }
   };
 
+  const handleDeleteSelectedWikiItems = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`¿Eliminar ${selectedIds.length} elemento(s) de la Wiki seleccionados?`)) return;
+    try {
+      await deleteWikiItems(selectedIds);
+      setSelectedIds([]);
+      setSelectionMode(false);
+      await loadWikiItems();
+    } catch (err) {
+      console.error('Error eliminando wiki items:', err);
+      alert('Error al eliminar los elementos de la wiki');
+    }
+  };
+
+  const handleDeleteAllWikiItems = async () => {
+    if (!user?.id) return;
+
+    // Construct warning message based on filters
+    let warningMsg = '¿Estás ABSOLUTAMENTE seguro de querer eliminar items de la Wiki?';
+    if (wikiDatasetFilter) {
+      warningMsg += `\n\nSe eliminarán SOLO los items vinculados al dataset seleccionado.`;
+    } else if (wikiSubcategory) {
+      warningMsg += `\n\nSe eliminarán SOLO los items de la categoría "${wikiSubcategory}".`;
+    } else {
+      warningMsg += `\n\nALERTA: Se eliminarán TODOS los items de tu Wiki.\nEsta acción es irreversible.`;
+    }
+
+    if (!window.confirm(warningMsg)) return;
+
+    try {
+      // Logic to delete based on current view/filters
+      // We can't just delete *all* if there are filters, so we need to fetch IDs of current view and delete them, 
+      // or implement a backend function. For safety/simplicity, let's use the current filtered list.
+      // We filtered client-side, so filteredWikiItems has the list.
+
+      const itemsToDelete = filteredWikiItems;
+      if (itemsToDelete.length === 0) {
+        alert('No hay elementos para eliminar con los filtros actuales.');
+        return;
+      }
+
+      console.log(`Deleting ${itemsToDelete.length} items...`);
+      const batchSize = 50;
+      for (let i = 0; i < itemsToDelete.length; i += batchSize) {
+        const batch = itemsToDelete.slice(i, i + batchSize).map(item => item.id);
+        await deleteWikiItems(batch);
+      }
+
+      setSelectedIds([]);
+      setSelectionMode(false);
+      await loadWikiItems();
+      alert(`Se eliminaron ${itemsToDelete.length} elementos correctamente.`);
+
+    } catch (err) {
+      console.error('Error eliminando todo wiki:', err);
+      alert('Error al eliminar elementos de la wiki');
+    }
+  };
+
   // ====== WIKI FUNCTIONS ======
   const loadWikiItems = async () => {
     if (!user?.id) return;
     try {
+      console.log('🔍 Loading wiki items for user:', user.id, 'subcategory:', wikiSubcategory);
       const items = await getWikiItems(user.id, wikiSubcategory || undefined);
+      console.log('✅ Loaded wiki items:', items.length, 'items');
+      console.log('📋 First 3 items:', items.slice(0, 3));
       setWikiItems(items);
     } catch (error) {
       console.error('Error loading wiki items:', error);
@@ -764,12 +823,506 @@ export default function EnhancedCodex() {
     handleEditWikiItem(item);
   };
 
+  // ====== ACTOR SYNC FUNCTIONS ======
+  const syncActorsFromDatasets = async () => {
+    if (!user?.id) return;
+
+    try {
+      setSyncingActors(true);
+
+      // Get all datasets from current project
+      const datasets = await datasetsService.listDatasets({
+        project_id: selectedProject || undefined
+      });
+
+      // Filter datasets with actor columns
+      const actorDatasets = datasets.filter((ds: any) => {
+        if (!ds.schema_definition) return false;
+        return ds.schema_definition.some((col: any) => col.type === 'actor');
+      });
+
+      let syncedCount = 0;
+
+      // Process each actor dataset
+      for (const dataset of actorDatasets) {
+        try {
+          // Get dataset data (rows)
+          const rows = await datasetsService.getDatasetData(dataset.id);
+
+          // Find actor columns
+          const actorColumns = dataset.schema_definition.filter((col: any) => col.type === 'actor');
+
+          // Extract unique actors from all actor columns
+          const uniqueActors = new Map<string, { name: string; type?: 'person' | 'organization' }>();
+
+          for (const actorCol of actorColumns) {
+            rows.forEach((row: any) => {
+              const actorValue = row[actorCol.name];
+              if (actorValue) {
+                // Handle both string and object actor values
+                const actorName = typeof actorValue === 'string' ? actorValue : actorValue.name;
+                const actorType = typeof actorValue === 'object' ? actorValue.type : 'person';
+
+                if (actorName && !uniqueActors.has(actorName)) {
+                  uniqueActors.set(actorName, {
+                    name: actorName,
+                    type: actorType || 'person'
+                  });
+                }
+              }
+            });
+          }
+
+          // Sync each unique actor to wiki (pass dataset object to avoid re-fetching)
+          for (const actor of uniqueActors.values()) {
+            await syncActorToWiki(actor, dataset);
+            syncedCount++;
+          }
+        } catch (error) {
+          console.error(`Error processing dataset ${dataset.name}:`, error);
+        }
+      }
+
+      // Reload wiki items to show new actors
+      await loadWikiItems();
+
+      alert(`✅ Sincronización completa: ${syncedCount} actores sincronizados desde ${actorDatasets.length} datasets`);
+    } catch (error) {
+      console.error('Error syncing actors:', error);
+      alert('❌ Error al sincronizar actores');
+    } finally {
+      setSyncingActors(false);
+    }
+  };
+
+  const syncActorToWiki = async (
+    actor: { name: string; type?: 'person' | 'organization' },
+    dataset: any
+  ) => {
+    if (!user?.id) return;
+
+    try {
+      // Check if actor already exists in current user's wiki
+      const existing = await searchWikiItems(
+        user.id,
+        actor.name,
+        actor.type === 'organization' ? 'organization' : 'person'
+      );
+
+      if (existing && existing.length > 0) {
+        // Update existing entry - add reference to this dataset
+        const item = existing[0];
+        const updatedMetadata = {
+          ...item.metadata,
+          datasets: [
+            ...(item.metadata?.datasets || []),
+            dataset.id
+          ].filter((v: string, i: number, a: string[]) => a.indexOf(v) === i) // unique
+        };
+
+        await updateWikiItem(item.id, {
+          metadata: updatedMetadata
+        });
+      } else {
+        // Create new wiki entry for current user only
+        const newItem: any = {
+          user_id: user.id,
+          subcategory: actor.type === 'organization' ? 'organization' : 'person',
+          name: actor.name,
+          description: '', // Dejar vacío - el usuario puede agregarlo después
+          relevance_score: 50,
+          metadata: {
+            source: 'dataset',
+            datasets: [dataset.id],
+            actor_type: actor.type,
+            dataset_visibility: dataset.visibility || 'private'
+          },
+          tags: ['actor', 'dataset', dataset.name] // Agregar nombre del dataset como tag
+        };
+
+        await createWikiItem(newItem);
+      }
+    } catch (error) {
+      console.error(`Error syncing actor ${actor.name}:`, error);
+      // Non-blocking - continue with other actors
+    }
+  };
+
+  // ====== ENTITY SYNC FUNCTIONS ======
+  const syncEntitiesFromDatasets = async () => {
+    if (!user?.id) return;
+
+    try {
+      setSyncingEntities(true);
+
+      // Get all datasets from current project
+      const datasets = await datasetsService.listDatasets({
+        project_id: selectedProject || undefined
+      });
+
+      // Filter datasets with entity columns (EXCLUDING actors as requested)
+      const entityDatasets = datasets.filter((ds: any) => {
+        if (!ds.schema_definition) return false;
+        // Strict filter: ONLY entity and company. explicit NO to 'actor'.
+        return ds.schema_definition.some((col: any) => ['entity', 'company'].includes(col.type));
+      });
+
+      // 3. Pre-fetch ALL Wiki items for this user (Optimization)
+      // This prevents N+1 queries during the loop
+      const existingWikiItems = await getWikiItems(user.id);
+      const wikiMap = new Map<string, any>();
+      existingWikiItems.forEach(item => {
+        wikiMap.set(item.name.toLowerCase(), item);
+      });
+
+      const itemsToUpsert = new Map<string, any>();
+      let syncedCount = 0;
+
+      // 4. Process each entity dataset
+      for (const dataset of entityDatasets) {
+        try {
+          // Get dataset data (rows)
+          const rows = await datasetsService.getDatasetData(dataset.id);
+
+          // Find entity columns (Strict filter)
+          const entityColumns = dataset.schema_definition.filter((col: any) => ['entity', 'company'].includes(col.type));
+
+          // Extract unique entities from all entity columns
+          for (const entityCol of entityColumns) {
+            rows.forEach((row: any) => {
+              const entityValue = row[entityCol.name];
+              if (entityValue) {
+                // Handle both string and object entity values
+                const entityName = typeof entityValue === 'string' ? entityValue : entityValue.name;
+
+                if (!entityName) return;
+
+                // Determine entity type
+                // FORCE 'organization' for 'entity' columns as requested by user.
+                // Unless the object explicitly has a type, we default 'entity' col -> 'organization'
+                let rawType = 'organization';
+
+                if (typeof entityValue === 'object' && entityValue.type) {
+                  rawType = entityValue.type;
+                } else if (entityCol.type === 'company') {
+                  rawType = 'company';
+                }
+
+                // Force 'company' type for company columns if type is generic
+                if (entityCol.type === 'company' && (!rawType || rawType === entityCol.name)) {
+                  rawType = 'company';
+                }
+
+                const entityCategory = typeof entityValue === 'object' ? entityValue.category : undefined;
+
+                // Map entity type to wiki subcategory
+                // We default to 'organization' because we are strictly in Entity/Company columns now.
+                let subcategory: any = 'organization';
+                const typeLower = (rawType || '').split('/')[0].toLowerCase().trim();
+
+                if (['person', 'persona', 'individual', 'actor'].some(t => typeLower.includes(t))) {
+                  subcategory = 'person';
+                } else if (['location', 'ubicación', 'ubicacion', 'place', 'lugar', 'city', 'country'].some(t => typeLower.includes(t))) {
+                  subcategory = 'location';
+                } else if (['event', 'evento'].some(t => typeLower.includes(t))) {
+                  subcategory = 'event';
+                }
+                // Note: We intentionally DO NOT map generic things to 'concept' anymore. 
+                // We assume if it's in an Entity column, it's an Organization unless proven otherwise.
+
+                // Prepare item data
+                const nameKey = entityName.toLowerCase();
+                let itemData = itemsToUpsert.get(nameKey) || wikiMap.get(nameKey);
+
+                if (itemData) {
+                  // Update existing item (in memory)
+                  const currentDatasets = itemData.metadata?.datasets || [];
+                  if (!currentDatasets.includes(dataset.id)) {
+                    /* Create new array to trigger update */
+                    const newDatasets = [...currentDatasets, dataset.id];
+
+                    // Prepare updated object
+                    const updatedItem = {
+                      ...itemData,
+                      metadata: {
+                        ...itemData.metadata,
+                        datasets: newDatasets,
+                        last_synced: new Date().toISOString()
+                      }
+                    };
+
+                    // Upgrade subcategory if current is concept but new one is specific
+                    if (itemData.subcategory === 'concept' && subcategory !== 'concept') {
+                      updatedItem.subcategory = subcategory;
+                    }
+
+                    itemsToUpsert.set(nameKey, updatedItem);
+                  } else if (itemData.subcategory === 'concept' && subcategory !== 'concept') {
+                    // Just upgrading subcategory even if dataset exists
+                    const updatedItem = {
+                      ...itemData,
+                      subcategory: subcategory
+                    };
+                    itemsToUpsert.set(nameKey, updatedItem);
+                  }
+                } else {
+                  // Create new item
+                  const newItem = {
+                    user_id: user.id,
+                    subcategory: subcategory,
+                    name: entityName,
+                    description: '',
+                    relevance_score: 50,
+                    metadata: {
+                      source: 'dataset',
+                      datasets: [dataset.id],
+                      original_type: rawType,
+                      entity_category: entityCategory,
+                      dataset_visibility: dataset.visibility || 'private'
+                    },
+                    tags: ['entidad', 'dataset', dataset.name]
+                  };
+                  itemsToUpsert.set(nameKey, newItem);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error processing dataset ${dataset.name}:`, error);
+        }
+      }
+
+      // 5. Batch Upsert to Supabase
+      // 5. Process updates/inserts individually (reverted from batch upsert to avoid DB constraint issues)
+      if (itemsToUpsert.size > 0) {
+        for (const item of itemsToUpsert.values()) {
+          try {
+            if (item.id) {
+              // Update existing item
+              const { id, ...updateData } = item;
+              await updateWikiItem(id, updateData);
+            } else {
+              // Create new item
+              await createWikiItem(item);
+            }
+            syncedCount++;
+          } catch (err) {
+            console.error(`Error syncing item ${item.name}:`, err);
+          }
+        }
+      }
+
+
+      // Reload wiki items to show new entities
+      await loadWikiItems();
+
+      alert(`✅ Sincronización completa: ${syncedCount} entidades sincronizadas desde ${entityDatasets.length} datasets`);
+    } catch (error) {
+      console.error('Error syncing entities:', error);
+      alert('❌ Error al sincronizar entidades');
+    } finally {
+      setSyncingEntities(false);
+    }
+  };
+
+  const syncEntityToWiki = async (
+    entity: { name: string; type?: string; category?: string },
+    dataset: any
+  ) => {
+    if (!user?.id) return;
+
+    try {
+      // Map entity type to wiki subcategory
+      // Valid wiki subcategories: person, organization, location, event, concept
+      let subcategory = 'concept';
+      const typeLower = (entity.type || '').split('/')[0].toLowerCase().trim();
+
+      if (['person', 'persona', 'individual', 'actor'].includes(typeLower)) {
+        subcategory = 'person';
+      } else if (['organization', 'organización', 'organizacion', 'entidad', 'company', 'empresa', 'ong', 'association', 'asociación', 'asociacion', 'institution', 'institución', 'institucion', 'gobierno', 'government', 'political_party', 'partido político', 'partido politico', 'ngo'].includes(typeLower)) {
+        subcategory = 'organization';
+      } else if (['location', 'ubicación', 'ubicacion', 'place', 'lugar', 'city', 'country'].includes(typeLower)) {
+        subcategory = 'location';
+      } else if (['event', 'evento'].includes(typeLower)) {
+        subcategory = 'event';
+      } else if (['concept', 'concepto', 'topic', 'tema'].includes(typeLower)) {
+        subcategory = 'concept';
+      }
+
+      // Check if entity already exists in current user's wiki (search by name globally to avoid duplicates)
+      const existing = await searchWikiItems(
+        user.id,
+        entity.name
+      );
+
+      // Find exact match by name (searchWikiItems uses ilike/fuzzy search)
+      const exactMatch = existing.find(i => i.name.toLowerCase() === entity.name.toLowerCase());
+
+      if (exactMatch) {
+        // Update existing entry
+        const item = exactMatch;
+        const updatedMetadata = {
+          ...item.metadata,
+          datasets: [
+            ...(item.metadata?.datasets || []),
+            dataset.id
+          ].filter((v: string, i: number, a: string[]) => a.indexOf(v) === i) // unique
+        };
+
+        const updateData: any = {
+          metadata: updatedMetadata
+        };
+
+        // If existing item is 'concept' and we have a more specific type, update the subcategory
+        if (item.subcategory === 'concept' && subcategory !== 'concept') {
+          updateData.subcategory = subcategory;
+        }
+
+        await updateWikiItem(item.id, updateData);
+      } else {
+        // Create new wiki entry for current user only
+        const newItem: any = {
+          user_id: user.id,
+          subcategory: subcategory,
+          name: entity.name,
+          description: '', // Dejar vacío - el usuario puede agregarlo después
+          relevance_score: 50,
+          metadata: {
+            source: 'dataset',
+            datasets: [dataset.id],
+            entity_type: entity.type,
+            entity_category: entity.category,
+            dataset_visibility: dataset.visibility || 'private'
+          },
+          tags: ['entidad', 'dataset', dataset.name] // Agregar nombre del dataset como tag
+        };
+
+        await createWikiItem(newItem);
+      }
+    } catch (error) {
+      console.error(`Error syncing entity ${entity.name}:`, error);
+      // Non-blocking - continue with other entities
+    }
+  };
+
+  // ====== AI ENRICHMENT FUNCTIONS ======
+  const handleEnrichWithAI = async () => {
+    if (!user?.id || selectedIds.length === 0) return;
+
+    setIsEnriching(true);
+    setEnrichmentProgress(0);
+    setEnrichmentTotal(selectedIds.length);
+    setEnrichmentStatus('Inicializando...');
+
+    // Get selected items
+    const selectedItems = wikiItems.filter(item => selectedIds.includes(item.id));
+
+    let processed = 0;
+
+    for (const item of selectedItems) {
+      setEnrichmentStatus(`Procesando: ${item.name}...`);
+      try {
+        const query = enrichmentQueryTemplate.replace('{name}', item.name);
+
+        // Call MCP Tool
+        const result = await executeMcpTool('search', {
+          query: query,
+          provider: 'perplexity'
+        });
+
+        // Extract description from result
+        // Extract description from result
+        let description = '';
+        if (typeof result === 'string') {
+          description = result;
+        } else if (result?.data?.analysis) {
+          description = result.data.analysis;
+        } else if (result?.data?.answer) {
+          description = result.data.answer;
+        } else if (result?.analysis) {
+          description = result.analysis;
+        } else if (result?.answer) {
+          description = result.answer;
+        } else if (result?.content) {
+          description = result.content;
+        } else {
+          description = JSON.stringify(result);
+        }
+
+        if (description) {
+          await updateWikiItem(item.id, { description: description });
+        }
+
+      } catch (error) {
+        console.error(`Error enriching item ${item.name}:`, error);
+      }
+
+      processed++;
+      setEnrichmentProgress(processed);
+    }
+
+    setIsEnriching(false);
+    setShowEnrichmentModal(false);
+    loadWikiItems();
+    setSelectedIds([]);
+    setSelectionMode(false);
+    alert(`Enriquecimiento completado: ${processed} items actualizados.`);
+    alert(`Enriquecimiento completado: ${processed} items actualizados.`);
+  };
+
+  const handleExportJSON = () => {
+    // Determine which items to export
+    let itemsToExport = [];
+
+    if (selectedIds.length > 0) {
+      // If selection exists, export selected items only
+      itemsToExport = wikiItems.filter(item => selectedIds.includes(item.id));
+    } else {
+      // Otherwise export all filtered items
+      itemsToExport = filteredWikiItems;
+    }
+
+    if (itemsToExport.length === 0) {
+      alert("No hay items para exportar.");
+      return;
+    }
+
+    const dataStr = JSON.stringify(itemsToExport, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `wiki_export_${new Date().toISOString().slice(0, 10)}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   // Load wiki items when category or subcategory changes
   useEffect(() => {
     if (categoryFilter === 'wiki' && user?.id) {
       loadWikiItems();
+      // Cargar datasets disponibles para el filtro
+      loadAvailableDatasets();
     }
   }, [categoryFilter, wikiSubcategory, user?.id]);
+
+  // Load available datasets for wiki filter
+  const loadAvailableDatasets = async () => {
+    try {
+      const datasets = await datasetsService.listDatasets({
+        project_id: selectedProject || undefined
+      });
+      setAvailableDatasets(datasets.map((ds: any) => ({ id: ds.id, name: ds.name })));
+    } catch (error) {
+      console.error('Error loading datasets for filter:', error);
+    }
+  };
+
+  // Filtered wiki items based on dataset filter
+  const filteredWikiItems = wikiDatasetFilter
+    ? wikiItems.filter(item => item.metadata?.datasets?.includes(wikiDatasetFilter))
+    : wikiItems;
 
   /**
    * Asegura que tenemos un token válido de Google Drive.
@@ -2961,7 +3514,7 @@ export default function EnhancedCodex() {
               />
 
               {/* Wiki Subcategory Filters */}
-              {categoryFilter === 'wiki' && (
+              {categoryFilter === 'wiki' && !isBetaView && (
                 <SubcategoryChips
                   selected={wikiSubcategory}
                   onSelect={setWikiSubcategory}
@@ -2973,6 +3526,93 @@ export default function EnhancedCodex() {
                     concept: wikiItems.filter(i => i.subcategory === 'concept').length,
                   }}
                 />
+              )}
+
+              {/* Dataset Filter for Wiki */}
+              {categoryFilter === 'wiki' && !isBetaView && availableDatasets.length > 0 && (
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="text-sm text-slate-500">Filtrar por dataset:</span>
+                  <select
+                    value={wikiDatasetFilter || ''}
+                    onChange={(e) => setWikiDatasetFilter(e.target.value || null)}
+                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Todos los datasets</option>
+                    {availableDatasets.map((ds) => (
+                      <option key={ds.id} value={ds.id}>
+                        {ds.name}
+                      </option>
+                    ))}
+                  </select>
+                  {wikiDatasetFilter && (
+                    <button
+                      onClick={() => setWikiDatasetFilter(null)}
+                      className="text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {categoryFilter === 'wiki' && (
+                <div className="flex gap-2 ml-auto">
+                  {!selectionMode ? (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectionMode(true)}
+                        className="text-slate-600 border-slate-300 hover:bg-slate-50"
+                      >
+                        <div className="w-4 h-4 mr-2 border border-slate-400 rounded flex items-center justify-center">
+                          <div className="w-2 h-2 bg-transparent" />
+                        </div>
+                        Seleccionar
+                      </Button>
+
+                      {/* Delete All Button (Filtered) */}
+                      {filteredWikiItems.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteAllWikiItems}
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {wikiDatasetFilter || wikiSubcategory ? 'Eliminar filtrados' : 'Eliminar Todo'}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
+                      <span className="text-xs font-semibold text-blue-700 mr-2">
+                        {selectedIds.length} seleccionados
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleDeleteSelectedWikiItems}
+                        disabled={selectedIds.length === 0}
+                        className="h-8"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectionMode(false);
+                          setSelectedIds([]);
+                        }}
+                        className="h-8 text-slate-500 hover:text-slate-700"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -3030,15 +3670,64 @@ export default function EnhancedCodex() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {categoryFilter === 'wiki' ? (
-                <Button
-                  size="lg"
-                  onClick={() => setShowCreateWikiModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Crear Item de Wiki
-                </Button>
+              {categoryFilter === 'wiki' && !isBetaView && selectedIds.length > 0 ? (
+                <>
+                  <Button
+                    size="lg"
+                    onClick={() => setShowEnrichmentModal(true)}
+                    className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <Search className="h-5 w-5 mr-2" />
+                    Search
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleExportJSON}
+                    className="bg-white hover:bg-slate-50 text-slate-700 border-slate-200 px-8 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Exportar JSON
+                  </Button>
+                </>
+              ) : categoryFilter === 'wiki' && !isBetaView ? (
+                <>
+                  <Button
+                    size="lg"
+                    onClick={() => setShowCreateWikiModal(true)}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Crear Item de Wiki
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={syncActorsFromDatasets}
+                    disabled={syncingActors}
+                    className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`h-5 w-5 mr-2 ${syncingActors ? 'animate-spin' : ''}`} />
+                    {syncingActors ? 'Sincronizando...' : 'Sincronizar Actores'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={syncEntitiesFromDatasets}
+                    disabled={syncingEntities}
+                    className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`h-5 w-5 mr-2 ${syncingEntities ? 'animate-spin' : ''}`} />
+                    {syncingEntities ? 'Sincronizando...' : 'Sincronizar Entidades'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleExportJSON}
+                    className="bg-white hover:bg-slate-50 text-slate-700 border-slate-200 px-8 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-200"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Exportar JSON
+                  </Button>
+                </>
               ) : (
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                   <DialogTrigger asChild>
@@ -3951,72 +4640,75 @@ export default function EnhancedCodex() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Search and Filters */}
-          <Card className="mb-8 border-0 shadow-md">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Buscar por título, proyecto, etiquetas..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  {categoryFilter === 'item' && (
-                    <Select value={selectedType} onValueChange={setSelectedType}>
+          {/* Search and Filters */}
+          {categoryFilter !== 'wiki' && (
+            <Card className="mb-8 border-0 shadow-md">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Buscar por título, proyecto, etiquetas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    {categoryFilter === 'item' && (
+                      <Select value={selectedType} onValueChange={setSelectedType}>
+                        <SelectTrigger className="w-48 h-12 border-slate-200">
+                          <SelectValue placeholder="Tipo de fuente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los tipos</SelectItem>
+                          <SelectItem value="documento">Documentos</SelectItem>
+                          <SelectItem value="audio">Audios</SelectItem>
+                          <SelectItem value="video">Videos</SelectItem>
+                          <SelectItem value="enlace">Enlaces</SelectItem>
+                          <SelectItem value="nota">Notas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                       <SelectTrigger className="w-48 h-12 border-slate-200">
-                        <SelectValue placeholder="Tipo de fuente" />
+                        <SelectValue placeholder="Estado" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos los tipos</SelectItem>
-                        <SelectItem value="documento">Documentos</SelectItem>
-                        <SelectItem value="audio">Audios</SelectItem>
-                        <SelectItem value="video">Videos</SelectItem>
-                        <SelectItem value="enlace">Enlaces</SelectItem>
-                        <SelectItem value="nota">Notas</SelectItem>
+                        <SelectItem value="all">Todos los estados</SelectItem>
+                        <SelectItem value="nuevo">Nuevo</SelectItem>
+                        <SelectItem value="revision">En revisión</SelectItem>
+                        <SelectItem value="procesado">Procesado</SelectItem>
                       </SelectContent>
                     </Select>
-                  )}
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-48 h-12 border-slate-200">
-                      <SelectValue placeholder="Estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los estados</SelectItem>
-                      <SelectItem value="nuevo">Nuevo</SelectItem>
-                      <SelectItem value="revision">En revisión</SelectItem>
-                      <SelectItem value="procesado">Procesado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="lg" className="h-12 px-4 border-slate-200">
-                    <Filter className="h-4 w-4" />
-                  </Button>
+                    <Button variant="outline" size="lg" className="h-12 px-4 border-slate-200">
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              {/* Toolbar de selección */}
-              <div className="flex flex-wrap gap-3 mt-4">
-                {!selectionMode ? (
-                  <Button variant="outline" size="lg" onClick={() => setSelectionMode(true)}>
-                    Seleccionar archivos
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="destructive" size="lg" onClick={handleDeleteSelectedItems} disabled={selectedIds.length === 0}>
-                      Eliminar seleccionados ({selectedIds.length})
+                {/* Toolbar de selección */}
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {!selectionMode ? (
+                    <Button variant="outline" size="lg" onClick={() => setSelectionMode(true)}>
+                      Seleccionar archivos
                     </Button>
-                    <Button variant="ghost" size="lg" onClick={() => { setSelectionMode(false); setSelectedIds([]); }}>
-                      Cancelar selección
-                    </Button>
-                    <Button variant="destructive" size="lg" onClick={handleDeleteAllItems}>
-                      Eliminar todos
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  ) : (
+                    <>
+                      <Button variant="destructive" size="lg" onClick={handleDeleteSelectedItems} disabled={selectedIds.length === 0}>
+                        Eliminar seleccionados ({selectedIds.length})
+                      </Button>
+                      <Button variant="ghost" size="lg" onClick={() => { setSelectionMode(false); setSelectedIds([]); }}>
+                        Cancelar selección
+                      </Button>
+                      <Button variant="destructive" size="lg" onClick={handleDeleteAllItems}>
+                        Eliminar todos
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Content Tabs */}
           <Tabs defaultValue="recent" className="space-y-6">
@@ -4058,39 +4750,69 @@ export default function EnhancedCodex() {
                   <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
                   <span className="ml-2 text-slate-600">Cargando elementos del Codex...</span>
                 </div>
-              ) : topLevelItems.length === 0 ? (
+              ) : (categoryFilter === 'wiki' ? wikiItems.length === 0 : topLevelItems.length === 0) ? (
                 <div className="text-center py-12">
                   <Archive className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">No hay elementos</h3>
                   <p className="text-slate-600 mb-4">
-                    {codexItems.length === 0
-                      ? "Aún no has agregado elementos a tu Codex."
-                      : "No se encontraron elementos que coincidan con tu búsqueda."
+                    {categoryFilter === 'wiki'
+                      ? "No hay items en tu Wiki. Haz clic en 'Sincronizar Actores' para importar actores desde tus datasets."
+                      : codexItems.length === 0
+                        ? "Aún no has agregado elementos a tu Codex."
+                        : "No se encontraron elementos que coincidan con tu búsqueda."
                     }
                   </p>
                   <Button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => categoryFilter === 'wiki' ? setShowCreateWikiModal(true) : setIsModalOpen(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Agregar primer elemento
+                    {categoryFilter === 'wiki' ? 'Crear Item de Wiki' : 'Agregar primer elemento'}
                   </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {categoryFilter === 'wiki' ? (
+                  {categoryFilter === 'wiki' && !isBetaView ? (
                     // Render Wiki Items
-                    wikiItems
-                      .filter(item => !wikiSubcategory || item.subcategory === wikiSubcategory)
-                      .map((item) => (
+                    (() => {
+                      const displayItems = filteredWikiItems.filter(item => !wikiSubcategory || item.subcategory === wikiSubcategory);
+                      console.log('🎨 Rendering wiki items:', displayItems.length, 'filtered items from', wikiItems.length, 'total');
+                      return displayItems.map((item) => (
                         <WikiItemCard
                           key={item.id}
                           item={item}
-                          onView={handleViewWikiItem}
-                          onEdit={handleEditWikiItem}
-                          onDelete={handleDeleteWikiItem}
+                          onView={(i) => {
+                            if (selectionMode) {
+                              toggleSelectItem(i.id);
+                            } else {
+                              // Assuming handleViewWikiItem was defined in scope or passed as prop, 
+                              // but since I see it named, I'll assume it exists in the component.
+                              // However, checking the file view, handleViewWikiItem is NOT defined in lines 1-100 or 650-750.
+                              // It might be defined elsewhere. To be safe, I will use the setEditingWikiItem logic directly 
+                              // or try to find where handleViewWikiItem is defined. 
+                              // Actually, I see `handleViewWikiItem` in the source code I viewed. 
+                              // If I can't find it, I'll fallback to `setEditingWikiItem`.
+                              // Let's use the safer direct state setting which I saw in my previous edit attempt that failed.
+                              setEditingWikiItem(i);
+                              setShowEditWikiModal(true);
+                            }
+                          }}
+                          onEdit={(i) => {
+                            setEditingWikiItem(i);
+                            setShowEditWikiModal(true);
+                          }}
+                          onDelete={async (i) => {
+                            if (window.confirm(`¿Eliminar ${i.name}?`)) {
+                              await deleteWikiItem(i.id);
+                              await loadWikiItems();
+                            }
+                          }}
+                          selectionMode={selectionMode}
+                          isSelected={selectedIds.includes(item.id)}
+                          onSelect={(i) => toggleSelectItem(i.id)}
                         />
-                      ))
+                      ));
+                    })()
                   ) : (
                     // Render General and Monitoring Items
                     topLevelItems.map((item) => {
@@ -4846,6 +5568,55 @@ export default function EnhancedCodex() {
           item={editingWikiItem}
           onSuccess={handleEditWikiSuccess}
         />
+
+        {/* AI Enrichment Modal */}
+        <Dialog open={showEnrichmentModal} onOpenChange={setShowEnrichmentModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Enriquecer con AI (Perplexity)</DialogTitle>
+              <DialogDescription>
+                Genera descripciones automáticas para los {selectedIds.length} items seleccionados usando Perplexity.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Plantilla de Consulta</Label>
+                <Input
+                  value={enrichmentQueryTemplate}
+                  onChange={(e) => setEnrichmentQueryTemplate(e.target.value)}
+                  placeholder="Ej: ¿Qué es {name}?"
+                />
+                <p className="text-xs text-slate-500">Usa <code>{'{name}'}</code> como marcador para el nombre del item.</p>
+              </div>
+
+              {isEnriching && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{enrichmentStatus}</span>
+                    <span>{enrichmentProgress} / {enrichmentTotal}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${(enrichmentProgress / (enrichmentTotal || 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEnrichmentModal(false)} disabled={isEnriching}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEnrichWithAI} disabled={isEnriching}>
+                {isEnriching ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+                {isEnriching ? 'Procesando...' : 'Iniciar Enriquecimiento'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </>

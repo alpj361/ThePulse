@@ -4,6 +4,7 @@ import { BarChart3 as BarChartIcon, LayoutDashboard, Search, TrendingUp } from '
 import { Trophy } from 'lucide-react'; // NUEVO: Icono para deportes
 import WordCloud from '../components/ui/WordCloud';
 import BarChart from '../components/ui/BarChart';
+import { NetworkGraph } from '../components/ui/NetworkGraph';
 import KeywordListCard from '../components/ui/KeywordListCard';
 import AboutCard from '../components/ui/AboutCard';
 import StatisticsCard from '../components/ui/StatisticsCard';
@@ -1099,7 +1100,7 @@ export const Trends = () => {
                     <CircularProgress size={20} color="secondary" />
                   </Box>
                 )}
-                <BarChart data={filteredData.categories} title={t.categoryDistribution} />
+                <NetworkGraph data={filteredData.categories} />
               </Box>
             ) : (
               <Box sx={{

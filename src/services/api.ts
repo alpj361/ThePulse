@@ -799,6 +799,7 @@ export async function getSondeoHistorial(limit: number = 10, offset: number = 0)
   }
 }
 
+
 // Obtener un sondeo específico por ID
 export async function getSondeoById(id: string) {
   try {
@@ -826,4 +827,57 @@ export async function getSondeoById(id: string) {
     console.error('Error obteniendo sondeo por ID:', error);
     throw error;
   }
-} 
+}
+
+/**
+ * Executes an MCP tool via the ExtractorW backend
+ * @param toolName Name of the tool to execute (e.g., 'search', 'codex')
+ * @param parameters Object containing the parameters for the tool
+ * @param authToken Optional authentication token
+ * @returns Result of the tool execution
+ */
+export async function executeMcpTool(toolName: string, parameters: any = {}, authToken?: string): Promise<any> {
+  try {
+    console.log(`🔧 Executing MCP Tool: ${toolName}`, parameters);
+
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add auth token if available or try to get from local storage
+    const token = authToken || localStorage.getItem('supabase.auth.token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Prepare payload
+    const payload = {
+      tool_name: toolName,
+      parameters: parameters
+    };
+
+    const response = await fetch(`${EXTRACTORW_API_URL}/mcp/execute`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error executing MCP tool (${response.status}): ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Unknown error executing MCP tool');
+    }
+
+    return data.result;
+  } catch (error) {
+    console.error(`❌ Error in executeMcpTool (${toolName}):`, error);
+    throw error;
+  }
+}
+

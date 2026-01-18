@@ -1,7 +1,5 @@
-// Wiki Service - API calls for Wiki functionality
+// Wiki Service - Supabase-based Wiki functionality
 import { supabase } from './supabase';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
 
 // Types
 export interface WikiItem {
@@ -47,24 +45,26 @@ export async function getWikiItems(
   minRelevance?: number
 ): Promise<WikiItem[]> {
   try {
-    const params = new URLSearchParams();
-    params.append('user_id', userId);
-    if (subcategory) params.append('subcategory', subcategory);
-    if (minRelevance) params.append('min_relevance', minRelevance.toString());
+    let query = supabase
+      .from('wiki_items')
+      .select('*')
+      .eq('user_id', userId);
 
-    const response = await fetch(`${BACKEND_URL}/api/wiki/items?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch wiki items: ${response.statusText}`);
+    if (subcategory) {
+      query = query.eq('subcategory', subcategory);
     }
 
-    const data = await response.json();
-    return data.items || [];
+    if (minRelevance !== undefined) {
+      query = query.gte('relevance_score', minRelevance);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
   } catch (error) {
     console.error('Error fetching wiki items:', error);
     return [];
@@ -74,42 +74,69 @@ export async function getWikiItems(
 // Create a new Wiki item
 export async function createWikiItem(item: WikiItemCreate): Promise<WikiItem | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/save-item`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(item),
-    });
+    const { data, error } = await supabase
+      .from('wiki_items')
+      .insert({
+        ...item,
+        category: 'wiki',
+        tags: item.tags || [],
+      })
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error(`Failed to create wiki item: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-    return data.item || null;
+    return data;
   } catch (error) {
     console.error('Error creating wiki item:', error);
     return null;
   }
 }
 
+// Upsert multiple Wiki items (insert or update on conflict)
+export async function upsertWikiItems(items: WikiItemCreate[]): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('wiki_items')
+      .upsert(
+        items.map(item => ({
+          ...item,
+          category: 'wiki',
+          tags: item.tags || [],
+        })),
+        { onConflict: 'user_id,name', ignoreDuplicates: false }
+        // Note: Requires a unique constraint on (user_id, name) in the DB. 
+        // If not present, we might need to handle per-item logic or trust the ID if provided (but here we don't have IDs for new items).
+        // For now, we'll try standard upsert. If it fails, we fall back to manual checks in the caller.
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error upserting wiki items:', error);
+    return false;
+  }
+}
+
 // Get a single Wiki item
 export async function getWikiItem(itemId: string): Promise<WikiItem | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/item/${itemId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const { data, error } = await supabase
+      .from('wiki_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch wiki item: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-    return data.item || null;
+    return data;
   } catch (error) {
     console.error('Error fetching wiki item:', error);
     return null;
@@ -122,20 +149,18 @@ export async function updateWikiItem(
   updates: Partial<WikiItemCreate>
 ): Promise<WikiItem | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/item/${itemId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    const { data, error } = await supabase
+      .from('wiki_items')
+      .update(updates)
+      .eq('id', itemId)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error(`Failed to update wiki item: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-    return data.item || null;
+    return data;
   } catch (error) {
     console.error('Error updating wiki item:', error);
     return null;
@@ -145,20 +170,37 @@ export async function updateWikiItem(
 // Delete a Wiki item
 export async function deleteWikiItem(itemId: string): Promise<boolean> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/item/${itemId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const { error } = await supabase
+      .from('wiki_items')
+      .delete()
+      .eq('id', itemId);
 
-    if (!response.ok) {
-      throw new Error(`Failed to delete wiki item: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
     return true;
   } catch (error) {
     console.error('Error deleting wiki item:', error);
+    return false;
+  }
+}
+
+// Delete multiple Wiki items
+export async function deleteWikiItems(itemIds: string[]): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('wiki_items')
+      .delete()
+      .in('id', itemIds);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting wiki items:', error);
     return false;
   }
 }
@@ -169,20 +211,18 @@ export async function updateRelevanceScore(
   score: number
 ): Promise<WikiItem | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/item/${itemId}/relevance`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ relevance_score: score }),
-    });
+    const { data, error } = await supabase
+      .from('wiki_items')
+      .update({ relevance_score: score })
+      .eq('id', itemId)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error(`Failed to update relevance: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-    return data.item || null;
+    return data;
   } catch (error) {
     console.error('Error updating relevance:', error);
     return null;
@@ -192,19 +232,30 @@ export async function updateRelevanceScore(
 // Get Wiki statistics
 export async function getWikiStats(userId: string): Promise<WikiStats | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/wiki/stats?user_id=${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const { data, error } = await supabase
+      .from('wiki_items')
+      .select('subcategory, relevance_score')
+      .eq('user_id', userId);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch wiki stats: ${response.statusText}`);
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-    return data.stats || null;
+    const stats: WikiStats = {
+      total: data.length,
+      by_type: {
+        person: data.filter(item => item.subcategory === 'person').length,
+        organization: data.filter(item => item.subcategory === 'organization').length,
+        location: data.filter(item => item.subcategory === 'location').length,
+        event: data.filter(item => item.subcategory === 'event').length,
+        concept: data.filter(item => item.subcategory === 'concept').length,
+      },
+      avg_relevance: data.length > 0
+        ? data.reduce((sum, item) => sum + item.relevance_score, 0) / data.length
+        : 0,
+    };
+
+    return stats;
   } catch (error) {
     console.error('Error fetching wiki stats:', error);
     return null;
@@ -218,24 +269,25 @@ export async function searchWikiItems(
   subcategory?: string
 ): Promise<WikiItem[]> {
   try {
-    const params = new URLSearchParams();
-    params.append('user_id', userId);
-    params.append('query', query);
-    if (subcategory) params.append('subcategory', subcategory);
+    let supabaseQuery = supabase
+      .from('wiki_items')
+      .select('*')
+      .eq('user_id', userId);
 
-    const response = await fetch(`${BACKEND_URL}/api/wiki/search?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to search wiki items: ${response.statusText}`);
+    if (subcategory) {
+      supabaseQuery = supabaseQuery.eq('subcategory', subcategory);
     }
 
-    const data = await response.json();
-    return data.items || [];
+    // Search in name and description fields
+    supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+
+    const { data, error } = await supabaseQuery.order('relevance_score', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
   } catch (error) {
     console.error('Error searching wiki items:', error);
     return [];

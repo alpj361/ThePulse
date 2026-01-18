@@ -36,10 +36,13 @@ import {
   Grid,
   Switch
 } from '@mui/material';
-import { FiX, FiUpload, FiDatabase, FiGlobe, FiLock, FiArrowLeft, FiArrowRight } from 'react-icons/fi';
+import { FiX, FiUpload, FiDatabase, FiGlobe, FiLock, FiArrowLeft, FiArrowRight, FiDownload, FiRefreshCw } from 'react-icons/fi';
 import { datasetsService, type CreateDatasetInput } from '../../services/datasets';
 import { DATASETS_CONFIG } from '../../config/datasets';
 import { useAuth } from '../../context/AuthContext';
+import { useUserType } from '../../hooks/useUserType';
+import GoogleDriveImporter from './GoogleDriveImporter';
+import GoogleSheetsImporter from './GoogleSheetsImporter';
 
 interface CreateDatasetModalProps {
   projectId?: string;
@@ -50,6 +53,16 @@ interface CreateDatasetModalProps {
 interface FormData extends CreateDatasetInput {
   file?: File;
   captureType?: string;
+  importSource?: 'local' | 'drive' | 'sheets';
+  sheetData?: {
+    spreadsheetId: string;
+    sheetName: string;
+    title: string;
+  };
+  syncConfig?: {
+    enabled: boolean;
+    interval: number;
+  };
 }
 
 const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
@@ -58,11 +71,13 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
   onCreated
 }) => {
   const { isAdmin } = useAuth();
+  const { hasAdvancedFeatures } = useUserType();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [importSource, setImportSource] = useState<'local' | 'drive' | 'sheets'>('local');
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -146,7 +161,20 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'number') return 'number';
     if (typeof value === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'date';
+      const trimmedValue = value.trim();
+
+      // Check for date format
+      if (/^\d{4}-\d{2}-\d{2}/.test(trimmedValue)) return 'date';
+
+      // Check for URL format
+      if (/^https?:\/\/.+/i.test(trimmedValue)) {
+        // Check if it's likely an image URL
+        if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(trimmedValue)) {
+          return 'image';
+        }
+        return 'url';
+      }
+
       return 'text';
     }
     return 'text';
@@ -190,6 +218,51 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
     await processFile(file);
   };
 
+  // Validate data structure - detect incorrectly nested data
+  const validateDataStructure = (data: any[]): { valid: boolean; error?: string } => {
+    if (data.length === 0) {
+      return { valid: false, error: 'El archivo no contiene datos válidos' };
+    }
+
+    const firstRow = data[0];
+
+    // Check if the first row has only one property that is an array
+    // This indicates incorrectly nested data like: [{"diputados": [...]}]
+    const keys = Object.keys(firstRow);
+
+    if (keys.length === 1 && Array.isArray(firstRow[keys[0]])) {
+      return {
+        valid: false,
+        error: `Datos no correctamente estructurados. El archivo contiene un objeto con la propiedad "${keys[0]}" que es un array. Por favor, suba directamente el array de datos sin envolverlo en un objeto.`
+      };
+    }
+
+    // Check if any value in the first row is an array or deeply nested object
+    for (const key of keys) {
+      const value = firstRow[key];
+      if (Array.isArray(value)) {
+        return {
+          valid: false,
+          error: `Datos no correctamente estructurados. La columna "${key}" contiene un array. Cada fila debe contener valores simples, no arrays u objetos anidados.`
+        };
+      }
+      if (value !== null && typeof value === 'object' && !isDateLike(value)) {
+        return {
+          valid: false,
+          error: `Datos no correctamente estructurados. La columna "${key}" contiene un objeto anidado. Cada fila debe contener valores simples.`
+        };
+      }
+    }
+
+    return { valid: true };
+  };
+
+  // Helper to check if a value looks like a date object
+  const isDateLike = (value: any): boolean => {
+    return value instanceof Date ||
+      (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value));
+  };
+
   // Extract file processing logic
   const processFile = async (file: File) => {
     try {
@@ -209,7 +282,14 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
       }
 
       if (data.length === 0) {
-        setError('The file contains no valid data');
+        setError('El archivo no contiene datos válidos');
+        return;
+      }
+
+      // Validate data structure
+      const validation = validateDataStructure(data);
+      if (!validation.valid) {
+        setError(validation.error || 'Datos no correctamente estructurados');
         return;
       }
 
@@ -248,8 +328,9 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
       setLoading(true);
       setError(null);
 
-      if (!formData.file || !formData.data.length) {
-        setError('Please upload a valid file');
+      // Validate data exists (either file or sheets data)
+      if (!formData.data || !formData.data.length) {
+        setError('Please upload a valid file or import data from Google Sheets');
         return;
       }
 
@@ -259,26 +340,43 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
         return;
       }
 
-      if (!formData.data || formData.data.length === 0) {
-        setError('Dataset must contain at least one row of data');
-        return;
-      }
-
       if (!formData.schema || formData.schema.length === 0) {
         setError('Dataset schema is required');
         return;
       }
 
+      // Prepare sync configuration if importing from Sheets
+      let isSynced = false;
+      let syncConfig = null;
+
+      if (formData.importSource === 'sheets' && formData.syncConfig?.enabled && formData.sheetData) {
+        isSynced = true;
+        syncConfig = {
+          spreadsheetId: formData.sheetData.spreadsheetId,
+          sheetName: formData.sheetData.sheetName,
+          syncInterval: formData.syncConfig.interval,
+          isPaused: false,
+          lastSyncAt: new Date().toISOString(),
+          lastSyncStatus: 'success' as const,
+          lastSyncError: null,
+          sheetColumns: formData.schema.map((col: any) => col.name),
+          localColumns: [],
+          lastRowSynced: formData.data.length
+        };
+      }
+
       // Prepare data for submission with proper defaults
-      const submitData = {
+      const submitData: any = {
         name: formData.name.trim(),
         description: formData.description?.trim() || '',
         visibility: formData.visibility,
         project_id: formData.project_id || null,
-        source: 'upload' as const,
+        source: formData.importSource === 'sheets' ? 'google_sheets' : 'upload',
         data: formData.data,
         schema: formData.schema,
-        tags: Array.isArray(formData.tags) ? formData.tags.filter(Boolean) : []
+        tags: Array.isArray(formData.tags) ? formData.tags.filter(Boolean) : [],
+        is_synced: isSynced,
+        sync_config: syncConfig
       };
 
       console.log('Submitting dataset data:', submitData);
@@ -298,7 +396,9 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
   const canProceed = () => {
     switch (activeStep) {
       case 0:
-        return formData.file && formData.data.length > 0;
+        // Can proceed if local file uploaded OR data imported from Drive/Sheets
+        return (formData.file && formData.data.length > 0) ||
+          (formData.data.length > 0 && formData.schema.length > 0);
       case 1:
         return formData.name.trim().length > 0;
       case 2:
@@ -314,65 +414,192 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
-              Upload Dataset File
+              Selecciona Fuente de Datos
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Upload a JSON or CSV file to create a {isUserAdmin ? 'dataset' : 'private dataset'}
+              Elige cómo importar tu dataset
             </Typography>
 
-            <Box
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              sx={{
-                border: '2px dashed',
-                borderColor: isDragOver ? 'success.main' : 'primary.main',
-                borderRadius: 2,
-                p: 6,
-                textAlign: 'center',
-                bgcolor: isDragOver ? 'success.50' : 'grey.50',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  bgcolor: isDragOver ? 'success.100' : 'grey.100',
-                  borderColor: isDragOver ? 'success.dark' : 'primary.dark'
-                }
-              }}
-            >
-              <input
-                accept=".json,.csv"
-                style={{ display: 'none' }}
-                id="file-upload"
-                type="file"
-                onChange={handleFileChange}
-              />
-              <label htmlFor="file-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<FiUpload />}
-                  size="large"
-                  sx={{ mb: 2 }}
+            {/* Source selection buttons */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={hasAdvancedFeatures ? 4 : 12}>
+                <Card
+                  variant={importSource === 'local' ? 'outlined' : 'elevation'}
+                  sx={{
+                    cursor: 'pointer',
+                    border: importSource === 'local' ? '2px solid' : '1px solid',
+                    borderColor: importSource === 'local' ? 'primary.main' : 'divider',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: 2
+                    }
+                  }}
+                  onClick={() => setImportSource('local')}
                 >
-                  Choose File
-                </Button>
-              </label>
+                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                    <FiUpload size={32} style={{ marginBottom: 8 }} />
+                    <Typography variant="subtitle1" gutterBottom>
+                      Archivo Local
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Subir CSV o JSON
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-              <Typography variant="body1" gutterBottom>
-                {isDragOver ? 'Drop your file here!' : 'Drag & drop or click to upload'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Supported formats: JSON, CSV (Max 1MB)
-              </Typography>
-            </Box>
+              {hasAdvancedFeatures && (
+                <>
+                  <Grid item xs={12} md={4}>
+                    <Card
+                      variant={importSource === 'drive' ? 'outlined' : 'elevation'}
+                      sx={{
+                        cursor: 'pointer',
+                        border: importSource === 'drive' ? '2px solid' : '1px solid',
+                        borderColor: importSource === 'drive' ? 'primary.main' : 'divider',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: 2
+                        }
+                      }}
+                      onClick={() => setImportSource('drive')}
+                    >
+                      <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                        <FiDownload size={32} style={{ marginBottom: 8 }} />
+                        <Typography variant="subtitle1" gutterBottom>
+                          Google Drive
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Importar de Drive
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
-            {formData.file && (
-              <Alert severity="success" sx={{ mt: 3 }}>
-                <Typography variant="subtitle2">File uploaded successfully!</Typography>
-                <Typography variant="body2">
-                  {formData.file.name} - {formData.data.length} rows, {formData.schema.length} columns
-                </Typography>
+                  <Grid item xs={12} md={4}>
+                    <Card
+                      variant={importSource === 'sheets' ? 'outlined' : 'elevation'}
+                      sx={{
+                        cursor: 'pointer',
+                        border: importSource === 'sheets' ? '2px solid' : '1px solid',
+                        borderColor: importSource === 'sheets' ? 'primary.main' : 'divider',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: 2
+                        }
+                      }}
+                      onClick={() => setImportSource('sheets')}
+                    >
+                      <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                        <FiRefreshCw size={32} style={{ marginBottom: 8 }} />
+                        <Typography variant="subtitle1" gutterBottom>
+                          Google Sheets
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Conectar & Sincronizar
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </>
+              )}
+            </Grid>
+
+            {!hasAdvancedFeatures && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Las opciones de Google Drive y Sheets están disponibles solo para usuarios Alpha.
               </Alert>
+            )}
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Render appropriate importer based on selection */}
+            {importSource === 'local' && (
+              <Box>
+                <Box
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  sx={{
+                    border: '2px dashed',
+                    borderColor: isDragOver ? 'success.main' : 'primary.main',
+                    borderRadius: 2,
+                    p: 6,
+                    textAlign: 'center',
+                    bgcolor: isDragOver ? 'success.50' : 'grey.50',
+                    transition: 'all 0.2s ease-in-out',
+                    '&:hover': {
+                      bgcolor: isDragOver ? 'success.100' : 'grey.100',
+                      borderColor: isDragOver ? 'success.dark' : 'primary.dark'
+                    }
+                  }}
+                >
+                  <input
+                    accept=".json,.csv"
+                    style={{ display: 'none' }}
+                    id="file-upload"
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                  <label htmlFor="file-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<FiUpload />}
+                      size="large"
+                      sx={{ mb: 2 }}
+                    >
+                      Choose File
+                    </Button>
+                  </label>
+
+                  <Typography variant="body1" gutterBottom>
+                    {isDragOver ? 'Drop your file here!' : 'Drag & drop or click to upload'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Supported formats: JSON, CSV (Max 1MB)
+                  </Typography>
+                </Box>
+
+                {formData.file && (
+                  <Alert severity="success" sx={{ mt: 3 }}>
+                    <Typography variant="subtitle2">File uploaded successfully!</Typography>
+                    <Typography variant="body2">
+                      {formData.file.name} - {formData.data.length} rows, {formData.schema.length} columns
+                    </Typography>
+                  </Alert>
+                )}
+              </Box>
+            )}
+
+            {importSource === 'drive' && (
+              <GoogleDriveImporter
+                onFileSelected={async (file) => {
+                  await processFile(file);
+                  setFormData(prev => ({ ...prev, importSource: 'drive' }));
+                }}
+                onError={(err) => setError(err)}
+              />
+            )}
+
+            {importSource === 'sheets' && (
+              <GoogleSheetsImporter
+                onDataImported={(imported) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    data: imported.data,
+                    schema: imported.schema,
+                    name: imported.sheetData.title,
+                    importSource: 'sheets',
+                    sheetData: imported.sheetData,
+                    syncConfig: imported.syncConfig
+                  }));
+                  // Auto-advance to next step
+                  setActiveStep(1);
+                }}
+                onError={(err) => setError(err)}
+              />
             )}
           </Box>
         );
@@ -540,6 +767,7 @@ const CreateDatasetModal: React.FC<CreateDatasetModalProps> = ({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      sx={{ zIndex: 1000 }} // Lower z-index to allow Google Picker to appear above
       PaperProps={{ sx: { minHeight: 600 } }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

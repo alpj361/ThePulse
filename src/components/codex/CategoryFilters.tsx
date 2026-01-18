@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Activity, BookOpen, Layers } from 'lucide-react';
+import { useViewMode } from '../../context/ViewModeContext';
 
 type Category = 'all' | 'item' | 'monitoreos' | 'posts' | 'wiki';
 
@@ -16,13 +17,15 @@ interface CategoryFiltersProps {
 }
 
 const CategoryFilters: React.FC<CategoryFiltersProps> = ({ selected, onSelect, counts }) => {
+  const { isBetaView } = useViewMode();
+
   const categories = [
     { id: 'all' as Category, label: 'Todos', icon: Layers },
     { id: 'item' as Category, label: 'Items', icon: FileText },
     { id: 'monitoreos' as Category, label: 'Monitoreos', icon: Activity },
     { id: 'posts' as Category, label: 'Posts', icon: FileText },
     { id: 'wiki' as Category, label: 'Wiki', icon: BookOpen },
-  ];
+  ].filter(cat => !isBetaView || cat.id !== 'wiki'); // Hide wiki category in Beta View
 
   return (
     <div className="flex items-center gap-2 flex-wrap mb-6">

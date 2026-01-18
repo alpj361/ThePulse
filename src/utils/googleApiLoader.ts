@@ -1,5 +1,6 @@
 let gsiPromise: Promise<void> | null = null;
 let gapiPromise: Promise<void> | null = null;
+let sheetsPromise: Promise<void> | null = null;
 
 export const loadGsi = (): Promise<void> => {
   console.log('🟦 [GoogleApiLoader] loadGsi() llamado');
@@ -102,4 +103,38 @@ export const waitForGsi = async (retries = 10): Promise<void> => {
     await new Promise(r => setTimeout(r, 300));
   }
   console.log('🟩 [GoogleApiLoader] GSI está disponible');
+};
+
+// Cargar Google Sheets API
+export const loadSheetsApi = async (): Promise<void> => {
+  console.log('🟦 [GoogleApiLoader] loadSheetsApi() llamado');
+  if (sheetsPromise) {
+    console.log('🟦 [GoogleApiLoader] Sheets API ya está cargándose, retornando promesa existente');
+    return sheetsPromise;
+  }
+
+  // Garantizar que GAPI se carga primero
+  await loadGapiPicker();
+
+  sheetsPromise = new Promise((resolve, reject) => {
+    // Si ya está cargado, resolver inmediatamente
+    if ((window as any).gapi?.client?.sheets) {
+      console.log('🟩 [GoogleApiLoader] Sheets API ya estaba cargada');
+      return resolve();
+    }
+
+    console.log('🟦 [GoogleApiLoader] Cargando Sheets API...');
+    (window as any).gapi.client.load('sheets', 'v4').then(
+      () => {
+        console.log('🟩 [GoogleApiLoader] Sheets API cargada exitosamente');
+        resolve();
+      },
+      (error: any) => {
+        console.error('🟥 [GoogleApiLoader] Error cargando Sheets API:', error);
+        reject(error);
+      }
+    );
+  });
+
+  return sheetsPromise;
 }; 

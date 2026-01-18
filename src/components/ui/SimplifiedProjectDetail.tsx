@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import { Card } from './card';
 import { Project } from '../../types/projects';
+import { useViewMode } from '../../context/ViewModeContext';
 import ProjectInsights from './ProjectInsights';
 import CapturedCards from './CapturedCards';
 import ProjectCoverages from '../coverages/ProjectCoverages';
@@ -43,6 +44,7 @@ export function SimplifiedProjectDetail({
   children
 }: SimplifiedProjectDetailProps) {
   const [activeTab, setActiveTab] = useState('general');
+  const { isBetaView } = useViewMode();
 
   // Restore tab from localStorage on mount
   useEffect(() => {
@@ -54,6 +56,13 @@ export function SimplifiedProjectDetail({
       setActiveTab(savedTab);
     }
   }, [project.id]);
+
+  // Auto-switch away from hidden tabs in Beta View
+  useEffect(() => {
+    if (isBetaView && (activeTab === 'captured' || activeTab === 'coverages')) {
+      setActiveTab('general');
+    }
+  }, [isBetaView, activeTab]);
 
   // Save tab to localStorage when it changes
   const handleTabChange = (newTab: string) => {
@@ -150,24 +159,28 @@ export function SimplifiedProjectDetail({
                 <span>General</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger
-              value="captured"
-              className="flex-1 py-3 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-300 rounded-lg transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <FiBox className="w-4 h-4" />
-                <span>Capturados</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="coverages"
-              className="flex-1 py-3 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 dark:data-[state=active]:bg-teal-900/20 dark:data-[state=active]:text-teal-300 rounded-lg transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <FiLayers className="w-4 h-4" />
-                <span>Coberturas</span>
-              </div>
-            </TabsTrigger>
+            {!isBetaView && (
+              <TabsTrigger
+                value="captured"
+                className="flex-1 py-3 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-300 rounded-lg transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <FiBox className="w-4 h-4" />
+                  <span>Capturados</span>
+                </div>
+              </TabsTrigger>
+            )}
+            {!isBetaView && (
+              <TabsTrigger
+                value="coverages"
+                className="flex-1 py-3 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 dark:data-[state=active]:bg-teal-900/20 dark:data-[state=active]:text-teal-300 rounded-lg transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <FiLayers className="w-4 h-4" />
+                  <span>Coberturas</span>
+                </div>
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="datasets"
               className="flex-1 py-3 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/20 dark:data-[state=active]:text-purple-300 rounded-lg transition-all"

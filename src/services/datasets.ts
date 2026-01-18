@@ -18,6 +18,7 @@ export interface Dataset {
   created_at: string;
   updated_at: string;
   last_queried_at?: string;
+  type_metadata?: Record<string, any>;
 }
 
 export interface DatasetShortcut {
@@ -321,41 +322,48 @@ export const datasetsService = {
     console.log('Updating dataset with:', dbUpdates);
 
     // Try to update private dataset first
-    const { data: privateData, error: privateError } = await supabase
+    const { data: privateData, error: privateError, count: privateCount } = await supabase
       .from('private_datasets')
       .update(dbUpdates)
       .eq('id', datasetId)
-      .select()
-      .single();
+      .select();
 
-    if (!privateError && privateData) {
+    // Check if private update succeeded
+    if (!privateError && privateData && privateData.length > 0) {
       // Invalidate geographic index cache so map reflects schema changes
       invalidateCache();
       console.log('🗺️ Geographic index cache invalidated after dataset update');
-      return { ...privateData, visibility: 'private' };
+      return { ...privateData[0], visibility: 'private' };
     }
 
-    console.log('Private update error:', privateError);
+    console.log('Private update result:', { error: privateError, count: privateCount, dataLength: privateData?.length });
 
-    // Try public dataset (will fail if user is not admin due to RLS)
-    const { data: publicData, error: publicError } = await supabase
+    // Try public dataset if private failed
+    const { data: publicData, error: publicError, count: publicCount } = await supabase
       .from('public_datasets')
       .update(dbUpdates)
       .eq('id', datasetId)
-      .select()
-      .single();
+      .select();
 
-    console.log('Public update error:', publicError);
+    console.log('Public update result:', { error: publicError, count: publicCount, dataLength: publicData?.length });
 
-    if (publicError) {
-      throw new Error(publicError.message || 'Failed to update dataset');
+    // Check if public update succeeded
+    if (!publicError && publicData && publicData.length > 0) {
+      // Invalidate geographic index cache so map reflects schema changes
+      invalidateCache();
+      console.log('🗺️ Geographic index cache invalidated after dataset update');
+      return { ...publicData[0], visibility: 'public' };
     }
 
-    // Invalidate geographic index cache so map reflects schema changes
-    invalidateCache();
-    console.log('🗺️ Geographic index cache invalidated after dataset update');
+    // If both failed, throw appropriate error
+    if (privateError) {
+      throw new Error(`Failed to update dataset: ${privateError.message}`);
+    }
+    if (publicError) {
+      throw new Error(`Failed to update dataset: ${publicError.message}`);
+    }
 
-    return { ...publicData, visibility: 'public' };
+    throw new Error('Dataset not found or insufficient permissions to update');
   },
 
   /**

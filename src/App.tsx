@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TwentyFirstToolbar } from '@21st-extension/toolbar-react';
 import { ReactPlugin } from '@21st-extension/react';
 import Layout from './components/layout/Layout';
-import Home from './pages/Home';
 import { Trends } from './pages/Trends';
 import RecentActivity from './pages/RecentActivity';
 import Sources from './pages/Sources';
@@ -21,6 +20,7 @@ import Refunds from './pages/Refunds';
 import Pricing from './pages/Pricing';
 import TestHashtagCard from './components/test/TestHashtagCard';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ViewModeProvider } from './context/ViewModeContext';
 import { useUserProfile } from './hooks/useUserProfile';
 import { useUserType } from './hooks/useUserType';
 import { Box, CircularProgress } from '@mui/material';
@@ -148,14 +148,15 @@ export const AdminAlphaRoute = ({ children }: { children: React.ReactNode }) => 
 export function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
-  return <Home />;
+  // Si tiene usuario → dashboard, si no → login
+  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 }
 
 function App() {
   return (
     <AuthProvider>
-      <SpreadsheetProvider>
+      <ViewModeProvider>
+        <SpreadsheetProvider>
         <div style={{
           position: 'fixed',
           left: '20px',
@@ -171,10 +172,8 @@ function App() {
         </div>
         <BrowserRouter>
           <Routes>
-            {/* Ruta principal - Redirección inteligente */}
+            {/* Ruta principal - Redirección automática a login o dashboard */}
             <Route path="/" element={<RootRedirect />} />
-            {/* Nueva ruta /home que también muestra Home */}
-            <Route path="/home" element={<Home />} />
 
             {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
@@ -317,7 +316,8 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </SpreadsheetProvider>
+        </SpreadsheetProvider>
+      </ViewModeProvider>
     </AuthProvider>
   );
 }

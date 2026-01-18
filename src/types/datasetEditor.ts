@@ -12,7 +12,9 @@ export type AdvancedColumnType =
   | 'location'
   | 'actor'
   | 'entity'
-  | 'company';
+  | 'company'
+  | 'url'
+  | 'image';
 
 export type Currency = 'GTQ' | 'USD' | 'EUR' | 'MXN';
 
@@ -59,6 +61,55 @@ export interface CompanyValue {
   location?: LocationValue;
 }
 
+export interface UrlValue {
+  url: string;
+  title?: string;
+  isValid?: boolean;
+}
+
+export interface ImageValue {
+  url: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+  isValid?: boolean;
+}
+
+/**
+ * Matching strategies for relationship resolution
+ */
+export type RelationshipMatchingStrategy =
+  | 'id'              // Numeric ID matching (highest priority)
+  | 'name_exact'      // Exact string match
+  | 'name_normalized' // Case-insensitive + accent removal
+  | 'fuzzy';          // Levenshtein distance
+
+/**
+ * Relationship configuration for a column
+ * Defines how this column relates to another dataset's column
+ */
+export interface ColumnRelationship {
+  enabled: boolean;
+  targetDatasetId: string;           // UUID of related dataset
+  targetColumnName: string;           // Column name in related dataset
+  matchingStrategy: RelationshipMatchingStrategy;
+  fuzzyThreshold?: number;            // 0.0-1.0, only for fuzzy matching
+  createdAt: string;
+  updatedBy: string;                  // User UUID who created/updated
+}
+
+/**
+ * Resolved relationship value (result of lookup)
+ */
+export interface ResolvedRelationship {
+  matched: boolean;
+  strategy: RelationshipMatchingStrategy;
+  confidence: number;                 // 0.0-1.0
+  sourceValue: any;                   // Original value from source column
+  targetValue: any;                   // Matched value from target column
+  targetRow?: any;                    // Full row from target dataset (optional)
+}
+
 export interface AdvancedColumnConfig {
   id: string;
   title: string;
@@ -74,11 +125,13 @@ export interface AdvancedColumnConfig {
   // Entity linking
   allowCreateNew?: boolean;
   linkedTable?: 'entities' | 'actors' | 'companies';
+  // Relationship to another dataset
+  relationship?: ColumnRelationship;
 }
 
 export interface DatasetRow {
   id: string;
-  [key: string]: any | MoneyValue | LocationValue | ActorValue | EntityValue | CompanyValue;
+  [key: string]: any | MoneyValue | LocationValue | ActorValue | EntityValue | CompanyValue | UrlValue | ImageValue;
 }
 
 export interface DatasetEditState {
@@ -138,5 +191,13 @@ export const DEFAULT_COLUMN_CONFIGS: Record<AdvancedColumnType, Partial<Advanced
     minWidth: 180,
     linkedTable: 'companies',
     allowCreateNew: true
+  },
+  url: {
+    minWidth: 200,
+    allowCreateNew: false
+  },
+  image: {
+    minWidth: 150,
+    allowCreateNew: false
   }
 };

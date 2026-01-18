@@ -53,7 +53,7 @@ const EditWikiModal: React.FC<EditWikiModalProps> = ({ open, onClose, item, onSu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!item || !name.trim()) {
       return;
     }
@@ -69,7 +69,7 @@ const EditWikiModal: React.FC<EditWikiModalProps> = ({ open, onClose, item, onSu
       };
 
       const result = await updateWikiItem(item.id, updates);
-      
+
       if (result) {
         onSuccess?.();
         onClose();
@@ -329,7 +329,7 @@ const EditWikiModal: React.FC<EditWikiModalProps> = ({ open, onClose, item, onSu
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descripción breve..."
-              rows={3}
+              rows={12}
             />
           </div>
 

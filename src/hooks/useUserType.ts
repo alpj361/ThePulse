@@ -55,13 +55,17 @@ export function useUserType() {
   // Beta users (but not Alpha) should not see Projects and Activity unless they're admin
   const shouldHideProjectsAndActivity = isBeta && !isAlpha && !isAdmin;
 
-  return { 
-    userType, 
-    loading, 
-    isAlpha, 
-    isBeta, 
-    isAdmin, 
+  // Alpha or Admin users have access to advanced features like Google Drive/Sheets import
+  const hasAdvancedFeatures = isAlpha || isAdmin;
+
+  return {
+    userType,
+    loading,
+    isAlpha,
+    isBeta,
+    isAdmin,
     isCreador,
-    shouldHideProjectsAndActivity 
+    shouldHideProjectsAndActivity,
+    hasAdvancedFeatures
   };
 }

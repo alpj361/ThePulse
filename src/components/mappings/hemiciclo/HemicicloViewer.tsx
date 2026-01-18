@@ -10,6 +10,7 @@ import {
 import { FiArrowLeft, FiEdit } from 'react-icons/fi';
 import HemicicloSVG from './HemicicloSVG';
 import CategoryLegend from './CategoryLegend';
+import CustomFieldsDisplay from './CustomFieldsDisplay';
 import { mappingsService } from '../../../services/mappings';
 import type {
     HemicicloConfig,
@@ -146,6 +147,15 @@ const HemicicloViewer: React.FC<HemicicloViewerProps> = ({
                             <Typography variant="body2" color="primary">
                                 {selectedSeat.type.charAt(0).toUpperCase() + selectedSeat.type.slice(1)}
                             </Typography>
+                        )}
+                        {/* Custom Fields Display */}
+                        {selectedSeat.actorData?.metadata && config.dataSource?.customFields && (
+                            <Box sx={{ mt: 2 }}>
+                                <CustomFieldsDisplay
+                                    customFields={config.dataSource.customFields}
+                                    metadata={selectedSeat.actorData.metadata}
+                                />
+                            </Box>
                         )}
                     </Paper>
                 )}

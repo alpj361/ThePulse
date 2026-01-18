@@ -1,32 +1,32 @@
 import React from 'react';
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
-interface PulseLogoProps {
+interface AlabLogoProps {
   size?: number;
-  variant?: 'full' | 'icon'; // 'full' includes text, 'icon' is just the logo
+  variant?: 'full' | 'icon';
   textColor?: string;
 }
 
-const PulseLogoComponent: React.FC<PulseLogoProps> = ({ size, variant = 'full' }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const defaultSize = isMobile ? 40 : 50;
-  const logoSize = size !== undefined ? size : defaultSize;
-
+const AlabLogoComponent: React.FC<AlabLogoProps> = ({
+  size = 40,
+  textColor = '#1a1a1a'
+}) => {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <img
-        src="/logo.png"
-        alt="Pulse Journal Logo"
-        style={{
-          height: logoSize,
-          width: 'auto',
-          maxWidth: variant === 'icon' ? logoSize : 'auto',
-          objectFit: 'contain'
+      <Typography
+        variant="h4"
+        fontWeight="800"
+        sx={{
+          color: textColor,
+          fontSize: size,
+          letterSpacing: 2,
+          fontFamily: 'monospace'
         }}
-      />
+      >
+        ALAB
+      </Typography>
     </Box>
   );
 };
 
-export default PulseLogoComponent; 
+export default AlabLogoComponent; 

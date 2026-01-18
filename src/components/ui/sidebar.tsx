@@ -29,6 +29,7 @@ import { LanguageContext } from "../../context/LanguageContext";
 import { useAdmin } from "../../hooks/useAdmin";
 import { useAuth } from "../../context/AuthContext";
 import { useUserType } from "../../hooks/useUserType";
+import { useViewMode } from "../../context/ViewModeContext";
 import { Tooltip } from "@mui/material";
 
 const sidebarVariants = {
@@ -134,6 +135,7 @@ export function SessionNavBar() {
   const { isAdmin } = useAdmin();
   const { user, signOut } = useAuth();
   const { shouldHideProjectsAndActivity } = useUserType();
+  const { isBetaView } = useViewMode();
 
   const t = translations[language];
 
@@ -206,21 +208,28 @@ export function SessionNavBar() {
   const sections: NavSection[] = (() => {
     let base = [...navSections];
 
-    // Filter sections based on user type
-    if (shouldHideProjectsAndActivity) {
+    // Filter sections based on user type or Beta View mode
+    if (shouldHideProjectsAndActivity || isBetaView) {
       base = base.map(section => {
         if (section.title === t.personalPulse) {
-          // Hide Activity (Actividad) for Beta users
+          // Hide Activity (Actividad) for Beta users or Beta View
+          // Hide Boards (Pizarras) only in Beta View
           return {
             ...section,
-            items: section.items.filter(item => item.label !== t.actividad)
+            items: section.items.filter(item =>
+              item.label !== t.actividad &&
+              (!isBetaView || item.label !== t.pizarras)
+            )
           };
         }
         if (section.title === t.myPulse) {
-          // Hide Projects (Proyectos) for Beta users
+          // Hide Projects (Proyectos) only for actual Beta users, NOT in Beta View
+          // In Beta View (admin), Projects is visible but tabs inside are limited
           return {
             ...section,
-            items: section.items.filter(item => item.label !== t.proyectos)
+            items: section.items.filter(item =>
+              !shouldHideProjectsAndActivity || item.label !== t.proyectos
+            )
           };
         }
         return section;

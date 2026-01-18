@@ -105,12 +105,20 @@ function EntityColumnEditor<T extends BaseEntityOption>({
   }, [inputValue, entityType]);
 
   const handleEntitySelect = (entity: T | null) => {
-    onChange(entity);
+    try {
+      onChange(entity);
+    } catch (error) {
+      console.error('Error in handleEntitySelect:', error);
+    }
   };
 
   const handleCreateNew = () => {
-    setNewEntityForm({ name: inputValue } as Partial<T>);
-    setCreateDialogOpen(true);
+    try {
+      setNewEntityForm({ name: inputValue } as Partial<T>);
+      setCreateDialogOpen(true);
+    } catch (error) {
+      console.error('Error in handleCreateNew:', error);
+    }
   };
 
   const handleCreateSubmit = async () => {

@@ -29,16 +29,24 @@ const MoneyColumnEditor: React.FC<MoneyColumnProps> = ({
   );
 
   const handleAmountChange = (amount: string) => {
-    const numAmount = amount === '' ? null : parseFloat(amount);
-    const newValue = { ...localValue, amount: isNaN(numAmount!) ? null : numAmount };
-    setLocalValue(newValue);
-    onChange(newValue);
+    try {
+      const numAmount = amount === '' ? null : parseFloat(amount);
+      const newValue = { ...localValue, amount: isNaN(numAmount!) ? null : numAmount };
+      setLocalValue(newValue);
+      onChange(newValue);
+    } catch (error) {
+      console.error('Error in handleAmountChange:', error);
+    }
   };
 
   const handleCurrencyChange = (currency: Currency) => {
-    const newValue = { ...localValue, currency };
-    setLocalValue(newValue);
-    onChange(newValue);
+    try {
+      const newValue = { ...localValue, currency };
+      setLocalValue(newValue);
+      onChange(newValue);
+    } catch (error) {
+      console.error('Error in handleCurrencyChange:', error);
+    }
   };
 
   return (

@@ -13,17 +13,21 @@ import {
   Stack,
   Tooltip,
   Snackbar,
-  Alert
+  Alert,
+  Autocomplete,
+  TextField
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { 
-  Twitter, 
-  TrendingUp, 
-  ViewModule, 
-  ViewList, 
-  ViewComfy, 
+import {
+  Twitter,
+  TrendingUp,
+  ViewModule,
+  ViewList,
+  ViewComfy,
   Refresh,
-  Sort
+  Sort,
+  Newspaper,
+  Tag
 } from '@mui/icons-material';
 import TweetCard from './TweetCard';
 import { MagicTweetCard } from './MagicTweetCard';
@@ -43,7 +47,7 @@ const translations = {
     allCategories: 'Todas',
     categories: {
       'Política': 'Política',
-      'Económica': 'Económica', 
+      'Económica': 'Económica',
       'Sociales': 'Sociales',
       'General': 'General'
     },
@@ -80,6 +84,7 @@ const translations = {
 
 type LayoutType = 'compact' | 'expanded' | 'full';
 type SortType = 'date' | 'likes' | 'retweets';
+type SourceTab = 'trend' | 'profile';
 
 const TrendingTweetsSection: React.FC = () => {
   const { language } = useContext(LanguageContext);
@@ -88,31 +93,36 @@ const TrendingTweetsSection: React.FC = () => {
   const { addTweetData } = useSpreadsheet();
 
   const [tweets, setTweets] = useState<TrendingTweet[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [categories, setCategories] = useState<string[]>(['all']);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categoryStats, setCategoryStats] = useState<Record<string, number>>({});
   const [layout, setLayout] = useState<LayoutType>('expanded');
   const [sortBy, setSortBy] = useState<SortType>('date');
-  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'info' | 'warning' | 'error'}>({
+  const [selectedTrend, setSelectedTrend] = useState<string | null>(null);
+  const [availableTrends, setAvailableTrends] = useState<string[]>([]);
+  const [sourceTab, setSourceTab] = useState<SourceTab>('trend'); // 'trend' = Tendencias, 'profile' = Noticias
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'info' | 'warning' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   });
   const [exporting, setExporting] = useState<boolean>(false);
 
-  useEffect(() => {
-    loadTweets();
-    loadCategoryStats();
-  }, [selectedCategory, sortBy]);
-
-  const loadTweets = async () => {
-    setLoading(true);
+  // Cargar tweets
+  const fetchTweets = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const categoria = selectedCategory === 'all' ? undefined : selectedCategory;
       // Obtener 150 tweets para las métricas mejoradas
-      const tweetsData = await getTrendingTweets(150, categoria);
-      
+      // Si hay una tendencia seleccionada, pasamos el filtro
+      // Pasar sourceType para filtrar por Tendencias o Noticias
+      const tweetsData = await getTrendingTweets(150, categoria, selectedTrend || undefined, sourceTab);
+
       // Ordenar tweets según el criterio seleccionado
       const sortedTweets = [...tweetsData].sort((a, b) => {
         switch (sortBy) {
@@ -122,33 +132,48 @@ const TrendingTweetsSection: React.FC = () => {
             return b.retweets - a.retweets;
           case 'date':
           default:
-            return new Date(b.fecha_tweet || b.fecha_captura).getTime() - 
-                   new Date(a.fecha_tweet || a.fecha_captura).getTime();
+            return new Date(b.fecha_tweet || b.fecha_captura).getTime() -
+              new Date(a.fecha_tweet || a.fecha_captura).getTime();
         }
       });
-      
       setTweets(sortedTweets as any);
-    } catch (error) {
-      console.error('Error loading tweets:', error);
-      setTweets([]);
+
+      // Si no estamos filtrando por tendencia, actualizamos la lista de tendencias disponibles
+      if (!selectedTrend) {
+        const trends = Array.from(new Set(tweetsData.map(t => t.trend_clean || t.trend_original))).filter(Boolean).sort() as string[];
+        setAvailableTrends(trends);
+      }
+
+      // Extract unique categories (solo si es la primera carga o cambio general)
+      if (categories.length <= 1) { // Check if categories are still default or only 'all'
+        const uniqueCategories = Array.from(new Set(tweetsData.map(t => t.categoria).filter(Boolean)));
+        setCategories(['all', ...uniqueCategories]);
+      }
+
+      // Calculate stats per category (usando los datos actuales)
+      const stats = tweetsData.reduce((acc, tweet) => {
+        if (tweet.categoria) {
+          acc[tweet.categoria] = (acc[tweet.categoria] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      setCategoryStats(stats);
+    } catch (err) {
+      console.error('Error fetching trending tweets:', err);
+      setError('Error al cargar los tweets. Por favor intente más tarde.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadCategoryStats = async () => {
-    try {
-      const stats = await getTweetStatsByCategory();
-      setCategoryStats(stats);
-    } catch (error) {
-      console.error('Error loading category stats:', error);
-    }
-  };
+  useEffect(() => {
+    fetchTweets();
+  }, [selectedCategory, selectedTrend, sortBy, sourceTab]);
+
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadTweets();
-    await loadCategoryStats();
+    await fetchTweets();
     setRefreshing(false);
     showSnackbar('Datos actualizados', 'success');
   };
@@ -311,7 +336,7 @@ const TrendingTweetsSection: React.FC = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const categories = ['all', 'Política', 'Económica', 'Sociales', 'General'];
+
 
   // Configurar grid según layout
   const getGridProps = () => {
@@ -348,7 +373,7 @@ const TrendingTweetsSection: React.FC = () => {
           pointerEvents: 'none'
         }}
       />
-      
+
       <Box
         sx={{
           position: 'absolute',
@@ -371,7 +396,7 @@ const TrendingTweetsSection: React.FC = () => {
         >
           {t.subtitle}
         </Typography>
-        
+
         {/* Refresh Button */}
         <Tooltip title={t.refreshData}>
           <Button
@@ -393,6 +418,42 @@ const TrendingTweetsSection: React.FC = () => {
             {refreshing ? 'Actualizando...' : t.refreshData}
           </Button>
         </Tooltip>
+      </Box>
+
+      {/* Source Tab: Tendencias vs Noticias */}
+      <Box sx={{ mb: 2 }}>
+        <ToggleButtonGroup
+          value={sourceTab}
+          exclusive
+          onChange={(_, newValue) => { if (newValue) setSourceTab(newValue); }}
+          aria-label="source tab"
+          size="medium"
+          sx={{
+            '& .MuiToggleButton-root': {
+              borderRadius: 3,
+              px: 3,
+              py: 1,
+              fontWeight: 'bold',
+              textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: theme.palette.primary.main,
+                color: '#fff',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.8)
+                }
+              }
+            }
+          }}
+        >
+          <ToggleButton value="trend">
+            <Tag sx={{ mr: 1, fontSize: 18 }} />
+            Tendencias
+          </ToggleButton>
+          <ToggleButton value="profile">
+            <Newspaper sx={{ mr: 1, fontSize: 18 }} />
+            Noticias
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
       {/* Controls */}
@@ -435,22 +496,49 @@ const TrendingTweetsSection: React.FC = () => {
               <ToggleButton key={category} value={category}>
                 {category === 'all' ? t.allCategories : t.categories[category as keyof typeof t.categories] || category}
                 {categoryStats[category] && category !== 'all' && (
-                  <Chip 
-                    label={categoryStats[category]} 
-                    size="small" 
-                    sx={{ 
-                      ml: 0.5, 
-                      height: 16, 
+                  <Chip
+                    label={categoryStats[category]}
+                    size="small"
+                    sx={{
+                      ml: 0.5,
+                      height: 16,
                       fontSize: '0.65rem',
                       backgroundColor: alpha('#fff', 0.2),
                       color: 'inherit',
                       '& .MuiChip-label': { px: 0.5 }
-                    }} 
+                    }}
                   />
                 )}
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
+        </Box>
+
+        {/* Trend Filter */}
+        <Box sx={{ minWidth: 200 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Filtrar por Tendencia
+          </Typography>
+          <Autocomplete
+            size="small"
+            options={availableTrends}
+            value={selectedTrend}
+            onChange={(_, newValue) => setSelectedTrend(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Buscar tendencia..."
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    fontSize: '0.875rem'
+                  }
+                }}
+              />
+            )}
+            sx={{ width: '100%' }}
+          />
         </Box>
 
         {/* Layout and Sort Controls */}
@@ -563,7 +651,7 @@ const TrendingTweetsSection: React.FC = () => {
         const neutralCount = sentimentCounts.neutral || 0;
         const hasSentimentData = tweetsWithSentiment.length > 0;
         const dominantSentiment = hasSentimentData ? (
-          positiveCount > negativeCount 
+          positiveCount > negativeCount
             ? (positiveCount > neutralCount ? 'positivo' : 'neutral')
             : (negativeCount > neutralCount ? 'negativo' : 'neutral')
         ) : null;
@@ -578,7 +666,7 @@ const TrendingTweetsSection: React.FC = () => {
 
         const hasIntentionData = tweetsWithIntention.length > 0;
         const topIntention = hasIntentionData ? Object.entries(intentionCounts)
-          .sort(([,a], [,b]) => b - a)[0] : null;
+          .sort(([, a], [, b]) => b - a)[0] : null;
 
         return (
           <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -625,16 +713,16 @@ const TrendingTweetsSection: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    background: dominantSentiment === 'positivo' 
+                    background: dominantSentiment === 'positivo'
                       ? `linear-gradient(135deg, ${alpha('#4caf50', 0.1)}, ${alpha('#4caf50', 0.05)})`
                       : dominantSentiment === 'negativo'
-                      ? `linear-gradient(135deg, ${alpha('#f44336', 0.1)}, ${alpha('#f44336', 0.05)})`
-                      : `linear-gradient(135deg, ${alpha('#9e9e9e', 0.1)}, ${alpha('#9e9e9e', 0.05)})`,
-                    border: `1px solid ${dominantSentiment === 'positivo' 
+                        ? `linear-gradient(135deg, ${alpha('#f44336', 0.1)}, ${alpha('#f44336', 0.05)})`
+                        : `linear-gradient(135deg, ${alpha('#9e9e9e', 0.1)}, ${alpha('#9e9e9e', 0.05)})`,
+                    border: `1px solid ${dominantSentiment === 'positivo'
                       ? alpha('#4caf50', 0.2)
                       : dominantSentiment === 'negativo'
-                      ? alpha('#f44336', 0.2)
-                      : alpha('#9e9e9e', 0.2)}`,
+                        ? alpha('#f44336', 0.2)
+                        : alpha('#9e9e9e', 0.2)}`,
                     borderRadius: 2,
                     textAlign: 'center'
                   }}
@@ -643,7 +731,7 @@ const TrendingTweetsSection: React.FC = () => {
                     <Box sx={{ fontSize: '1.2rem' }}>
                       {dominantSentiment === 'positivo' ? '😊' : dominantSentiment === 'negativo' ? '😔' : '😐'}
                     </Box>
-                    <Typography variant="subtitle2" fontWeight="bold" 
+                    <Typography variant="subtitle2" fontWeight="bold"
                       color={dominantSentiment === 'positivo' ? '#4caf50' : dominantSentiment === 'negativo' ? '#f44336' : '#9e9e9e'}
                     >
                       Sentimiento Dominante
@@ -677,14 +765,14 @@ const TrendingTweetsSection: React.FC = () => {
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
                     <Box sx={{ fontSize: '1.2rem' }}>
-                      {topIntention[0] === 'informativo' ? '📰' : 
-                       topIntention[0] === 'opinativo' ? '💭' : 
-                       topIntention[0] === 'humoristico' ? '😄' : 
-                       topIntention[0] === 'critico' ? '❗' : 
-                       topIntention[0] === 'alarmista' ? '⚠️' : 
-                       topIntention[0] === 'promocional' ? '📢' : 
-                       topIntention[0] === 'conversacional' ? '💬' : 
-                       topIntention[0] === 'protesta' ? '✊' : '💭'}
+                      {topIntention[0] === 'informativo' ? '📰' :
+                        topIntention[0] === 'opinativo' ? '💭' :
+                          topIntention[0] === 'humoristico' ? '😄' :
+                            topIntention[0] === 'critico' ? '❗' :
+                              topIntention[0] === 'alarmista' ? '⚠️' :
+                                topIntention[0] === 'promocional' ? '📢' :
+                                  topIntention[0] === 'conversacional' ? '💬' :
+                                    topIntention[0] === 'protesta' ? '✊' : '💭'}
                     </Box>
                     <Typography variant="subtitle2" fontWeight="bold" color="secondary.main">
                       Intención Principal
@@ -743,8 +831,8 @@ const TrendingTweetsSection: React.FC = () => {
         <Grid container spacing={layout === 'compact' ? 2 : 3}>
           {tweets.map((tweet, index) => (
             <Grid item {...getGridProps()} key={tweet.id}>
-              <MagicTweetCard 
-                tweet={tweet} 
+              <MagicTweetCard
+                tweet={tweet}
                 layout={layout}
               />
             </Grid>

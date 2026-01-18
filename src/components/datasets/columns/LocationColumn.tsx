@@ -237,10 +237,11 @@ const LocationColumnEditor: React.FC<LocationColumnProps> = ({
   };
 
   const handleLocationSelect = async (location: LocationOption | null) => {
-    if (!location) {
-      onChange(null);
-      return;
-    }
+    try {
+      if (!location) {
+        onChange(null);
+        return;
+      }
 
     let locationValue: LocationValue = {
       department: location.department,
@@ -254,12 +255,15 @@ const LocationColumnEditor: React.FC<LocationColumnProps> = ({
       is_boundary: location.is_boundary
     };
 
-    // Auto-geocode if no coordinates and not a boundary with geometry
-    if (!locationValue.coordinates && !locationValue.geometry) {
-      locationValue = await autoGeocodeLocation(locationValue);
-    }
+      // Auto-geocode if no coordinates and not a boundary with geometry
+      if (!locationValue.coordinates && !locationValue.geometry) {
+        locationValue = await autoGeocodeLocation(locationValue);
+      }
 
-    onChange(locationValue);
+      onChange(locationValue);
+    } catch (error) {
+      console.error('Error in handleLocationSelect:', error);
+    }
   };
 
   const getDisplayValue = () => {

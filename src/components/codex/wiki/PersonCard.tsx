@@ -53,9 +53,10 @@ const PersonCard: React.FC<PersonCardProps> = ({ item, onView, onEdit, onDelete 
                 {fullName}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge variant="secondary" className="text-xs bg-blue-600 text-white">
-                  👤 Persona
-                </Badge>
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
+                  <User className="h-3.5 w-3.5" />
+                  <span>Persona</span>
+                </div>
                 <Badge variant="secondary" className={`text-xs text-white ${relevance.color}`}>
                   {relevance.label} ({item.relevance_score})
                 </Badge>

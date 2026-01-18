@@ -16,7 +16,8 @@ import {
   floatColumn,
   dateColumn,
   checkboxColumn,
-  keyColumn
+  keyColumn,
+  ContextMenuComponentProps
 } from 'react-datasheet-grid';
 import {
   Box,
@@ -48,7 +49,12 @@ import {
   FiUpload,
   FiMoreVertical,
   FiTrash2,
-  FiEdit3
+  FiEdit3,
+  FiLink,
+  FiCopy,
+  FiClipboard,
+  FiX,
+  FiSearch
 } from 'react-icons/fi';
 import { Dataset, datasetsService } from '../../services/datasets';
 import {
@@ -61,7 +67,12 @@ import {
 import { createMoneyColumn } from './columns/MoneyColumn';
 import { createLocationColumn } from './columns/LocationColumn';
 import { createActorColumn, createEntityColumn, createCompanyColumn } from './columns/EntityColumn';
+import { urlColumn } from './columns/UrlColumn';
+import { imageColumn } from './columns/ImageColumn';
 import { useLocationTypeConverter } from '../../hooks/useLocationTypeConverter';
+import RelationshipsTab from './RelationshipsTab';
+import RelationshipViewModal from './RelationshipViewModal';
+import { useAuth } from '../../context/AuthContext';
 import 'react-datasheet-grid/dist/style.css';
 
 interface AdvancedDatasetEditorProps {
@@ -77,6 +88,8 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
   onClose,
   onSave
 }) => {
+  const { user, isAdmin } = useAuth();
+
   const [editState, setEditState] = useState<DatasetEditState>({
     data: [],
     columns: [],
@@ -96,6 +109,30 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [relationshipsOpen, setRelationshipsOpen] = useState(false);
+
+  // Relationship view modal state
+  const [relationshipViewOpen, setRelationshipViewOpen] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<{
+    rowIndex: number;
+    columnId: string;
+    value: any;
+  } | null>(null);
+
+  // Cell context menu state (for right-click on cells)
+  const [cellContextMenuAnchor, setCellContextMenuAnchor] = useState<{
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+  const [cellContextData, setCellContextData] = useState<{
+    rowIndex: number;
+    colIndex: number;
+    column: AdvancedColumnConfig;
+    value: any;
+  } | null>(null);
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Location type converter for automatic geocoding
   const { convertDataToLocationValues, progress: locationProgress } = useLocationTypeConverter();
@@ -104,6 +141,18 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
   const [contextMenuAnchor, setContextMenuAnchor] = useState<null | HTMLElement>(null);
   const [contextMenuColumn, setContextMenuColumn] = useState<AdvancedColumnConfig | null>(null);
   const [metadataEditMode, setMetadataEditMode] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+  // Check if user is admin on mount
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const adminStatus = await isAdmin();
+      setIsUserAdmin(adminStatus);
+    };
+    if (user) {
+      checkAdmin();
+    }
+  }, [user, isAdmin]);
 
   // Initialize editor with dataset data
   useEffect(() => {
@@ -111,6 +160,17 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
       initializeEditor();
     }
   }, [open, dataset]);
+
+  // Helper to parse dates safely
+  const parseDate = (value: any): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  };
 
   const initializeEditor = async () => {
     try {
@@ -176,17 +236,37 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
           // Load money-specific fields from schema
           ...(inferredType === 'money' && (field as any).defaultCurrency ? {
             defaultCurrency: (field as any).defaultCurrency
+          } : {}),
+          // Load relationship configuration from schema
+          ...((field as any).relationship?.enabled ? {
+            relationship: (field as any).relationship
           } : {})
         };
       });
 
       console.log('Schema field names:', dataset.schema_definition?.map(f => f.name) || []);
 
-      // Convert data rows to DatasetRow format
-      const dataRows: DatasetRow[] = data.map((row, index) => ({
-        id: `row_${index}`,
-        ...row
-      }));
+      // Identify date columns
+      const dateColumnIds = columns
+        .filter(col => col.type === 'date')
+        .map(col => col.id);
+
+      // Convert data rows to DatasetRow format and handle dates
+      const dataRows: DatasetRow[] = data.map((row, index) => {
+        const processedRow = { ...row };
+
+        // Convert date strings to Date objects for date columns
+        dateColumnIds.forEach(colId => {
+          if (processedRow[colId]) {
+            processedRow[colId] = parseDate(processedRow[colId]);
+          }
+        });
+
+        return {
+          id: `row_${index}`,
+          ...processedRow
+        };
+      });
 
       console.log('Converted columns:', columns);
       console.log('Converted dataRows:', dataRows);
@@ -223,6 +303,8 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
       case 'actor': return 'actor';
       case 'entity': return 'entity';
       case 'company': return 'company';
+      case 'url': return 'url';
+      case 'image': return 'image';
       default: return 'text';
     }
   };
@@ -233,33 +315,81 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
     const columns = editState.columns.map(col => {
       console.log('Processing column:', col);
 
-      // Create header component with right-click context menu for columns
+      // Create header component with right-click context menu and explicit options button
       const HeaderComponent = () => (
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
             gap: 0.5,
             width: '100%',
+            height: '100%',
             cursor: 'context-menu',
             position: 'relative',
             zIndex: 10,
+            py: 1,
+            px: 0.5,
             '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              '& .header-actions': { opacity: 1 }
             }
           }}
           onContextMenu={(e) => {
-            // Only handle context menu for headers, not cells
             e.preventDefault();
             e.stopPropagation();
             setContextMenuAnchor(e.currentTarget);
             setContextMenuColumn(col);
           }}
-          title="Click derecho para opciones de columna"
         >
-          <Typography variant="caption" sx={{ flexGrow: 1, fontWeight: 600 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 600,
+              wordBreak: 'break-word',
+              whiteSpace: 'normal',
+              lineHeight: 1.2,
+              fontSize: '0.75rem',
+              mr: 0.5
+            }}
+          >
             {col.title}
           </Typography>
+
+          <Box
+            className="header-actions"
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 0.5,
+              opacity: 0.3,
+              transition: 'opacity 0.2s',
+              flexShrink: 0,
+              mt: -0.5
+            }}
+          >
+            <IconButton
+              size="small"
+              sx={{ padding: 0.5 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setContextMenuAnchor(e.currentTarget);
+                setContextMenuColumn(col);
+              }}
+            >
+              <FiMoreVertical size={14} />
+            </IconButton>
+
+            {col.relationship?.enabled && (
+              <Tooltip title="Esta columna tiene una relación">
+                <Box sx={{ color: 'primary.main', display: 'flex' }}>
+                  <FiLink size={12} />
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
       );
 
@@ -305,6 +435,22 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
           };
           break;
 
+        case 'url':
+          column = {
+            ...keyColumn(col.id, urlColumn(col.id)),
+            title: <HeaderComponent />,
+            minWidth: col.minWidth || 200
+          };
+          break;
+
+        case 'image':
+          column = {
+            ...keyColumn(col.id, imageColumn(col.id)),
+            title: <HeaderComponent />,
+            minWidth: col.minWidth || 150
+          };
+          break;
+
         case 'number':
           column = {
             ...keyColumn(col.id, floatColumn),
@@ -330,10 +476,18 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
           break;
 
         default: // text
+          // Calculate dynamic width based on title length
+          // Base width 150px, add 8px per character over 15 chars, max 400px
+          const titleLength = col.title?.length || 0;
+          const calculatedWidth = Math.min(400, Math.max(150, 150 + (titleLength - 15) * 8));
+
           column = {
             ...keyColumn(col.id, textColumn),
             title: <HeaderComponent />,
-            minWidth: col.minWidth || 120
+            minWidth: calculatedWidth,
+            basis: calculatedWidth,
+            grow: 0,
+            shrink: 0
           };
           break;
       }
@@ -416,10 +570,21 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
       }));
 
       // Convert imported data to DatasetRow format
-      const newDataRows: DatasetRow[] = importedData.map((row, index) => ({
-        id: `imported_row_${Date.now()}_${index}`,
-        ...row
-      }));
+      const newDataRows: DatasetRow[] = importedData.map((row, index) => {
+        const processedRow = { ...row };
+
+        // Correctly type detected date columns
+        newColumns.forEach(col => {
+          if (col.type === 'date' && processedRow[col.id]) {
+            processedRow[col.id] = parseDate(processedRow[col.id]);
+          }
+        });
+
+        return {
+          id: `imported_row_${Date.now()}_${index}`,
+          ...processedRow
+        };
+      });
 
       // Update state with imported data
       setEditState(prev => ({
@@ -716,6 +881,10 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
         // Money column specific fields
         ...(col.type === 'money' ? {
           defaultCurrency: col.defaultCurrency
+        } : {}),
+        // Relationship configuration
+        ...(col.relationship?.enabled ? {
+          relationship: col.relationship
         } : {})
       }));
 
@@ -753,6 +922,100 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
       onClose();
     }
   };
+
+  // Filtered data based on search term
+  const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return editState.data;
+
+    const term = searchTerm.toLowerCase();
+    return editState.data.filter(row => {
+      return Object.values(row).some(value => {
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'object') {
+          return JSON.stringify(value).toLowerCase().includes(term);
+        }
+        return String(value).toLowerCase().includes(term);
+      });
+    });
+  }, [editState.data, searchTerm]);
+
+  // Custom context menu component that extends the native one
+  const CustomContextMenu = useCallback(({ clientX, clientY, items, cursorIndex, close }: ContextMenuComponentProps) => {
+    // Handle null cursorIndex
+    if (!cursorIndex) {
+      return (
+        <Menu
+          open={true}
+          onClose={close}
+          anchorReference="anchorPosition"
+          anchorPosition={{ top: clientY, left: clientX }}
+        >
+          {items.map((item, index) => (
+            <MenuItem key={index} onClick={() => { item.action(); close(); }}>
+              {item.type}
+            </MenuItem>
+          ))}
+        </Menu>
+      );
+    }
+
+    // Get column info for the current cell
+    const column = cursorIndex.col >= 0 && cursorIndex.col < editState.columns.length
+      ? editState.columns[cursorIndex.col]
+      : null;
+    // IMPORTANT: Use filteredData since that's what's displayed in the grid
+    const row = cursorIndex.row >= 0 && cursorIndex.row < filteredData.length
+      ? filteredData[cursorIndex.row]
+      : null;
+    const hasRelationship = column?.relationship?.enabled;
+
+    // Map item types to labels
+    const getLabel = (type: string) => {
+      switch (type) {
+        case 'COPY': return 'Copiar';
+        case 'CUT': return 'Cortar';
+        case 'PASTE': return 'Pegar';
+        case 'DELETE_ROW': return 'Eliminar fila';
+        case 'DELETE_ROWS': return 'Eliminar filas';
+        case 'INSERT_ROW_BELLOW': return 'Insertar fila abajo';
+        case 'DUPLICATE_ROW': return 'Duplicar fila';
+        case 'DUPLICATE_ROWS': return 'Duplicar filas';
+        default: return type;
+      }
+    };
+
+    return (
+      <Menu
+        open={true}
+        onClose={close}
+        anchorReference="anchorPosition"
+        anchorPosition={{ top: clientY, left: clientX }}
+      >
+        {items.map((item, index) => (
+          <MenuItem key={index} onClick={() => { item.action(); close(); }}>
+            {getLabel(item.type)}
+          </MenuItem>
+        ))}
+        {hasRelationship && row && column && (
+          <MenuItem
+            onClick={() => {
+              setSelectedCell({
+                rowIndex: cursorIndex.row,
+                columnId: column.id,
+                value: row[column.id]
+              });
+              setRelationshipViewOpen(true);
+              close();
+            }}
+            sx={{ color: 'primary.main' }}
+          >
+            <FiLink style={{ marginRight: 8 }} />
+            Ver Relación
+          </MenuItem>
+        )}
+      </Menu>
+    );
+  }, [editState.columns, filteredData]);
 
   if (!open) return null;
 
@@ -940,10 +1203,31 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
                 Columna
               </Button>
 
+              <Button
+                startIcon={<FiLink />}
+                onClick={() => setRelationshipsOpen(true)}
+                size="small"
+                variant="outlined"
+              >
+                Relaciones
+              </Button>
+
+              {/* Search field */}
+              <TextField
+                size="small"
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <FiSearch style={{ marginRight: 8, color: '#888' }} />,
+                }}
+                sx={{ width: 200 }}
+              />
+
               <Box sx={{ flexGrow: 1 }} />
 
               <Typography variant="caption" color="text.secondary">
-                {editState.data.length} filas
+                {searchTerm ? `${filteredData.length} de ${editState.data.length}` : `${editState.data.length}`} filas
               </Typography>
 
               <IconButton
@@ -955,17 +1239,32 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
             </Toolbar>
 
             {/* DataGrid */}
-            <Box sx={{ flexGrow: 1, overflow: 'hidden', height: 'calc(80vh - 120px)' }}>
+            {/* DataGrid */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                height: 'calc(80vh - 120px)',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                '& .dsg-container': {
+                  height: '100% !important',
+                  minWidth: editState.columns.length > 8 ? `${editState.columns.length * 150}px` : 'auto',
+                  '--dsg-header-row-height': '60px'
+                }
+              }}
+            >
               {editState.data.length > 0 && gridColumns.length > 0 ? (
                 <DataSheetGrid
                   key={`grid-${editState.data.length}-${editState.columns.map(c => c.type).join('-')}`}
-                  value={editState.data}
+                  value={filteredData}
                   onChange={handleDataChange}
                   columns={gridColumns}
-                  height={600}
+                  // @ts-ignore - height is required by types but works with style
+                  height={undefined}
+                  headerRowHeight={80}
+                  style={{ height: '100%' }}
                   addRowsComponent={false}
-                  disableContextMenu={false}
-                  rightClickToInsert={false}
+                  contextMenuComponent={CustomContextMenu}
                 />
               ) : (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -1044,6 +1343,60 @@ const AdvancedDatasetEditor: React.FC<AdvancedDatasetEditorProps> = ({
           Eliminar Columna
         </MenuItem>
       </Menu>
+
+      {/* Relationships Dialog */}
+      <Dialog
+        open={relationshipsOpen}
+        onClose={() => setRelationshipsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Relaciones de Dataset</DialogTitle>
+        <DialogContent>
+          <RelationshipsTab
+            columns={editState.columns}
+            datasetId={dataset.id}
+            onUpdateColumn={(columnId, updates) => {
+              const updatedColumns = editState.columns.map(col =>
+                col.id === columnId ? { ...col, ...updates } : col
+              );
+              setEditState(prev => ({
+                ...prev,
+                columns: updatedColumns,
+                hasChanges: true
+              }));
+            }}
+            isOwner={user?.id === dataset.owner_id}
+            isAdmin={isUserAdmin}
+            datasetVisibility={dataset.visibility || 'private'}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRelationshipsOpen(false)}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Relationship View Modal */}
+      {selectedCell && (
+        <RelationshipViewModal
+          open={relationshipViewOpen}
+          onClose={() => {
+            setRelationshipViewOpen(false);
+            setSelectedCell(null);
+          }}
+          sourceDatasetId={dataset.id}
+          sourceColumn={selectedCell.columnId}
+          sourceColumnTitle={
+            editState.columns.find(col => col.id === selectedCell.columnId)?.title || selectedCell.columnId
+          }
+          sourceValue={selectedCell.value}
+          relationship={
+            editState.columns.find(col => col.id === selectedCell.columnId)?.relationship!
+          }
+        />
+      )}
     </Dialog>
   );
 };
@@ -1150,6 +1503,8 @@ const ColumnEditorDialog: React.FC<ColumnEditorDialogProps> = ({
                 <MenuItem value="actor">👤 Actor/Persona</MenuItem>
                 <MenuItem value="entity">🏛️ Entidad</MenuItem>
                 <MenuItem value="company">🏢 Empresa</MenuItem>
+                <MenuItem value="url">🔗 URL/Enlace</MenuItem>
+                <MenuItem value="image">🖼️ Imagen</MenuItem>
               </Select>
             </FormControl>
           </Grid>

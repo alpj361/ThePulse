@@ -51,6 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Llamar a signOut de Supabase
       await supabase.auth.signOut();
 
+      // Limpiar view mode de localStorage
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('view_mode_'))
+        .forEach(key => localStorage.removeItem(key));
+
       // Limpiar almacenamiento local
       localStorage.clear();
       sessionStorage.clear();
@@ -60,6 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Incluso si hay error, limpiar estado local
       setSession(null);
       setUser(null);
+      // Limpiar view mode de localStorage
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('view_mode_'))
+        .forEach(key => localStorage.removeItem(key));
       // Limpiar almacenamiento local incluso si hay error
       localStorage.clear();
       sessionStorage.clear();

@@ -54,6 +54,27 @@ export interface HemicicloCategory {
     seatCount?: number;
 }
 
+// Custom field configuration
+export interface CustomField {
+    id: string;
+    label: string;                    // Display name (e.g., "Email", "Party Position")
+    sourceType: 'column' | 'dataset'; // Data source type
+
+    // For 'column' type (same dataset)
+    columnName?: string;              // Which column to read from current dataset
+
+    // For 'dataset' type (different dataset with join)
+    relatedDatasetId?: string;        // ID of related dataset
+    keyColumnLocal?: string;          // Join key in current dataset (e.g., "name")
+    keyColumnRelated?: string;        // Join key in related dataset (e.g., "actor_name")
+    valueColumn?: string;             // Column with the display value (e.g., "committee_name")
+
+    // Display configuration
+    displayType?: 'text' | 'number' | 'url' | 'image' | 'list';
+    icon?: string;                    // Optional icon (e.g., "FiMail", "FiPhone")
+    order?: number;                   // Display order
+}
+
 // Data source configuration
 export interface HemicicloDataSource {
     type: 'dataset' | 'manual';
@@ -65,6 +86,7 @@ export interface HemicicloDataSource {
         position?: string;
         seatNumber?: string;
     };
+    customFields?: CustomField[];     // Optional custom field configurations
 }
 
 // Layout configuration

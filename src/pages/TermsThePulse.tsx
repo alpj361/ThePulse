@@ -23,7 +23,7 @@ export default function TermsThePulse() {
         <Box>
           <Typography paragraph color="#666">
             <strong>1.1. StandAtPD:</strong> Stand At Platform Development, entidad legal guatemalteca responsable de la operación, desarrollo y prestación de todos los servicios descritos en estos Términos.<br /><br />
-            <strong>1.2. Plataforma o Servicio:</strong> Pulse Journal, herramienta tecnológica desarrollada y operada por StandAtPD, que incluye funcionalidades de creación de contenido, investigación, análisis de información, inteligencia artificial y colaboración.<br /><br />
+            <strong>1.2. Plataforma o Servicio:</strong> ALAB, herramienta tecnológica desarrollada y operada por StandAtPD, que incluye funcionalidades de creación de contenido, investigación, análisis de información, inteligencia artificial y colaboración.<br /><br />
             <strong>1.3. Usuario:</strong> Toda persona física mayor de edad que acceda, se registre o utilice los servicios de la Plataforma.<br /><br />
             <strong>1.4. Cuenta:</strong> El perfil individual creado por el Usuario para acceder a los servicios, protegido mediante credenciales de autenticación.<br /><br />
             <strong>1.5. Contenido del Usuario:</strong> Toda información, datos, textos, archivos, materiales o contenidos que el Usuario cree, cargue, transmita o almacene mediante el uso de la Plataforma.<br /><br />
@@ -39,7 +39,7 @@ export default function TermsThePulse() {
         <Box>
           <Typography paragraph color="#666">
             <strong>2.1. Descripción del Servicio</strong><br />
-            StandAtPD opera y desarrolla Pulse Journal, una herramienta tecnológica diseñada para profesionales del periodismo y la comunicación, ofreciendo funcionalidades de creación, edición, investigación, análisis y colaboración, con integración de tecnologías de inteligencia artificial.<br /><br />
+            StandAtPD opera y desarrolla ALAB, una herramienta tecnológica diseñada para profesionales del periodismo y la comunicación, ofreciendo funcionalidades de creación, edición, investigación, análisis y colaboración, con integración de tecnologías de inteligencia artificial.<br /><br />
             <strong>2.2. Estado de Desarrollo</strong><br />
             El Usuario reconoce y acepta expresamente que la mayoría de las herramientas se encuentran en <strong>Fase Alpha de desarrollo</strong>. En consecuencia:<br />
             a) Las funcionalidades pueden experimentar modificaciones, adiciones o eliminaciones sin previo aviso;<br />
@@ -235,7 +235,7 @@ export default function TermsThePulse() {
             <a href="mailto:contacto@standatpd.com" style={{ color: '#3b82f6', textDecoration: 'none' }}>
               contacto@standatpd.com
             </a><br />
-            <strong>Herramienta:</strong> Pulse Journal<br />
+            <strong>Herramienta:</strong> ALAB<br />
             <strong>Jurisdicción:</strong> Guatemala
           </Typography>
         </Box>
@@ -298,7 +298,7 @@ export default function TermsThePulse() {
           sx={{ mb: 4, bgcolor: '#e3f2fd', border: '1px solid #90caf9' }}
         >
           <Typography variant="body2" color="#1565c0">
-            <strong>StandAtPD</strong> (Stand At Platform Development) es la entidad legal guatemalteca responsable de la operación, desarrollo y prestación de servicios de <strong>Pulse Journal</strong> y otras herramientas tecnológicas.
+            <strong>StandAtPD</strong> (Stand At Platform Development) es la entidad legal guatemalteca responsable de la operación, desarrollo y prestación de servicios de <strong>ALAB</strong> y otras herramientas tecnológicas.
           </Typography>
         </Alert>
 
@@ -337,10 +337,10 @@ export default function TermsThePulse() {
             ACEPTACIÓN
           </Typography>
           <Typography paragraph color="#666">
-            Al registrarse, acceder o utilizar los servicios de Pulse Journal, el Usuario declara haber leído, comprendido y aceptado en su totalidad los presentes Términos y Condiciones, obligándose a su cumplimiento.
+            Al registrarse, acceder o utilizar los servicios de ALAB, el Usuario declara haber leído, comprendido y aceptado en su totalidad los presentes Términos y Condiciones, obligándose a su cumplimiento.
           </Typography>
           <Typography variant="body2" color="#999" sx={{ mt: 2, fontStyle: 'italic' }}>
-            StandAtPD (Stand At Platform Development) · Operador Legal de Pulse Journal
+            StandAtPD (Stand At Platform Development) · Operador Legal de ALAB
           </Typography>
         </Box>
 

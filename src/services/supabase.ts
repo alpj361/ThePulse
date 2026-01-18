@@ -49,18 +49,18 @@ export const supabase: SupabaseClient = (() => {
   // Crear nuevo cliente
   const client = SUPABASE_URL && SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true
-        },
-        global: {
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-          }
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
         }
-      })
+      }
+    })
     : createClient('https://example.com', 'mock-key'); // fallback para storybook/tests
 
   globalThis.__supabase__ = client;
@@ -88,7 +88,7 @@ export async function insertTrendData(data: any): Promise<void> {
     console.warn('Supabase not configured, skipping database operation');
     return;
   }
-  
+
   try {
     const { error } = await supabase
       .from('trends')
@@ -100,7 +100,7 @@ export async function insertTrendData(data: any): Promise<void> {
           category_data: data.categoryData
         }
       ], { ignoreDuplicates: true }); // Evita error 409 si el timestamp ya existe
-    
+
     if (error) throw error;
   } catch (error) {
     console.error('Error inserting trend data:', error);
@@ -117,7 +117,7 @@ export async function getLatestTrendData(): Promise<any | null> {
     console.warn('Supabase not configured, returning mock data');
     return mockTrendData;
   }
-  
+
   try {
     const { data, error } = await supabase
       .from('trends')
@@ -125,7 +125,7 @@ export async function getLatestTrendData(): Promise<any | null> {
       .order('timestamp', { ascending: false })
       .limit(1)
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows found
@@ -134,7 +134,7 @@ export async function getLatestTrendData(): Promise<any | null> {
       }
       throw error;
     }
-    
+
     console.log('📋 Datos encontrados en Supabase:', {
       timestamp: data.timestamp,
       hasWordCloud: !!data.word_cloud_data,
@@ -142,26 +142,26 @@ export async function getLatestTrendData(): Promise<any | null> {
       hasCategories: !!data.category_data,
       keywordCount: data.top_keywords?.length || 0
     });
-    
+
     // Verificar si los datos tienen la estructura completa
     if (!data.top_keywords || data.top_keywords.length < 10) {
       console.warn(`Los datos recuperados tienen ${data.top_keywords?.length || 0} keywords, se esperaban 10`);
-      
+
       // Si tenemos datos crudos, procesar localmente
       if (data.raw_data) {
         console.log('Usando raw_data para generar topKeywords completos');
-        
+
         // Ordenar por alguna métrica relevante (p.ej. volume)
         const rawItems = data.raw_data.trends || [];
         const sortedItems = [...rawItems].sort((a, b) => (b.volume || 0) - (a.volume || 0));
-        
+
         // Tomar top 10 o repetir si hay menos
         const top10 = sortedItems.slice(0, 10);
         while (top10.length < 10) {
           // Si hay menos de 10, repetir los más importantes
           top10.push(top10[top10.length % Math.max(1, top10.length)]);
         }
-        
+
         // Crear estructura para topKeywords
         data.top_keywords = top10.map(item => ({
           keyword: item.name || item.keyword || 'Unknown',
@@ -169,7 +169,7 @@ export async function getLatestTrendData(): Promise<any | null> {
         }));
       }
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error fetching latest trend data from Supabase:', error);
@@ -188,17 +188,17 @@ export async function getTrendsByType(isDeportes: boolean, limit: number = 10): 
     console.warn('Supabase not configured');
     return [];
   }
-  
+
   try {
-    const { data, error} = await supabase
+    const { data, error } = await supabase
       .from('trends')
       .select('*')
       .eq('is_deportes', isDeportes)
       .order('timestamp', { ascending: false })
       .limit(limit);
-    
+
     if (error) throw error;
-    
+
     console.log(`📊 Trends ${isDeportes ? 'deportivos' : 'generales'} encontrados:`, data?.length || 0);
     return data || [];
   } catch (error) {
@@ -215,7 +215,7 @@ export async function getTrendsStats(): Promise<any> {
     console.warn('Supabase not configured');
     return null;
   }
-  
+
   try {
     // Obtener los últimos 30 días de trends
     const { data, error } = await supabase
@@ -223,21 +223,21 @@ export async function getTrendsStats(): Promise<any> {
       .select('is_deportes, categoria_principal, timestamp')
       .gte('timestamp', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('timestamp', { ascending: false });
-    
+
     if (error) throw error;
-    
+
     if (!data || data.length === 0) return null;
-    
+
     const deportivos = data.filter(t => t.is_deportes).length;
     const total = data.length;
-    
+
     // Contar por categorías
     const categorias: Record<string, number> = {};
     data.forEach(t => {
       const cat = t.categoria_principal || 'General';
       categorias[cat] = (categorias[cat] || 0) + 1;
     });
-    
+
     return {
       total_trends: total,
       deportivos,
@@ -356,7 +356,7 @@ export async function saveLinkRelations(relations: { item_id: string; user_id: s
 
 export async function getCodexItemsByUser(user_id: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
+
   // Consulta expandida para incluir datos de recent_scrapes cuando applicable
   const { data, error } = await supabase
     .from('codex_items')
@@ -389,7 +389,7 @@ export async function getCodexItemsByUser(user_id: string) {
     `)
     .eq('user_id', user_id)
     .order('created_at', { ascending: false });
-    
+
   if (error) throw error;
 
   // Fallback robusto: consultar la tabla links aparte por si el FK alias no coincide
@@ -429,14 +429,14 @@ export async function getCodexItemsByUser(user_id: string) {
  */
 export async function getProjectAssets(projectId: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
+
   try {
     const { data, error } = await supabase
       .from('codex_items')
       .select('*')
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -450,7 +450,7 @@ export async function getProjectAssets(projectId: string) {
  */
 export async function getAvailableCodexItems(userId: string) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
+
   try {
     const { data, error } = await supabase
       .from('codex_items')
@@ -588,15 +588,15 @@ export async function createCodexGroup(
 
     const result = await response.json();
     console.log('✅ Grupo creado exitosamente vía backend:', result);
-    
+
     return result.group;
 
   } catch (error) {
     console.error('❌ Error creando grupo vía backend:', error);
-    
+
     // Fallback: intentar crear directamente con Supabase
     console.log('🔄 Intentando fallback con Supabase directo...');
-    
+
     const groupId = crypto.randomUUID();
 
     // Si se especifica un parent_item_id, actualizar ese item como parent
@@ -657,7 +657,7 @@ export async function createCodexGroupBulk(
     console.log('🔄 INICIO createCodexGroupBulk');
     console.log('📝 userId:', userId);
     console.log('📝 groupData:', JSON.stringify(groupData, null, 2));
-    
+
     // Verificar token
     let token;
     try {
@@ -704,7 +704,7 @@ export async function createCodexGroupBulk(
         console.error('❌ Error parseando respuesta de error:', parseError);
         throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
-      
+
       console.error('❌ Error del servidor:', errorData);
       throw new Error(errorData.message || `HTTP ${response.status}`);
     }
@@ -720,7 +720,7 @@ export async function createCodexGroupBulk(
 
     console.log('✅ Resultado parseado:', result);
     console.log('✅ FIN createCodexGroupBulk exitoso');
-    
+
     return result;
 
   } catch (error) {
@@ -767,15 +767,15 @@ export async function addItemToGroup(
 
     const result = await response.json();
     console.log('✅ Item agregado al grupo exitosamente vía backend:', result);
-    
+
     return result.item;
 
   } catch (error) {
     console.error('❌ Error agregando item al grupo vía backend:', error);
-    
+
     // Fallback: intentar agregar directamente con Supabase
     console.log('🔄 Intentando fallback con Supabase directo...');
-    
+
     // Actualizar el item para que sea parte del grupo
     const { data: updatedItem, error: updateError } = await supabase
       .from('codex_items')
@@ -933,7 +933,7 @@ export async function deleteGroup(groupId: string, userId: string) {
   try {
     // Obtener todos los items del grupo
     const groupItems = await getGroupItems(groupId, userId);
-    
+
     if (groupItems.length === 0) {
       throw new Error('Grupo no encontrado o no tienes permisos');
     }
@@ -1044,14 +1044,14 @@ export async function createCodexBucket() {
   try {
     // Check if bucket exists
     const { data: buckets, error: listError } = await supabase.storage.listBuckets()
-    
+
     if (listError) {
       console.error('Error listing buckets:', listError)
       return
     }
-    
+
     const bucketExists = buckets?.some(bucket => bucket.name === 'digitalstorage')
-    
+
     if (bucketExists) {
       console.log('digitalstorage bucket already exists')
     } else {
@@ -1225,21 +1225,21 @@ export async function uploadPublicKnowledgeDocument(params: {
  */
 export async function getLatestNews() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
+
   console.log('🔍 getLatestNews: Iniciando consulta...');
   const { data, error } = await supabase
     .from('news')
     .select('*')
     .order('fecha', { ascending: false })
     .limit(10);
-  
+
   if (error) {
     console.error('❌ getLatestNews: Error en consulta:', error);
     throw error;
   }
-  
+
   console.log('📊 getLatestNews: Datos raw de BD:', data?.[0]);
-  
+
   // Función para limpiar HTML y fragmentos de código
   const cleanText = (text: string) => {
     if (!text) return '';
@@ -1250,7 +1250,7 @@ export async function getLatestNews() {
       .replace(/\s+/g, ' ') // Normalizar espacios
       .trim();
   };
-  
+
   // Mapear a NewsItem
   const mappedData = (data || []).map((item: any) => ({
     id: item.id,
@@ -1262,9 +1262,9 @@ export async function getLatestNews() {
     keywords: item.keywords || [],
     url: item.url
   }));
-  
+
   console.log('🗺️ getLatestNews: Datos mapeados:', mappedData?.[0]);
-  
+
   return mappedData;
 }
 
@@ -1279,19 +1279,20 @@ export async function getSondeosByUser(userEmail: string) {
     .select('*')
     .eq('email_usuario', userEmail)
     .order('created_at', { ascending: false });
-  if (error) throw error;
   return data;
 }
 
 /**
- * Obtener tweets de trending topics de las últimas 24 horas
- * @param limit Número máximo de tweets a obtener (default: 20)
- * @param categoria Filtrar por categoría específica (opcional)
+ * Obtener tweets basados en tendencias (trending_tweets) - últimas 24 horas
+ * @param limit Número de tweets a obtener
+ * @param categoria Filtrar por categoría (opcional)
+ * @param trend Filtrar por tendencia específica (opcional)
+ * @param sourceType Filtrar por tipo de fuente: 'trend' o 'profile' (opcional)
  * @returns Array de tweets con datos limpios
  */
-export async function getTrendingTweets(limit: number = 20, categoria?: string) {
+export async function getTrendingTweets(limit: number = 20, categoria?: string, trend?: string, sourceType?: 'trend' | 'profile') {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-  
+
   try {
     let query = supabase
       .from('trending_tweets')
@@ -1299,16 +1300,27 @@ export async function getTrendingTweets(limit: number = 20, categoria?: string) 
       .gte('fecha_captura', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('fecha_captura', { ascending: false })
       .limit(limit);
-    
+
     // Filtrar por categoría si se especifica
-    if (categoria) {
+    if (categoria && categoria !== 'all') {
       query = query.eq('categoria', categoria);
     }
-    
+
+    // Filtrar por tendencia si se especifica
+    // Use simple equality filter on trend_clean (which is what the Autocomplete shows)
+    if (trend) {
+      query = query.eq('trend_clean', trend);
+    }
+
+    // Filtrar por tipo de fuente (trend o profile)
+    if (sourceType) {
+      query = query.eq('source_type', sourceType);
+    }
+
     const { data, error } = await query;
-    
+
     if (error) throw error;
-    
+
     // Función para limpiar texto de tweets (similar a cleanText de noticias)
     const cleanTweetText = (text: string) => {
       if (!text) return '';
@@ -1319,7 +1331,7 @@ export async function getTrendingTweets(limit: number = 20, categoria?: string) 
         .replace(/\s+/g, ' ') // Normalizar espacios
         .trim();
     };
-    
+
     // Mapear y limpiar datos
     return (data || []).map((tweet: any) => ({
       id: tweet.id,
@@ -1344,7 +1356,9 @@ export async function getTrendingTweets(limit: number = 20, categoria?: string) 
       sentimiento: tweet.sentimiento || null,
       intencion_comunicativa: tweet.intencion_comunicativa || null,
       score_sentimiento: tweet.score_sentimiento || null,
-      propagacion_viral: tweet.propagacion_viral || null
+      propagacion_viral: tweet.propagacion_viral || null,
+      // Tipo de fuente: trend o profile
+      source_type: tweet.source_type || 'trend'
     }));
   } catch (error) {
     console.error('Error fetching trending tweets:', error);
@@ -1358,22 +1372,22 @@ export async function getTrendingTweets(limit: number = 20, categoria?: string) 
  */
 export async function getTweetStatsByCategory() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return {};
-  
+
   try {
     const { data, error } = await supabase
       .from('trending_tweets')
       .select('categoria')
       .gte('fecha_captura', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-    
+
     if (error) throw error;
-    
+
     // Contar por categoría
     const stats = (data || []).reduce((acc: any, tweet: any) => {
       const cat = tweet.categoria || 'General';
       acc[cat] = (acc[cat] || 0) + 1;
       return acc;
     }, {});
-    
+
     return stats;
   } catch (error) {
     console.error('Error fetching tweet stats:', error);
@@ -2470,8 +2484,8 @@ export async function executeAgentExtraction(agentId: string): Promise<AgentExtr
     if (error) throw error;
 
     // Actualizar fecha de última ejecución del agente
-    await updateSiteAgent(agentId, { 
-      last_execution: new Date().toISOString() 
+    await updateSiteAgent(agentId, {
+      last_execution: new Date().toISOString()
     });
 
     // Registrar usage log exitoso
@@ -2485,7 +2499,7 @@ export async function executeAgentExtraction(agentId: string): Promise<AgentExtr
     return data;
   } catch (error) {
     console.error('Error executing agent extraction:', error);
-    
+
     // Registrar usage log con error
     usageData.success = false;
     usageData.error_message = error instanceof Error ? error.message : 'Error desconocido';
@@ -2496,7 +2510,7 @@ export async function executeAgentExtraction(agentId: string): Promise<AgentExtr
     }).catch(logError => {
       console.error('Error logging usage:', logError);
     });
-    
+
     // Guardar error en la base de datos también
     const errorData = {
       agent_id: agentId,

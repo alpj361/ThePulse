@@ -298,7 +298,7 @@ export default function Pricing() {
         {/* Nota */}
         <Box sx={{ mt: 6, p: 3, bgcolor: '#f5f5f5', borderRadius: 2, border: '1px solid #e0e0e0' }}>
           <Typography variant="body2" color="#666" textAlign="center">
-            <strong>Nota:</strong> Todas las funcionalidades básicas de Pulse Journal están disponibles sin costo. 
+            <strong>Nota:</strong> Todas las funcionalidades básicas de ALAB están disponibles sin costo. 
             Los créditos solo se utilizan para funcionalidades avanzadas con IA.
           </Typography>
         </Box>

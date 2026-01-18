@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Typography, useTheme, Paper, IconButton, Grid, Tooltip, getContrastRatio } from '@mui/material';
+import { Box, Typography, useTheme, Paper, IconButton, Grid, Tooltip, getContrastRatio, Button } from '@mui/material';
 import { FiTrash2, FiX } from 'react-icons/fi';
 import type { HemicicloSeat, HemicicloCategory, HemicicloLayout } from '../../../types/mappings';
 
@@ -108,13 +108,15 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
         <Box
             sx={{
                 position: 'relative',
-                width: width,
+                width: '100%',
+                maxWidth: width,
                 height: 'auto',
                 aspectRatio: '2/1',
                 background: `linear-gradient(180deg, #f0f8ff 0%, #e6f3ff 100%)`,
                 borderRadius: 3,
                 border: `1px solid ${theme.palette.divider}`,
-                overflow: 'visible'
+                overflow: 'visible',
+                mx: 'auto'
             }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
@@ -158,21 +160,21 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                         >
                             <div
                                 style={{
-                                    width: 12,
-                                    height: 12,
+                                    width: width >= 1200 ? 16 : 12,
+                                    height: width >= 1200 ? 16 : 12,
                                     borderRadius: '50%',
                                     backgroundColor: isHovered ? styles.hover : styles.bg,
                                     border: isSelected
                                         ? '3px solid #1976d2'
                                         : isAssignable
                                             ? `2px dashed ${selectedCategoryId ? categories.find(c => c.id === selectedCategoryId)?.color : '#666'}`
-                                            : `1.5px solid ${styles.border}`,
+                                            : `2px solid ${styles.border}`,
                                     boxShadow: isSelected
-                                        ? '0 0 10px rgba(25,118,210,0.6)'
+                                        ? '0 0 12px rgba(25,118,210,0.7), 0 0 20px rgba(25,118,210,0.4)'
                                         : isHovered
-                                            ? '0 4px 12px rgba(0,0,0,0.3)'
-                                            : '0 1px 3px rgba(0,0,0,0.15)',
-                                    transition: 'background-color 0.2s, box-shadow 0.2s',
+                                            ? '0 6px 16px rgba(0,0,0,0.35)'
+                                            : '0 2px 4px rgba(0,0,0,0.15)',
+                                    transition: 'all 0.2s ease-in-out',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
@@ -180,7 +182,7 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                             >
                                 {seat.actorData?.name && (
                                     <span style={{
-                                        fontSize: 7,
+                                        fontSize: width >= 1200 ? 9 : 7,
                                         fontWeight: 'bold',
                                         color: getContrastRatio(styles.bg, '#fff') > 3 ? '#fff' : '#000',
                                         userSelect: 'none'
@@ -233,15 +235,16 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                 })}
             </AnimatePresence>
 
-            {/* Selected Seat Action Menu */}
+            {/* Selected Seat Action Menu - Disabled when using sidebar */}
             <AnimatePresence>
-                {selectedSeat && editable && !selectedCategoryId && (
+                {false && selectedSeat && editable && !selectedCategoryId && (
                     <motion.div
                         style={{
                             position: 'absolute',
                             left: `${selectedSeat.x}%`,
-                            bottom: `calc(${100 - selectedSeat.y}% + 20px)`,
-                            transform: 'translateX(-50%)',
+                            top: `${selectedSeat.y}%`,
+                            transform: 'translate(-50%, -100%)',
+                            marginTop: -20,
                             zIndex: 50
                         }}
                         initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -250,104 +253,167 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <Paper
-                            elevation={4}
+                            elevation={8}
                             sx={{
-                                p: 1.5,
+                                p: 2,
                                 borderRadius: 2,
-                                minWidth: 200,
+                                minWidth: 280,
                                 bgcolor: 'rgba(255, 255, 255, 0.98)',
-                                backdropFilter: 'blur(8px)',
-                                border: '1px solid',
-                                borderColor: 'divider'
+                                backdropFilter: 'blur(12px)',
+                                border: '2px solid',
+                                borderColor: selectedSeat.categoryId
+                                    ? getCategoryDetails(selectedSeat.categoryId)?.color
+                                    : 'divider',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
                             }}
                         >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                <Box>
-                                    <Typography variant="subtitle2" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, mb: 0.5 }}>
                                         {selectedSeat.actorData?.name || `Asiento ${selectedSeat.row + 1}-${selectedSeat.position + 1}`}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {getCategoryDetails(selectedSeat.categoryId)?.name || 'Sin asignar'}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {selectedSeat.categoryId && (
+                                            <Box
+                                                sx={{
+                                                    width: 12,
+                                                    height: 12,
+                                                    borderRadius: '50%',
+                                                    bgcolor: getCategoryDetails(selectedSeat.categoryId)?.color,
+                                                    border: '2px solid #fff',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                                }}
+                                            />
+                                        )}
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            {getCategoryDetails(selectedSeat.categoryId)?.name || 'Sin asignar'}
+                                        </Typography>
+                                    </Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                                        Fila {selectedSeat.row + 1}, Posición {selectedSeat.position + 1}
                                     </Typography>
                                 </Box>
-                                <IconButton size="small" onClick={() => onBackgroundClick?.()} sx={{ ml: 1, mt: -1, mr: -1 }}>
-                                    <FiX size={14} />
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onBackgroundClick?.()}
+                                    sx={{
+                                        ml: 1,
+                                        bgcolor: 'action.hover',
+                                        '&:hover': { bgcolor: 'action.selected' }
+                                    }}
+                                >
+                                    <FiX size={16} />
                                 </IconButton>
                             </Box>
 
                             {selectedSeat.categoryId ? (
-                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Box>
                                     <Box
                                         sx={{
-                                            flex: 1,
-                                            height: 32,
-                                            borderRadius: 1,
-                                            bgcolor: getCategoryDetails(selectedSeat.categoryId)?.color || '#eee',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
+                                            p: 2,
+                                            borderRadius: 1.5,
+                                            bgcolor: getCategoryDetails(selectedSeat.categoryId)?.color,
                                             color: '#fff',
-                                            fontSize: 12,
-                                            fontWeight: 'bold'
+                                            textAlign: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: 14,
+                                            mb: 1.5,
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                                         }}
                                     >
-                                        Asignado
+                                        ✓ Asiento Asignado
                                     </Box>
-                                    <Tooltip title="Limpiar asignación">
-                                        <IconButton
-                                            size="small"
+                                    <Tooltip title="Limpiar asignación de este escaño">
+                                        <Button
+                                            fullWidth
+                                            variant="outlined"
                                             color="error"
-                                            sx={{ border: '1px solid', borderColor: 'error.light', borderRadius: 1 }}
+                                            startIcon={<FiTrash2 />}
                                             onClick={() => onClearSeat?.(selectedSeat)}
+                                            sx={{
+                                                borderWidth: 2,
+                                                '&:hover': { borderWidth: 2 }
+                                            }}
                                         >
-                                            <FiTrash2 size={16} />
-                                        </IconButton>
+                                            Limpiar Asignación
+                                        </Button>
                                     </Tooltip>
                                 </Box>
                             ) : (
                                 <Box>
-                                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-                                        Asignar categoría:
+                                    <Typography variant="body2" sx={{ display: 'block', mb: 1.5, fontWeight: 600 }}>
+                                        Asignar a una categoría:
                                     </Typography>
-                                    <Grid container spacing={1}>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                                         {categories.map(cat => (
-                                            <Grid item key={cat.id}>
-                                                <Tooltip title={cat.name}>
+                                            <Tooltip key={cat.id} title={`Asignar a ${cat.name}`}>
+                                                <Box
+                                                    onClick={() => onAssignSeat?.(selectedSeat, cat.id)}
+                                                    sx={{
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        gap: 0.5,
+                                                        cursor: 'pointer',
+                                                        p: 1,
+                                                        borderRadius: 1,
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            bgcolor: 'action.hover',
+                                                            transform: 'scale(1.05)'
+                                                        }
+                                                    }}
+                                                >
                                                     <Box
-                                                        onClick={() => onAssignSeat?.(selectedSeat, cat.id)}
                                                         sx={{
-                                                            width: 24,
-                                                            height: 24,
+                                                            width: 32,
+                                                            height: 32,
                                                             borderRadius: '50%',
                                                             bgcolor: cat.color,
-                                                            cursor: 'pointer',
-                                                            transition: 'transform 0.2s',
-                                                            border: '2px solid transparent',
-                                                            '&:hover': {
-                                                                transform: 'scale(1.2)',
-                                                                borderColor: 'text.primary'
-                                                            }
+                                                            border: '3px solid #fff',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#fff',
+                                                            fontWeight: 'bold',
+                                                            fontSize: 12
                                                         }}
-                                                    />
-                                                </Tooltip>
-                                            </Grid>
+                                                    >
+                                                        {cat.seatCount || 0}
+                                                    </Box>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            maxWidth: 60,
+                                                            textAlign: 'center',
+                                                            fontSize: 10,
+                                                            lineHeight: 1.2
+                                                        }}
+                                                    >
+                                                        {cat.name}
+                                                    </Typography>
+                                                </Box>
+                                            </Tooltip>
                                         ))}
-                                    </Grid>
+                                    </Box>
                                 </Box>
                             )}
 
                             <Box
                                 sx={{
                                     position: 'absolute',
-                                    top: '100%',
+                                    bottom: -10,
                                     left: '50%',
                                     transform: 'translateX(-50%)',
                                     width: 0,
                                     height: 0,
-                                    borderLeft: '8px solid transparent',
-                                    borderRight: '8px solid transparent',
-                                    borderTop: '8px solid white',
-                                    filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.05))'
+                                    borderLeft: '10px solid transparent',
+                                    borderRight: '10px solid transparent',
+                                    borderBottom: `10px solid ${selectedSeat.categoryId
+                                        ? getCategoryDetails(selectedSeat.categoryId)?.color
+                                        : 'white'}`,
+                                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.05))'
                                 }}
                             />
                         </Paper>
@@ -355,12 +421,13 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                 )}
             </AnimatePresence>
 
+            {/* Podio/Mesa Presidencial */}
             <motion.div
                 style={{
                     position: 'absolute',
                     left: '50%',
-                    top: '88%',
-                    transform: 'translate(-50%, -50%)',
+                    bottom: '8%',
+                    transform: 'translateX(-50%)',
                     width: 80,
                     height: 40,
                     backgroundColor: '#5f6368',
@@ -380,6 +447,7 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                 🏛️
             </motion.div>
 
+            {/* Label de total de asientos */}
             <Typography
                 variant="caption"
                 sx={{
@@ -388,10 +456,12 @@ const HemicicloSVG: React.FC<HemicicloSVGProps> = ({
                     left: '50%',
                     transform: 'translateX(-50%)',
                     color: 'text.secondary',
-                    bgcolor: 'rgba(255,255,255,0.8)',
-                    px: 1,
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    px: 1.5,
+                    py: 0.5,
                     borderRadius: 1,
-                    zIndex: 2
+                    zIndex: 2,
+                    fontWeight: 600
                 }}
             >
                 {layout.totalSeats} asientos

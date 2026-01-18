@@ -32,7 +32,7 @@ export default function Terms() {
       title: '2. Descripción del servicio',
       content: (
         <Typography paragraph color="#666">
-          Pulse Journal es un servicio agéntico para investigación, organización y gestión de datos 
+          ALAB es un servicio agéntico para investigación, organización y gestión de datos 
           orientado a periodistas y otras personas profesionales, impulsado por IA con capacidades 
           para extraer, automatizar y visualizar información.
         </Typography>
@@ -73,7 +73,7 @@ export default function Terms() {
       title: '6. Propiedad de contenidos',
       content: (
         <Typography paragraph color="#666">
-          La propiedad de la información creada o almacenada en Pulse Journal corresponde 
+          La propiedad de la información creada o almacenada en ALAB corresponde 
           a la persona usuaria que la generó.
         </Typography>
       ),
@@ -210,7 +210,7 @@ export default function Terms() {
       >
         <Container maxWidth="lg">
           <Typography variant="body2" color="#999" textAlign="center">
-            © {new Date().getFullYear()} Pulse Journal · Todos los derechos reservados
+            © {new Date().getFullYear()} ALAB · Todos los derechos reservados
           </Typography>
         </Container>
       </Box>

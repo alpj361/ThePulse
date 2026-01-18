@@ -1,11 +1,15 @@
 // Configuración centralizada de Google APIs
-export const GOOGLE_CLIENT_ID = '80973030831-7v96jltgkg4r31r8n68du9vjpjutuq3o.apps.googleusercontent.com';
-export const GOOGLE_DEVELOPER_KEY = 'AIzaSyA0oumyL3f8EaXraPvdYOVE2IYLbcO6lEo';
+export const GOOGLE_CLIENT_ID = '791862052938-000vods8guv7damvnt2gonrmo6vjtopd.apps.googleusercontent.com';
+export const GOOGLE_DEVELOPER_KEY = 'AIzaSyDjBjZCXVX5e8goox4m5r848moPeBOuN44';
 
-// Scopes para Google Drive
+// Scopes para Google Drive y Google Sheets
 export const GOOGLE_DRIVE_SCOPES = [
   // Permisos de creación/lectura sobre archivos creados o abiertos con la app
   'https://www.googleapis.com/auth/drive.file',
+  // Acceso completo a Google Drive (para importar cualquier archivo)
+  'https://www.googleapis.com/auth/drive',
+  // Acceso de solo lectura a Google Sheets (para sincronización)
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
   'openid',
   'email',
   'profile'

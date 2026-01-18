@@ -13,13 +13,15 @@ import {
     CardContent,
     Chip
 } from '@mui/material';
-import { FiPlus, FiSearch, FiMap, FiPlay } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiMap } from 'react-icons/fi';
 import { mappingsService } from '../../services/mappings';
 import type { BaseMapping } from '../../types/mappings';
 import CreateMappingModal from './CreateMappingModal';
 import MappingCard from './MappingCard';
 import HemicicloEditor from './hemiciclo/HemicicloEditor';
 import HemicicloDemo from './HemicicloDemo';
+import RelationshipGraphDemo from './RelationshipGraphDemo';
+import TimelineDemo from './TimelineDemo';
 
 interface MappingsTabProps {
     projectId: string;
@@ -34,6 +36,8 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
     const [selectedMapping, setSelectedMapping] = useState<BaseMapping | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [showDemo, setShowDemo] = useState(false);
+    const [showRelationshipDemo, setShowRelationshipDemo] = useState(false);
+    const [showTimelineDemo, setShowTimelineDemo] = useState(false);
 
     useEffect(() => {
         loadMappings();
@@ -78,6 +82,17 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
         loadMappings(); // Refresh the list
     };
 
+    const handleMappingDelete = async (mappingId: string) => {
+        try {
+            await mappingsService.deleteMapping(mappingId);
+            // Refresh the list after deletion
+            loadMappings();
+        } catch (err) {
+            console.error('Error deleting mapping:', err);
+            setError(err instanceof Error ? err.message : 'Error al eliminar el mapeo');
+        }
+    };
+
     const filteredMappings = mappings.filter(mapping => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
@@ -87,9 +102,17 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
         );
     });
 
-    // Show demo
+    // Show demos
     if (showDemo) {
         return <HemicicloDemo onBack={() => setShowDemo(false)} />;
+    }
+
+    if (showRelationshipDemo) {
+        return <RelationshipGraphDemo onBack={() => setShowRelationshipDemo(false)} />;
+    }
+
+    if (showTimelineDemo) {
+        return <TimelineDemo onBack={() => setShowTimelineDemo(false)} />;
     }
 
     // Si hay un mapeo seleccionado y es hemiciclo, mostrar editor
@@ -120,28 +143,18 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
                     </Typography>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<FiPlay />}
-                        onClick={() => setShowDemo(true)}
-                        disabled={loading}
-                    >
-                        Ver Demo
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<FiPlus />}
-                        onClick={() => setIsCreating(true)}
-                        disabled={loading}
-                        sx={{
-                            bgcolor: 'success.main',
-                            '&:hover': { bgcolor: 'success.dark' }
-                        }}
-                    >
-                        Crear Mapeo
-                    </Button>
-                </Box>
+                <Button
+                    variant="contained"
+                    startIcon={<FiPlus />}
+                    onClick={() => setIsCreating(true)}
+                    disabled={loading}
+                    sx={{
+                        bgcolor: 'success.main',
+                        '&:hover': { bgcolor: 'success.dark' }
+                    }}
+                >
+                    Crear Mapeo
+                </Button>
             </Box>
 
             {/* Demo Visualization Cards */}
@@ -172,6 +185,60 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                     Visualización interactiva con animaciones
+                                </Typography>
+                                <Chip label="Demo Interactivo" color="primary" size="small" />
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card
+                            sx={{
+                                cursor: 'pointer',
+                                border: '2px solid',
+                                borderColor: 'primary.light',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 3
+                                }
+                            }}
+                            onClick={() => setShowRelationshipDemo(true)}
+                        >
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Box sx={{ fontSize: 48, mb: 1 }}>🌐</Box>
+                                <Typography variant="h6" gutterBottom>
+                                    Gráfico de Relaciones
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    Red interactiva de conexiones entre actores
+                                </Typography>
+                                <Chip label="Demo Interactivo" color="primary" size="small" />
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card
+                            sx={{
+                                cursor: 'pointer',
+                                border: '2px solid',
+                                borderColor: 'primary.light',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 3
+                                }
+                            }}
+                            onClick={() => setShowTimelineDemo(true)}
+                        >
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Box sx={{ fontSize: 48, mb: 1 }}>📅</Box>
+                                <Typography variant="h6" gutterBottom>
+                                    Timeline Interactivo
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    Línea de tiempo cronológica con eventos históricos
                                 </Typography>
                                 <Chip label="Demo Interactivo" color="primary" size="small" />
                             </CardContent>
@@ -260,6 +327,7 @@ const MappingsTab: React.FC<MappingsTabProps> = ({ projectId }) => {
                             <MappingCard
                                 mapping={mapping}
                                 onClick={() => handleMappingClick(mapping)}
+                                onDelete={handleMappingDelete}
                             />
                         </Grid>
                     ))}

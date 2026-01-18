@@ -21,7 +21,7 @@ export default function Refunds() {
       title: '1. Alcance',
       content: (
         <Typography paragraph color="#666">
-          Esta política aplica a todas las compras realizadas en Pulse Journal, incluyendo el Plan Soporte 
+          Esta política aplica a todas las compras realizadas en ALAB, incluyendo el Plan Soporte 
           y la compra de créditos adicionales. Los pagos son procesados por Paddle (Merchant of Record).
         </Typography>
       ),

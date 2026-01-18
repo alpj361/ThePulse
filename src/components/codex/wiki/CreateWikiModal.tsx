@@ -82,7 +82,7 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       alert('El nombre es requerido');
       return;
@@ -101,7 +101,7 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
       };
 
       const result = await createWikiItem(itemData);
-      
+
       if (result) {
         // Reset form
         setName('');
@@ -110,7 +110,7 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
         setTags([]);
         setMetadata({});
         setSelectedType('person');
-        
+
         onSuccess?.();
         onClose();
       } else {
@@ -342,11 +342,10 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
                     key={type.id}
                     type="button"
                     onClick={() => setSelectedType(type.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                      isSelected
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${isSelected
                         ? `${type.color} text-white border-transparent`
                         : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     <span className="font-medium">{type.label}</span>
@@ -375,7 +374,7 @@ const CreateWikiModal: React.FC<CreateWikiModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descripción breve..."
-              rows={3}
+              rows={12}
             />
           </div>
 
